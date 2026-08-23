@@ -12,6 +12,7 @@ import {
   Globe,
   CheckCircle2 
 } from 'lucide-react';
+import { getInitials, getRolePresentation } from '../../../lib/auth/rolePresentation.js';
 
 export default function ProfileDropdown({ currentUser, onNavigatePublic, onLogout, onOpenSettings, onOpenProfile }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -28,17 +29,10 @@ export default function ProfileDropdown({ currentUser, onNavigatePublic, onLogou
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Compute initials avatar
-  const getInitials = (name) => {
-    if (!name) return 'SA';
-    const parts = name.trim().split(/\s+/);
-    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  };
-
-  const displayName = currentUser?.name || 'Super Administrator';
-  const displayRole = currentUser?.role === 'SUPER_ADMIN' ? 'Super Admin' : (currentUser?.label || currentUser?.role || 'Staff');
-  const displayEmail = currentUser?.email || 'ashuchinthapalli3900@gmail.com';
+  const displayName = currentUser?.name || currentUser?.fullName || 'Academic Officer';
+  const rolePresentation = getRolePresentation(currentUser?.role, currentUser?.dept, displayName);
+  const displayRole = rolePresentation.shortLabel || currentUser?.label || currentUser?.role || 'Staff';
+  const displayEmail = currentUser?.email || 'portal@nrtec.in';
   const initials = getInitials(displayName);
 
   return (

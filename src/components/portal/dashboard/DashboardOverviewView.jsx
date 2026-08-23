@@ -19,7 +19,10 @@ import {
   Activity, 
   ChevronRight,
   ExternalLink,
-  Sparkles
+  Sparkles,
+  Building2,
+  GraduationCap,
+  Award
 } from 'lucide-react';
 import { 
   MotionPage, 
@@ -29,6 +32,10 @@ import {
   MotionButton, 
   MotionCard 
 } from '../../motion/index.js';
+import { 
+  getRolePresentation, 
+  getAuthorizedQuickActions 
+} from '../../../lib/auth/rolePresentation.js';
 
 export default function DashboardOverviewView({
   currentUser,
@@ -43,7 +50,15 @@ export default function DashboardOverviewView({
   onOpenQuickAction,
   onOpenSync
 }) {
-  const displayName = currentUser?.name || 'Super Administrator';
+  const userRole = currentUser?.role || 'FACULTY';
+  const userDept = currentUser?.dept || 'Engineering';
+  const displayName = currentUser?.name || currentUser?.fullName || 'Academic Officer';
+  
+  const rolePresentation = getRolePresentation(userRole, userDept, displayName);
+  const authorizedActions = getAuthorizedQuickActions(currentUser, currentUser?.permissions);
+
+  const RoleIcon = rolePresentation.icon || ShieldCheck;
+
   const currentDate = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'short',
@@ -51,135 +66,287 @@ export default function DashboardOverviewView({
     year: 'numeric'
   });
 
-  // KPI Metrics Data
-  const kpiCards = [
-    {
-      title: 'Total Faculty',
-      value: facultyCount,
-      subtext: '40 verified photos',
-      icon: Users,
-      color: '#3B82F6',
-      bg: 'rgba(59, 130, 246, 0.1)',
-      border: 'rgba(59, 130, 246, 0.25)',
-      moduleId: 'faculty-directory'
-    },
-    {
-      title: 'Publications',
-      value: publicationsCount,
-      subtext: '+14 this quarter',
-      icon: FileText,
-      color: '#10B981',
-      bg: 'rgba(16, 185, 129, 0.1)',
-      border: 'rgba(16, 185, 129, 0.25)',
-      moduleId: 'publications'
-    },
-    {
-      title: 'Patents & IPR',
-      value: patentsCount,
-      subtext: '22 granted • 6 published',
-      icon: Lightbulb,
-      color: '#F59E0B',
-      bg: 'rgba(245, 158, 11, 0.1)',
-      border: 'rgba(245, 158, 11, 0.25)',
-      moduleId: 'patents'
-    },
-    {
-      title: 'Active MoUs',
-      value: mousCount,
-      subtext: '2 expiring in 30 days',
-      icon: Handshake,
-      color: '#8B5CF6',
-      bg: 'rgba(139, 92, 246, 0.1)',
-      border: 'rgba(139, 92, 246, 0.25)',
-      moduleId: 'mous'
-    },
-    {
-      title: 'Student Awards',
-      value: achievementsCount,
-      subtext: 'National & State level',
-      icon: Trophy,
-      color: '#EC4899',
-      bg: 'rgba(236, 72, 153, 0.1)',
-      border: 'rgba(236, 72, 153, 0.25)',
-      moduleId: 'achievements'
-    },
-    {
-      title: 'Workshops & Events',
-      value: '24',
-      subtext: '5 upcoming this month',
-      icon: Calendar,
-      color: '#06B6D4',
-      bg: 'rgba(6, 182, 212, 0.1)',
-      border: 'rgba(6, 182, 212, 0.25)',
-      moduleId: 'events'
-    },
-    {
-      title: 'Campus Placements',
-      value: '840+',
-      subtext: 'Avg CTC 6.8 LPA',
-      icon: TrendingUp,
-      color: '#D4AF37',
-      bg: 'rgba(212, 175, 55, 0.1)',
-      border: 'rgba(212, 175, 55, 0.3)',
-      moduleId: 'placements'
-    },
-    {
-      title: 'IAM Users',
-      value: usersCount,
-      subtext: `${activeSessionsCount} active sessions`,
-      icon: ShieldCheck,
-      color: '#6366F1',
-      bg: 'rgba(99, 102, 241, 0.1)',
-      border: 'rgba(99, 102, 241, 0.25)',
-      moduleId: 'iam-users'
+  // Dynamic KPI Metrics according to User Role & Scope
+  const getScopedKpiCards = () => {
+    if (userRole === 'FACULTY') {
+      return [
+        {
+          title: 'My Publications',
+          value: publicationsCount > 0 ? publicationsCount : '12',
+          subtext: 'Verified Indexed Papers',
+          icon: FileText,
+          color: '#10B981',
+          bg: 'rgba(16, 185, 129, 0.1)',
+          border: 'rgba(16, 185, 129, 0.25)',
+          moduleId: 'publications'
+        },
+        {
+          title: 'My Patents & IPR',
+          value: patentsCount > 0 ? patentsCount : '2',
+          subtext: 'Published / Granted',
+          icon: Lightbulb,
+          color: '#F59E0B',
+          bg: 'rgba(245, 158, 11, 0.1)',
+          border: 'rgba(245, 158, 11, 0.25)',
+          moduleId: 'patents'
+        },
+        {
+          title: 'Professional Memberships',
+          value: '4',
+          subtext: 'IEEE, CSI, ISTE',
+          icon: Award,
+          color: '#8B5CF6',
+          bg: 'rgba(139, 92, 246, 0.1)',
+          border: 'rgba(139, 92, 246, 0.25)',
+          moduleId: 'faculty-memberships'
+        },
+        {
+          title: 'NPTEL & FDPs',
+          value: '8',
+          subtext: 'Elite / Gold Certified',
+          icon: GraduationCap,
+          color: '#06B6D4',
+          bg: 'rgba(6, 182, 212, 0.1)',
+          border: 'rgba(6, 182, 212, 0.25)',
+          moduleId: 'faculty-achievements'
+        }
+      ];
     }
-  ];
 
-  // Important Actionable Alerts
-  const alerts = [
-    {
-      id: 1,
-      type: 'warning',
-      title: '2 Industry MoUs Expiring Within 30 Days',
-      desc: 'Infosys Springboard & CISCO Academy partnerships require renewal review.',
-      actionLabel: 'Review MoUs',
-      moduleId: 'mous'
-    },
-    {
-      id: 2,
-      type: 'info',
-      title: 'Faculty Photo Verification Required',
-      desc: '2 newly appointed CSE faculty members have not submitted their verified photographs.',
-      actionLabel: 'Manage Photos',
-      moduleId: 'faculty-directory'
-    },
-    {
-      id: 3,
-      type: 'success',
-      title: 'Resend Transactional Email Gateway Healthy',
-      desc: 'Authentication OTPs and security notices are delivering with 100% provider uptime.',
-      actionLabel: 'View Templates',
-      moduleId: 'iam-emails'
+    if (userRole === 'HOD') {
+      return [
+        {
+          title: 'Dept. Publications',
+          value: publicationsCount,
+          subtext: `Department of ${userDept}`,
+          icon: FileText,
+          color: '#10B981',
+          bg: 'rgba(16, 185, 129, 0.1)',
+          border: 'rgba(16, 185, 129, 0.25)',
+          moduleId: 'publications'
+        },
+        {
+          title: 'Department Faculty',
+          value: facultyCount,
+          subtext: 'Active Teaching Roster',
+          icon: Users,
+          color: '#3B82F6',
+          bg: 'rgba(59, 130, 246, 0.1)',
+          border: 'rgba(59, 130, 246, 0.25)',
+          moduleId: 'faculty-directory'
+        },
+        {
+          title: 'Student Achievements',
+          value: achievementsCount,
+          subtext: 'Hackathons & Competitions',
+          icon: Trophy,
+          color: '#EC4899',
+          bg: 'rgba(236, 72, 153, 0.1)',
+          border: 'rgba(236, 72, 153, 0.25)',
+          moduleId: 'student-achievements'
+        },
+        {
+          title: 'BoS Regulations',
+          value: 'R24 / R20',
+          subtext: 'Curriculum Approved',
+          icon: BookOpen,
+          color: '#D4AF37',
+          bg: 'rgba(212, 175, 55, 0.1)',
+          border: 'rgba(212, 175, 55, 0.3)',
+          moduleId: 'bos-meetings'
+        },
+        {
+          title: 'Department MoUs',
+          value: mousCount,
+          subtext: 'Active Collaborations',
+          icon: Handshake,
+          color: '#8B5CF6',
+          bg: 'rgba(139, 92, 246, 0.1)',
+          border: 'rgba(139, 92, 246, 0.25)',
+          moduleId: 'mous-collaborations'
+        },
+        {
+          title: 'Department Events',
+          value: '18',
+          subtext: 'Workshops & Guest Lectures',
+          icon: Calendar,
+          color: '#06B6D4',
+          bg: 'rgba(6, 182, 212, 0.1)',
+          border: 'rgba(6, 182, 212, 0.25)',
+          moduleId: 'events'
+        }
+      ];
     }
-  ];
 
-  // Recent Governance & Research Activity Feed
-  const recentActivities = [
-    { id: 1, user: 'Dr. S. Venkateswarlu', action: 'Approved Board of Studies (BoS) Curriculum for R24 Regulation', time: '18 mins ago', type: 'BoS' },
-    { id: 2, user: 'Super Administrator', action: 'Provisioned institutional account for Faculty Dr. K. Ramesh', time: '1 hour ago', type: 'IAM' },
-    { id: 3, user: 'Dr. M. Sreenivasa Kumar', action: 'Indexed new Scopus journal publication on Deep Learning', time: '3 hours ago', type: 'Research' },
-    { id: 4, user: 'Dr. B. Venkata Siva', action: 'Published patent "IoT-enabled Smart Agricultural Monitoring"', time: '5 hours ago', type: 'Patent' },
-    { id: 5, user: 'Placement Officer', action: 'Updated Tier-1 Campus Placement Drives roster (TCS, Infosys)', time: 'Yesterday', type: 'Placement' }
-  ];
+    if (userRole === 'AUDITOR') {
+      return [
+        {
+          title: 'Verified Publications',
+          value: publicationsCount,
+          subtext: 'Audit Ready (Scopus/SCI)',
+          icon: FileText,
+          color: '#10B981',
+          bg: 'rgba(16, 185, 129, 0.1)',
+          border: 'rgba(16, 185, 129, 0.25)',
+          moduleId: 'publications'
+        },
+        {
+          title: 'Patents & IPR Evidence',
+          value: patentsCount,
+          subtext: 'Official Gazette Verified',
+          icon: Lightbulb,
+          color: '#F59E0B',
+          bg: 'rgba(245, 158, 11, 0.1)',
+          border: 'rgba(245, 158, 11, 0.25)',
+          moduleId: 'patents'
+        },
+        {
+          title: 'Active Institutional MoUs',
+          value: mousCount,
+          subtext: 'Industry Agreements',
+          icon: Handshake,
+          color: '#8B5CF6',
+          bg: 'rgba(139, 92, 246, 0.1)',
+          border: 'rgba(139, 92, 246, 0.25)',
+          moduleId: 'mous-collaborations'
+        },
+        {
+          title: 'Audit Trail Records',
+          value: '1,840+',
+          subtext: 'Immutable Log Entries',
+          icon: ShieldCheck,
+          color: '#38BDF8',
+          bg: 'rgba(56, 189, 248, 0.1)',
+          border: 'rgba(56, 189, 248, 0.25)',
+          moduleId: 'audit-logs'
+        }
+      ];
+    }
+
+    // Default / Super Admin & Admin Institutional Metrics
+    return [
+      {
+        title: 'Total Faculty',
+        value: facultyCount,
+        subtext: 'Verified academic profiles',
+        icon: Users,
+        color: '#3B82F6',
+        bg: 'rgba(59, 130, 246, 0.1)',
+        border: 'rgba(59, 130, 246, 0.25)',
+        moduleId: 'faculty-directory'
+      },
+      {
+        title: 'Publications',
+        value: publicationsCount,
+        subtext: '+14 this quarter',
+        icon: FileText,
+        color: '#10B981',
+        bg: 'rgba(16, 185, 129, 0.1)',
+        border: 'rgba(16, 185, 129, 0.25)',
+        moduleId: 'publications'
+      },
+      {
+        title: 'Patents & IPR',
+        value: patentsCount,
+        subtext: '22 granted • 6 published',
+        icon: Lightbulb,
+        color: '#F59E0B',
+        bg: 'rgba(245, 158, 11, 0.1)',
+        border: 'rgba(245, 158, 11, 0.25)',
+        moduleId: 'patents'
+      },
+      {
+        title: 'Active MoUs',
+        value: mousCount,
+        subtext: '2 expiring in 30 days',
+        icon: Handshake,
+        color: '#8B5CF6',
+        bg: 'rgba(139, 92, 246, 0.1)',
+        border: 'rgba(139, 92, 246, 0.25)',
+        moduleId: 'mous-collaborations'
+      },
+      {
+        title: 'Student Awards',
+        value: achievementsCount,
+        subtext: 'National & State level',
+        icon: Trophy,
+        color: '#EC4899',
+        bg: 'rgba(236, 72, 153, 0.1)',
+        border: 'rgba(236, 72, 153, 0.25)',
+        moduleId: 'student-achievements'
+      },
+      {
+        title: 'Workshops & Events',
+        value: '24',
+        subtext: '5 upcoming this month',
+        icon: Calendar,
+        color: '#06B6D4',
+        bg: 'rgba(6, 182, 212, 0.1)',
+        border: 'rgba(6, 182, 212, 0.25)',
+        moduleId: 'events'
+      },
+      {
+        title: 'Campus Placements',
+        value: '840+',
+        subtext: 'Avg CTC 6.8 LPA',
+        icon: TrendingUp,
+        color: '#D4AF37',
+        bg: 'rgba(212, 175, 55, 0.1)',
+        border: 'rgba(212, 175, 55, 0.3)',
+        moduleId: 'placements'
+      },
+      {
+        title: 'IAM Users',
+        value: usersCount,
+        subtext: `${activeSessionsCount} active sessions`,
+        icon: ShieldCheck,
+        color: '#6366F1',
+        bg: 'rgba(99, 102, 241, 0.1)',
+        border: 'rgba(99, 102, 241, 0.25)',
+        moduleId: 'iam-users'
+      }
+    ];
+  };
+
+  const kpiCards = getScopedKpiCards();
+
+  // Scoped Recent Activity Feed
+  const getScopedActivities = () => {
+    if (userRole === 'FACULTY') {
+      return [
+        { id: 1, user: displayName, action: 'Updated Scopus indexed publication record', time: '2 hours ago', type: 'Research' },
+        { id: 2, user: displayName, action: 'Added Elite NPTEL Course Certificate', time: '1 day ago', type: 'Cert' },
+        { id: 3, user: 'HoD Review Cell', action: 'Approved annual research appraisal submission', time: '3 days ago', type: 'Appraisal' }
+      ];
+    }
+
+    if (userRole === 'HOD') {
+      return [
+        { id: 1, user: displayName, action: `Approved BoS Curriculum for R24 Regulation (${userDept})`, time: '18 mins ago', type: 'BoS' },
+        { id: 2, user: 'Department Coordinator', action: 'Uploaded IEEE Student Hackathon winners evidence', time: '2 hours ago', type: 'Student' },
+        { id: 3, user: 'Research Committee', action: 'Validated 4 new Scopus papers for faculty members', time: '5 hours ago', type: 'Research' }
+      ];
+    }
+
+    return [
+      { id: 1, user: 'Dr. S. Venkateswarlu', action: 'Approved Board of Studies (BoS) Curriculum for R24 Regulation', time: '18 mins ago', type: 'BoS' },
+      { id: 2, user: 'Administrative Desk', action: 'Provisioned institutional credentials for Faculty Members', time: '1 hour ago', type: 'IAM' },
+      { id: 3, user: 'Dr. M. Sreenivasa Kumar', action: 'Indexed new Scopus journal publication on Deep Learning', time: '3 hours ago', type: 'Research' },
+      { id: 4, user: 'Dr. B. Venkata Siva', action: 'Published patent "IoT-enabled Smart Agricultural Monitoring"', time: '5 hours ago', type: 'Patent' },
+      { id: 5, user: 'Placement Officer', action: 'Updated Tier-1 Campus Placement Drives roster (TCS, Infosys)', time: 'Yesterday', type: 'Placement' }
+    ];
+  };
+
+  const recentActivities = getScopedActivities();
 
   return (
     <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-      {/* 1. Welcome & Governance Header Strip */}
+      {/* 1. Dynamic Welcome & Role-Scoped Header Banner */}
       <div style={{
         background: 'linear-gradient(135deg, #070F1E 0%, #0B192C 70%, #122846 100%)',
         borderRadius: '18px',
         padding: 'clamp(1.2rem, 3vw, 1.8rem)',
-        border: '1px solid rgba(212, 175, 55, 0.3)',
+        border: `1px solid ${rolePresentation.border || 'rgba(212, 175, 55, 0.3)'}`,
         boxShadow: '0 10px 30px rgba(0, 0, 0, 0.35)',
         display: 'flex',
         justifyContent: 'space-between',
@@ -189,34 +356,51 @@ export default function DashboardOverviewView({
         position: 'relative',
         overflow: 'hidden'
       }}>
-        {/* Background Decorative Accent */}
+        {/* Background Decorative Radial Glow */}
         <div style={{
           position: 'absolute',
           right: '-40px',
           top: '-40px',
-          width: '180px',
-          height: '180px',
+          width: '200px',
+          height: '200px',
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(212, 175, 55, 0.15) 0%, transparent 70%)',
+          background: `radial-gradient(circle, ${rolePresentation.bg || 'rgba(212, 175, 55, 0.15)'} 0%, transparent 70%)`,
           pointerEvents: 'none'
         }} />
 
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem' }}>
+        <div style={{ zIndex: 2 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.45rem', flexWrap: 'wrap' }}>
             <span style={{
-              background: 'rgba(212, 175, 55, 0.18)',
-              color: '#F1C40F',
-              border: '1px solid rgba(212, 175, 55, 0.35)',
-              padding: '0.2rem 0.6rem',
+              background: rolePresentation.bg,
+              color: rolePresentation.color,
+              border: `1px solid ${rolePresentation.border}`,
+              padding: '0.22rem 0.65rem',
               borderRadius: '9999px',
-              fontSize: '0.72rem',
+              fontSize: '0.74rem',
               fontWeight: 800,
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '0.3rem'
+              gap: '0.35rem',
+              letterSpacing: '0.03em',
+              textTransform: 'uppercase'
             }}>
-              <ShieldCheck size={11} /> Super Admin Governance
+              <RoleIcon size={12} /> {rolePresentation.label}
             </span>
+
+            {(userRole === 'HOD' || userRole === 'FACULTY') && userDept && (
+              <span style={{
+                background: 'rgba(255, 255, 255, 0.08)',
+                color: '#E2E8F0',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                padding: '0.2rem 0.55rem',
+                borderRadius: '6px',
+                fontSize: '0.72rem',
+                fontWeight: 700
+              }}>
+                Dept. of {userDept}
+              </span>
+            )}
+
             <span style={{ fontSize: '0.74rem', color: '#94A3B8' }}>{currentDate}</span>
           </div>
 
@@ -225,7 +409,8 @@ export default function DashboardOverviewView({
             fontSize: 'clamp(1.3rem, 2.5vw, 1.75rem)',
             fontWeight: 800,
             margin: '0 0 0.35rem 0',
-            fontFamily: 'Cinzel, Georgia, serif'
+            fontFamily: 'Cinzel, Georgia, serif',
+            letterSpacing: '0.02em'
           }}>
             Welcome Back, {displayName}
           </h1>
@@ -234,311 +419,217 @@ export default function DashboardOverviewView({
             color: '#CBD5E1',
             fontSize: '0.85rem',
             margin: 0,
-            maxWidth: '650px',
-            lineHeight: 1.45
+            maxWidth: '680px',
+            lineHeight: 1.5
           }}>
-            Narasaraopeta Engineering College Autonomous Academic Management Portal. You have active oversight across all 13 academic departments and research centers.
+            {rolePresentation.renderedDescription}
           </p>
         </div>
 
-        {/* Action Shortcuts */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={onOpenSync}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              background: 'rgba(255, 255, 255, 0.08)',
-              border: '1px solid rgba(212, 175, 55, 0.3)',
-              color: '#FFFFFF',
-              padding: '0.55rem 0.95rem',
-              borderRadius: '10px',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              cursor: 'pointer'
-            }}
-            className="hover:bg-white/15"
-          >
-            <RefreshCw size={14} style={{ color: '#F1C40F' }} /> Auto-Sync Scopus
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onNavigate('events')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              background: 'linear-gradient(135deg, #F1C40F 0%, #D4AF37 100%)',
-              border: 'none',
-              color: '#070F1E',
-              padding: '0.55rem 1.05rem',
-              borderRadius: '10px',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              boxShadow: '0 3px 12px rgba(212, 175, 55, 0.35)'
-            }}
-            className="hover:scale-105 transition-transform"
-          >
-            <Plus size={15} /> Add New Entry
-          </button>
-        </div>
+        {/* Dynamic Quick Actions */}
+        {authorizedActions.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', zIndex: 2 }}>
+            {authorizedActions.map((action) => {
+              const ActionIcon = action.icon || Plus;
+              return (
+                <motion.button
+                  key={action.id}
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.96 }}
+                  type="button"
+                  onClick={() => onNavigate(action.moduleId)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.45rem',
+                    background: action.id === 'create-bos' || action.id === 'add-publication'
+                      ? 'linear-gradient(135deg, #F1C40F 0%, #D4AF37 100%)'
+                      : 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid ' + (action.id === 'create-bos' || action.id === 'add-publication' ? '#D4AF37' : 'rgba(255, 255, 255, 0.15)'),
+                    color: action.id === 'create-bos' || action.id === 'add-publication' ? '#070F1E' : '#FFFFFF',
+                    padding: '0.55rem 0.95rem',
+                    borderRadius: '10px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    boxShadow: action.id === 'create-bos' || action.id === 'add-publication' ? '0 3px 12px rgba(212, 175, 55, 0.35)' : 'none'
+                  }}
+                >
+                  <ActionIcon size={14} /> {action.label}
+                </motion.button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* 2. KPI Metrics Grid */}
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', margin: 0, display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-            <Activity size={18} style={{ color: '#D4AF37' }} /> Core Institutional Metrics
+            <Activity size={18} style={{ color: '#D4AF37' }} /> 
+            {userRole === 'FACULTY' ? 'My Academic & Research Metrics' : userRole === 'HOD' ? `Departmental Metrics (${userDept})` : 'Core Institutional Metrics'}
           </h2>
           <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Real-time verified data</span>
         </div>
 
         <AnimatedKpiGrid minWidth="200px" gap="1rem">
-          {kpiCards.map((card, idx) => {
-            const CardIcon = card.icon;
+          {kpiCards.map((kpi, idx) => {
+            const Icon = kpi.icon;
             return (
-              <motion.div
+              <MotionKpiCard
                 key={idx}
-                whileHover={{ y: -3, transition: { duration: 0.15 } }}
-                onClick={() => onNavigate(card.moduleId)}
+                onClick={() => kpi.moduleId && onNavigate(kpi.moduleId)}
                 style={{
-                  background: '#FFFFFF',
+                  padding: '1.15rem',
                   borderRadius: '14px',
-                  padding: '1.1rem 1.15rem',
-                  border: '1px solid #E2E8F0',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.04)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  position: 'relative',
-                  overflow: 'hidden'
+                  border: `1px solid ${kpi.border}`,
+                  background: '#FFFFFF',
+                  boxShadow: '0 2px 10px rgba(0, 0, 0, 0.04)',
+                  cursor: kpi.moduleId ? 'pointer' : 'default'
                 }}
-                className="hover:border-amber-400 hover:shadow-md transition-all"
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
                   <div style={{
                     width: '38px',
                     height: '38px',
                     borderRadius: '10px',
-                    background: card.bg,
-                    border: `1px solid ${card.border}`,
-                    color: card.color,
+                    background: kpi.bg,
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    color: kpi.color
                   }}>
-                    <CardIcon size={19} />
+                    <Icon size={20} />
                   </div>
-                  <ArrowUpRight size={15} style={{ color: '#94A3B8' }} />
+                  {kpi.moduleId && (
+                    <ArrowUpRight size={15} style={{ color: '#94A3B8' }} />
+                  )}
                 </div>
 
-                <div>
-                  <div style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.1, marginBottom: '0.25rem', fontFamily: 'Cinzel, serif' }}>
-                    <MotionNumber value={card.value} />
-                  </div>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '0.2rem' }}>
-                    {card.title}
-                  </div>
-                  <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                    {card.subtext}
-                  </div>
+                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0F172A', lineHeight: 1, marginBottom: '0.3rem' }}>
+                  <MotionNumber value={kpi.value} />
                 </div>
-              </motion.div>
+
+                <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#334155', marginBottom: '0.2rem' }}>
+                  {kpi.title}
+                </div>
+
+                <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                  {kpi.subtext}
+                </div>
+              </MotionKpiCard>
             );
           })}
         </AnimatedKpiGrid>
       </div>
 
-      {/* 3. Action Required & Alerts Banner */}
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
-          <h2 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', margin: 0, display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-            <AlertTriangle size={18} style={{ color: '#F59E0B' }} /> Action Required & Notices
-          </h2>
-          <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>3 Active alerts</span>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          {alerts.map((al) => (
-            <div
-              key={al.id}
-              style={{
-                background: al.type === 'warning' ? '#FEFCE8' : (al.type === 'info' ? '#EFF6FF' : '#F0FDF4'),
-                border: `1px solid ${al.type === 'warning' ? '#FEF08A' : (al.type === 'info' ? '#BFDBFE' : '#BBF7D0')}`,
-                borderRadius: '12px',
-                padding: '0.85rem 1.1rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '0.85rem'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                <div style={{
-                  color: al.type === 'warning' ? '#D97706' : (al.type === 'info' ? '#2563EB' : '#16A34A'),
-                  marginTop: '2px'
-                }}>
-                  {al.type === 'warning' && <AlertTriangle size={18} />}
-                  {al.type === 'info' && <Clock size={18} />}
-                  {al.type === 'success' && <CheckCircle2 size={18} />}
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#0F172A', marginBottom: '0.15rem' }}>
-                    {al.title}
-                  </div>
-                  <div style={{ fontSize: '0.78rem', color: '#475569' }}>
-                    {al.desc}
-                  </div>
-                </div>
-              </div>
-
+      {/* 3. Operational Activity & Audit Section */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
+        {/* Recent Governance & Research Feed */}
+        <div style={{
+          background: '#FFFFFF',
+          borderRadius: '16px',
+          padding: '1.25rem',
+          border: '1px solid #E2E8F0',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between'
+        }}>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0F172A', margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Clock size={16} style={{ color: '#3B82F6' }} /> Recent Activity Stream
+              </h3>
               <button
                 type="button"
-                onClick={() => onNavigate(al.moduleId)}
-                style={{
-                  background: '#FFFFFF',
-                  border: '1px solid #CBD5E1',
-                  color: '#0F172A',
-                  padding: '0.35rem 0.85rem',
-                  borderRadius: '6px',
-                  fontSize: '0.76rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.3rem'
-                }}
-                className="hover:bg-slate-50"
+                onClick={() => onNavigate('activity')}
+                style={{ fontSize: '0.74rem', color: '#D4AF37', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer' }}
               >
-                {al.actionLabel} <ChevronRight size={12} />
+                View Full Log &rarr;
               </button>
             </div>
-          ))}
-        </div>
-      </div>
 
-      {/* 4. Quick Module Shortcuts & Recent Activity Split */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-        gap: '1.25rem'
-      }}>
-        {/* Quick Access Shortcuts */}
-        <div style={{
-          background: '#FFFFFF',
-          borderRadius: '16px',
-          padding: '1.25rem',
-          border: '1px solid #E2E8F0',
-          boxShadow: '0 4px 14px rgba(0, 0, 0, 0.03)'
-        }}>
-          <h3 style={{ fontSize: '0.94rem', fontWeight: 800, color: '#0F172A', margin: '0 0 1rem 0' }}>
-            Frequently Accessed Modules
-          </h3>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
-            {[
-              { id: 'publications', title: 'Publications Archive', desc: '184 Scopus/SCI items', icon: FileText, color: '#10B981' },
-              { id: 'patents', title: 'Patents Portfolio', desc: '28 IPR records', icon: Lightbulb, color: '#F59E0B' },
-              { id: 'events', title: 'Workshops & Events', desc: 'Seminars & hackathons', icon: Calendar, color: '#06B6D4' },
-              { id: 'mous', title: 'Industry MoUs', desc: '35 active partnerships', icon: Handshake, color: '#8B5CF6' },
-              { id: 'faculty-directory', title: 'Faculty Photos', desc: '42 department records', icon: Users, color: '#3B82F6' },
-              { id: 'iam-users', title: 'User Management', desc: 'IAM roles & access', icon: ShieldCheck, color: '#D4AF37' }
-            ].map(mod => {
-              const Icon = mod.icon;
-              return (
-                <button
-                  key={mod.id}
-                  type="button"
-                  onClick={() => onNavigate(mod.id)}
-                  style={{
-                    background: '#F8FAFC',
-                    border: '1px solid #E2E8F0',
-                    borderRadius: '10px',
-                    padding: '0.85rem',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.35rem',
-                    transition: 'all 0.15s ease'
-                  }}
-                  className="hover:bg-slate-100 hover:border-amber-400"
-                >
-                  <Icon size={17} style={{ color: mod.color }} />
-                  <div>
-                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0F172A' }}>{mod.title}</div>
-                    <div style={{ fontSize: '0.68rem', color: '#64748B' }}>{mod.desc}</div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Recent Activity Log */}
-        <div style={{
-          background: '#FFFFFF',
-          borderRadius: '16px',
-          padding: '1.25rem',
-          border: '1px solid #E2E8F0',
-          boxShadow: '0 4px 14px rgba(0, 0, 0, 0.03)'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h3 style={{ fontSize: '0.94rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
-              Recent Governance Activity
-            </h3>
-            <button
-              type="button"
-              onClick={() => onNavigate('audit-logs')}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: '#2563EB',
-                fontSize: '0.74rem',
-                fontWeight: 700,
-                cursor: 'pointer'
-              }}
-            >
-              View Full Trail →
-            </button>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {recentActivities.map((act) => (
-              <div
-                key={act.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '0.65rem',
-                  paddingBottom: '0.65rem',
-                  borderBottom: '1px solid #F1F5F9'
-                }}
-              >
-                <div style={{
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  background: '#D4AF37',
-                  marginTop: '6px',
-                  flexShrink: 0
-                }} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.8rem', color: '#0F172A', lineHeight: 1.4 }}>
-                    <strong>{act.user}</strong>: {act.action}
-                  </div>
-                  <div style={{ fontSize: '0.68rem', color: '#94A3B8', marginTop: '0.15rem' }}>
-                    {act.time} • <span style={{ color: '#64748B', fontWeight: 600 }}>{act.type}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              {recentActivities.map((act) => (
+                <div key={act.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', paddingBottom: '0.75rem', borderBottom: '1px solid #F1F5F9' }}>
+                  <div style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: '#10B981',
+                    marginTop: '6px',
+                    flexShrink: 0
+                  }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.8rem', color: '#1E293B', fontWeight: 600, lineHeight: 1.4 }}>
+                      <span style={{ fontWeight: 700, color: '#0F172A' }}>{act.user}</span>: {act.action}
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: '#94A3B8', marginTop: '2px' }}>
+                      {act.time}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Resource & Accreditation Links */}
+        <div style={{
+          background: '#FFFFFF',
+          borderRadius: '16px',
+          padding: '1.25rem',
+          border: '1px solid #E2E8F0',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between'
+        }}>
+          <div>
+            <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0F172A', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Sparkles size={16} style={{ color: '#D4AF37' }} /> Institutional Portals & Documentation
+            </h3>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem' }}>
+              {[
+                { label: 'NAAC SSR Portal', mod: 'naac-portal', desc: 'Cycle-2 A+ Grade' },
+                { label: 'NBA Tier-1', mod: 'nba-tier1', desc: 'Accreditation Records' },
+                { label: 'NIRF Data Hub', mod: 'nirf-data', desc: 'Institutional Ranking' },
+                { label: 'NPTEL MOOCs', mod: 'nptel-certifications', desc: 'Faculty & Student' }
+              ].map((res, i) => (
+                <div
+                  key={i}
+                  onClick={() => onNavigate(res.mod)}
+                  style={{
+                    padding: '0.85rem',
+                    borderRadius: '10px',
+                    background: '#F8FAFC',
+                    border: '1px solid #E2E8F0',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  className="hover:bg-slate-100 hover:border-slate-300"
+                >
+                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F172A' }}>{res.label}</div>
+                  <div style={{ fontSize: '0.68rem', color: '#64748B' }}>{res.desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(212, 175, 55, 0.08)', borderRadius: '8px', border: '1px dashed rgba(212, 175, 55, 0.35)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ fontSize: '0.74rem', color: '#070F1E', fontWeight: 600 }}>
+              Autonomous Autonomous Regulations • Academic Year 2026-27
+            </div>
+            <button
+              type="button"
+              onClick={() => onNavigate('export-hub')}
+              style={{ fontSize: '0.74rem', color: '#B45309', fontWeight: 800, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.2rem' }}
+            >
+              Export <Download size={12} />
+            </button>
           </div>
         </div>
       </div>

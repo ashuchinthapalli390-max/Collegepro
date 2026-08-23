@@ -40,6 +40,7 @@ import {
 } from 'lucide-react';
 
 import { NAVIGATION_CATEGORIES } from './navigationCategories.js';
+import { getInitials, getRolePresentation } from '../../../lib/auth/rolePresentation.js';
 
 export default function FloatingSidebar({
   activeModule,
@@ -55,6 +56,12 @@ export default function FloatingSidebar({
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCategories, setExpandedCategories] = useState({});
+
+  const userRole = currentUser?.role || 'FACULTY';
+  const displayName = currentUser?.name || currentUser?.fullName || 'Academic Officer';
+  const rolePresentation = getRolePresentation(userRole, currentUser?.dept, displayName);
+  const displayRole = rolePresentation.shortLabel || currentUser?.label || currentUser?.role || 'Staff';
+  const initials = getInitials(displayName);
 
   // Auto-expand category containing active module
   useEffect(() => {
@@ -73,8 +80,14 @@ export default function FloatingSidebar({
     }));
   };
 
-  // Filter categories and items based on search query
+  // Filter categories by user permissions/roles & search query
   const filteredCategories = NAVIGATION_CATEGORIES.map(cat => {
+    // Hide IAM / Administration category for non-admin users
+    if (cat.id === 'cat-admin' && userRole !== 'SUPER_ADMIN' && userRole !== 'ADMIN') {
+      const hasIamPerm = currentUser?.permissions?.some(p => p.startsWith('users.') || p.startsWith('iam.'));
+      if (!hasIamPerm) return null;
+    }
+
     const q = searchQuery.toLowerCase().trim();
     if (!q) return cat;
 
@@ -89,17 +102,6 @@ export default function FloatingSidebar({
     }
     return null;
   }).filter(Boolean);
-
-  const getInitials = (name) => {
-    if (!name) return 'SA';
-    const parts = name.trim().split(/\s+/);
-    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  };
-
-  const displayName = currentUser?.name || 'Super Administrator';
-  const displayRole = currentUser?.role === 'SUPER_ADMIN' ? 'Super Admin' : (currentUser?.label || 'Staff');
-  const initials = getInitials(displayName);
 
   const sidebarWidth = isMobileDrawer ? '290px' : (sidebarExpanded ? '280px' : '78px');
 

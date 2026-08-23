@@ -41,35 +41,49 @@ class ErrorBoundary extends React.Component {
     console.error('ErrorBoundary caught:', error, errorInfo);
   }
 
+  // Safe UI cache reset (Never wipes auth cookies, tokens or server session!)
   handleResetStorage = () => {
-    localStorage.clear();
-    window.location.reload();
+    try {
+      // Clear only namespaced UI display preferences
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('nec:ui:') || key.startsWith('nec:view:') || key.startsWith('nec_table_')) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch (e) {
+      console.warn('Storage reset notice:', e);
+    }
+    this.setState({ hasError: false, error: null });
+  };
+
+  handleTryAgain = () => {
+    this.setState({ hasError: false, error: null });
   };
 
   render() {
     if (this.state.hasError) {
       return (
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#070F1E', color: '#FFF', padding: '2rem', textAlign: 'center' }}>
-          <h2 style={{ fontSize: '1.8rem', color: '#D4AF37', marginBottom: '1rem', fontFamily: 'Cinzel, serif' }}>
-            Narasaraopeta Engineering College Portal
+          <h2 style={{ fontSize: '1.8rem', color: '#D4AF37', marginBottom: '0.8rem', fontFamily: 'Cinzel, serif' }}>
+            Narasaraopeta Engineering College
           </h2>
-          <p style={{ color: '#94A3B8', maxWidth: '500px', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-            A temporary display error occurred while rendering the page data. You can refresh or reset cached records.
+          <p style={{ color: '#94A3B8', maxWidth: '540px', marginBottom: '1.5rem', fontSize: '0.92rem', lineHeight: 1.6 }}>
+            A temporary display issue occurred while rendering this module. You can try reloading the view or resetting cached display preferences.
           </p>
-          <div style={{ display: 'flex', gap: '1rem' }}>
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
             <button
-              onClick={() => window.location.reload()}
+              onClick={this.handleTryAgain}
               className="btn-primary"
-              style={{ padding: '0.6rem 1.4rem' }}
+              style={{ padding: '0.65rem 1.5rem', borderRadius: '8px', cursor: 'pointer' }}
             >
-              Reload Page
+              Try Again
             </button>
             <button
               onClick={this.handleResetStorage}
               className="btn-secondary"
-              style={{ padding: '0.6rem 1.4rem' }}
+              style={{ padding: '0.65rem 1.5rem', borderRadius: '8px', cursor: 'pointer' }}
             >
-              Reset Cache & Reload
+              Reset Display Preferences
             </button>
           </div>
         </div>
@@ -90,7 +104,7 @@ export default function App() {
 function MainApp() {
   // Authentication & Session Persistence State
   const [authState, setAuthState] = useState('loading'); // 'loading' | 'authenticated' | 'unauthenticated'
-  const [currentUser, setCurrentUser] = useState(USER_ROLES[0]);
+  const [currentUser, setCurrentUser] = useState(null); // Never default to Super Admin
   const [viewMode, setViewMode] = useState('public'); // 'public' | 'portal'
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
@@ -145,7 +159,7 @@ function MainApp() {
   }, [activeTab, viewMode]);
 
   const handleOpenPortal = async () => {
-    if (authState === 'authenticated') {
+    if (authState === 'authenticated' && currentUser) {
       setViewMode('portal');
       return;
     }
@@ -215,7 +229,7 @@ function MainApp() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // 2. Loading State During Session Hydration (Prevents Login Screen Flash)
+  // 2. Loading State During Session Hydration (Prevents Privilege/Role Flash)
   if (authState === 'loading') {
     return (
       <div style={{
@@ -257,145 +271,116 @@ function MainApp() {
   }
 
   // 3. Authenticated Secure Portal View Mode (Survives Refresh & Public Navigation!)
-  if (viewMode === 'portal' && authState === 'authenticated') {
+  if (viewMode === 'portal' && authState === 'authenticated' && currentUser) {
     return (
-      <div className="nec-app">
+      <ErrorBoundary>
         <PortalDashboard
           currentUser={currentUser}
-          onNavigatePublic={handleGoToPublicWebsite}
           onLogout={handleLogout}
-          onExitPortal={handleGoToPublicWebsite}
+          onNavigatePublic={handleGoToPublicWebsite}
         />
-      </div>
+      </ErrorBoundary>
     );
   }
 
-  // 4. Public College Website View Mode
+  // 4. Public Institutional Website (Accessible to both Guest and Authenticated visitors)
   return (
-    <div className="nec-app" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Global Navigation Header */}
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#FFFFFF' }}>
+      {/* Dynamic Header with Session-Aware Portal Indicator */}
       <Header
         activeTab={activeTab}
-        setActiveTab={(tab) => {
-          setSelectedDepartment(null);
-          setActiveTab(tab);
-        }}
-        isAuthenticated={authState === 'authenticated'}
-        currentUser={currentUser}
+        setActiveTab={setActiveTab}
         onOpenPortal={handleOpenPortal}
         onSelectDepartment={handleSelectDepartment}
         onOpenGlobalSearch={() => setSearchModalOpen(true)}
+        isAuthenticated={authState === 'authenticated'}
+        currentUser={currentUser}
       />
 
-      {/* PUBLIC TAB 1: HOME (Complete Cinematic Experience) */}
-      {activeTab === 'home' && (
-        <main>
-          {/* Cinematic Hero Background Video */}
-          <Hero
-            onExploreClick={() => {
-              const el = document.getElementById('departments-preview');
-              if (el) el.scrollIntoView({ behavior: 'smooth' });
-            }}
-            onOpenPortal={handleOpenPortal}
-            onGoToResearch={() => setActiveTab('research')}
-            onGoToDepartments={() => setActiveTab('departments')}
-          />
-
-          {/* Live Dynamic Stats Counter */}
-          <StatsCounter />
-
-          {/* Leadership & Vision Section */}
-          <LeadershipSection />
-
-          {/* 13 Departments Showcase Preview */}
-          <div id="departments-preview">
-            <DepartmentsHub
-              selectedDepartment={selectedDepartment}
+      {/* Main Public Body Switching by activeTab */}
+      <main style={{ flex: 1 }}>
+        {activeTab === 'home' && (
+          <>
+            <Hero onExploreCampus={() => setActiveTab('campus')} onOpenPortal={handleOpenPortal} />
+            <StatsCounter />
+            <MadamShowcase onSelectFaculty={handleSelectFaculty} />
+            <LeadershipSection />
+            <DepartmentsHub 
+              selectedDepartment={selectedDepartment} 
               onSelectDepartment={handleSelectDepartment}
               onSelectFaculty={handleSelectFaculty}
             />
-          </div>
+            <ResearchHub onSelectFaculty={handleSelectFaculty} />
+            <VirtualTour />
+            <ExamCellAndContact />
+          </>
+        )}
 
-          {/* Research & Patents Showcase Preview */}
-          <ResearchHub onOpenPortal={handleOpenPortal} />
+        {activeTab === 'about' && (
+          <>
+            <LeadershipSection />
+            <GovernanceSection />
+          </>
+        )}
 
-          {/* Virtual Campus Tour & Media Showcase */}
-          <VirtualTour />
-
-          {/* Dr. S. N. Tirumala Rao Madam Showcase */}
-          <MadamShowcase />
-
-          {/* Exam Cell, Contact & Footer */}
-          <ExamCellAndContact />
-        </main>
-      )}
-
-      {/* PUBLIC TAB 2: GOVERNANCE & BOS */}
-      {activeTab === 'governance' && (
-        <main>
-          <GovernanceSection onOpenPortal={handleOpenPortal} />
-          <ExamCellAndContact />
-        </main>
-      )}
-
-      {/* PUBLIC TAB 3: DEPARTMENTS HUB */}
-      {activeTab === 'departments' && (
-        <main>
-          <DepartmentsHub
-            selectedDepartment={selectedDepartment}
+        {activeTab === 'departments' && (
+          <DepartmentsHub 
+            selectedDepartment={selectedDepartment} 
             onSelectDepartment={handleSelectDepartment}
             onSelectFaculty={handleSelectFaculty}
           />
-          <ExamCellAndContact />
-        </main>
-      )}
+        )}
 
-      {/* PUBLIC TAB 4: FACULTY DIRECTORY */}
-      {activeTab === 'faculty' && (
-        <main>
-          <FacultyDirectory
-            selectedFaculty={selectedFaculty}
-            onSelectFaculty={handleSelectFaculty}
-            onOpenPortal={handleOpenPortal}
+        {activeTab === 'faculty' && (
+          <FacultyDirectory 
+            selectedFacultyFromParent={selectedFaculty}
+            onClearSelectedFaculty={() => setSelectedFaculty(null)}
           />
-          <ExamCellAndContact />
-        </main>
-      )}
+        )}
 
-      {/* PUBLIC TAB 5: RESEARCH & IPR */}
-      {activeTab === 'research' && (
-        <main>
-          <ResearchHub onOpenPortal={handleOpenPortal} />
-          <ExamCellAndContact />
-        </main>
-      )}
+        {activeTab === 'research' && (
+          <ResearchHub onSelectFaculty={handleSelectFaculty} />
+        )}
 
-      {/* Authentication Modal */}
+        {activeTab === 'campus' && (
+          <VirtualTour />
+        )}
+
+        {activeTab === 'governance' && (
+          <GovernanceSection />
+        )}
+
+        {activeTab === 'madam' && (
+          <MadamShowcase onSelectFaculty={handleSelectFaculty} />
+        )}
+
+        {activeTab === 'contact' && (
+          <ExamCellAndContact />
+        )}
+      </main>
+
+      {/* Authentication Modal with 2-Step OTP Verification */}
       {authModalOpen && (
         <PortalAuth
-          currentUser={currentUser}
-          onLoginSuccess={handleLoginSuccess}
           onClose={() => setAuthModalOpen(false)}
+          onLoginSuccess={handleLoginSuccess}
         />
       )}
 
-      {/* Global Search Modal */}
-      {searchModalOpen && (
-        <GlobalSearchModal
-          isOpen={searchModalOpen}
-          onClose={() => setSearchModalOpen(false)}
-          onNavigate={(targetTab, item) => {
-            setSearchModalOpen(false);
-            if (targetTab === 'portal') {
-              handleOpenPortal();
-            } else {
-              setActiveTab(targetTab);
-              if (item?.dept) setSelectedDepartment(item.dept);
-              if (item?.faculty) setSelectedFaculty(item.faculty);
-            }
-          }}
-        />
-      )}
+      {/* Global Instant Search Palette (Ctrl + K) */}
+      <GlobalSearchModal
+        isOpen={searchModalOpen}
+        onClose={() => setSearchModalOpen(false)}
+        onSelectFaculty={(fac) => {
+          setSelectedFaculty(fac);
+          setActiveTab('faculty');
+        }}
+        onSelectDepartment={(dept) => {
+          setSelectedDepartment(dept);
+          setActiveTab('departments');
+        }}
+        onNavigateTab={(tab) => setActiveTab(tab)}
+      />
     </div>
   );
 }

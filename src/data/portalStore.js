@@ -95,7 +95,7 @@ export const USER_ROLES = [
     id: 'usr_superadmin', 
     username: 'superadmin',
     label: 'Super Admin', 
-    name: 'Super Administrator', 
+    name: 'Ashu Chinthapalli', 
     email: 'ashuchinthapalli3900@gmail.com', 
     dept: 'Management & Governance', 
     role: 'SUPER_ADMIN', 

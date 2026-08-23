@@ -10,7 +10,7 @@ const USERS_SEED = [
     id: 'usr_superadmin', 
     username: 'superadmin',
     label: 'Super Admin', 
-    name: 'Super Administrator', 
+    name: 'Ashu Chinthapalli', 
     email: 'ashuchinthapalli3900@gmail.com', 
     dept: 'Management & Governance', 
     role: 'SUPER_ADMIN', 
@@ -47,6 +47,48 @@ const USERS_SEED = [
     status: 'Active',
     allowPassword: true,
     allowGoogle: true,
+    requireEmailOtp: true
+  },
+  { 
+    id: 'usr_faculty_cse', 
+    username: 'faculty_cse',
+    label: 'Faculty Member', 
+    name: 'Dr. B. Jhansi Vazram', 
+    email: 'faculty@nrtec.in', 
+    dept: 'CSE', 
+    role: 'FACULTY', 
+    canApprove: false, 
+    status: 'Active',
+    allowPassword: true,
+    allowGoogle: true,
+    requireEmailOtp: false
+  },
+  { 
+    id: 'usr_auditor', 
+    username: 'auditor',
+    label: 'Audit & Compliance Evaluator', 
+    name: 'Sri. P. Radhakrishna', 
+    email: 'auditor@nrtec.in', 
+    dept: 'Compliance & Audit', 
+    role: 'AUDITOR', 
+    canApprove: false, 
+    status: 'Active',
+    allowPassword: true,
+    allowGoogle: true,
+    requireEmailOtp: true
+  },
+  { 
+    id: 'usr_dataentry', 
+    username: 'dataentry',
+    label: 'Data Entry Operator', 
+    name: 'Academic Cell Staff', 
+    email: 'dataentry@nrtec.in', 
+    dept: 'Academic Cell', 
+    role: 'DATA_ENTRY', 
+    canApprove: false, 
+    status: 'Active',
+    allowPassword: true,
+    allowGoogle: false,
     requireEmailOtp: true
   }
 ];
