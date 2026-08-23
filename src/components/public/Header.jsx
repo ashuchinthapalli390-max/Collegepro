@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { 
   Building2, 
   Award, 
@@ -134,31 +135,66 @@ export default function Header({
       >
         <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.55rem clamp(1rem, 2.5vw, 2rem)' }}>
           {/* Logo & College Identity */}
-          <div 
+          <motion.div 
             onClick={() => { setActiveTab('home'); closeMegaMenu(); }} 
-            style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.985 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.85rem', 
+              cursor: 'pointer',
+              userSelect: 'none'
+            }}
           >
-            <img 
-              src={BRANDING_LOGOS.collegeLogo} 
-              alt="NEC Logo" 
-              style={{ width: '44px', height: '44px', objectFit: 'contain', borderRadius: '6px', border: '1px solid rgba(212, 175, 55, 0.4)' }} 
-            />
-            <div>
+            {/* Proportionally Scaled Logo Frame */}
+            <div 
+              style={{
+                position: 'relative',
+                width: 'clamp(46px, 4.2vw, 54px)',
+                height: 'clamp(46px, 4.2vw, 54px)',
+                flexShrink: 0,
+                borderRadius: '12px',
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(212, 175, 55, 0.45)',
+                boxShadow: '0 2px 10px rgba(0, 0, 0, 0.35), 0 0 14px rgba(212, 175, 55, 0.18)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '3px',
+                overflow: 'hidden'
+              }}
+            >
+              <img 
+                src={BRANDING_LOGOS.collegeLogo} 
+                alt="Narasaraopeta Engineering College Official Logo" 
+                style={{ 
+                  width: '100%', 
+                  height: '100%', 
+                  objectFit: 'contain',
+                  display: 'block'
+                }} 
+              />
+            </div>
+
+            {/* Vertically Centered College Typography */}
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
               <div style={{ 
                 fontFamily: 'Cinzel, serif', 
                 fontWeight: 800, 
-                fontSize: '1.02rem', 
+                fontSize: 'clamp(0.98rem, 1.6vw, 1.15rem)', 
                 color: '#FFFFFF', 
                 letterSpacing: '0.03em',
-                lineHeight: 1.2
+                lineHeight: 1.18
               }}>
                 NARASARAOPETA <span style={{ color: '#D4AF37' }}>ENGINEERING COLLEGE</span>
               </div>
-              <div style={{ fontSize: '0.68rem', color: '#94A3B8', fontWeight: 500 }}>
+              <div style={{ fontSize: 'clamp(0.66rem, 0.9vw, 0.72rem)', color: '#94A3B8', fontWeight: 500, marginTop: '2px' }}>
                 Autonomous Institution • Affiliated to JNTUK • Estd. 1998
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Desktop Primary Navigation Items */}
           <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '0.15rem' }}>
