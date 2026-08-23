@@ -411,6 +411,7 @@ export const BRANDING_LOGOS = {
   iic: "/assets/NEC Logos/IIC Logo.jpeg",
   iicBg: "/assets/NEC Logos/IIC Logo BG.png",
   rdLogo: "/assets/NEC Logos/R&D Logo.png",
+  rdLogoNoBg: "/assets/NEC Logos/R&D Logo Without BG.png",
 };
 
 export const FACULTY_DATA = [

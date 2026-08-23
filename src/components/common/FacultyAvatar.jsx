@@ -14,6 +14,13 @@ export default function FacultyAvatar({
 
   // If photo is valid and has not errored
   if (photo && !imageError) {
+    let safePhoto = photo;
+    try {
+      safePhoto = photo.startsWith('http') ? photo : encodeURI(photo);
+    } catch {
+      safePhoto = photo;
+    }
+
     return (
       <div 
         style={{ 
@@ -28,8 +35,9 @@ export default function FacultyAvatar({
         className={className}
       >
         <img
-          src={photo}
+          src={safePhoto}
           alt={name}
+          loading="lazy"
           onError={() => setImageError(true)}
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />

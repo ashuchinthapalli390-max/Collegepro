@@ -12,6 +12,7 @@ import {
   X
 } from 'lucide-react';
 import { LEADERSHIP_PROFILES, COLLEGE_INFO } from '../../data/masterData.js';
+import { NECImage } from '../media/index.js';
 
 export default function LeadershipSection() {
   const [selectedLeader, setSelectedLeader] = useState(null);
@@ -58,18 +59,20 @@ export default function LeadershipSection() {
               padding: '8px',
               borderRadius: '20px',
               background: 'linear-gradient(135deg, #F1C40F 0%, #D4AF37 50%, #B38600 100%)',
-              boxShadow: '0 12px 35px rgba(212, 175, 55, 0.3)'
+              boxShadow: '0 12px 35px rgba(212, 175, 55, 0.3)',
+              width: '100%',
+              maxWidth: '300px',
+              margin: '0 auto'
             }}>
-              <img
+              <NECImage
                 src={chairman.photo}
                 alt={chairman.name}
+                aspectRatio="4/5"
+                fallbackTitle={chairman.name}
                 style={{
-                  width: '100%',
-                  maxWidth: '300px',
-                  height: '350px',
-                  objectFit: 'cover',
                   borderRadius: '14px',
-                  display: 'block'
+                  display: 'block',
+                  height: '350px'
                 }}
               />
             </div>
@@ -147,13 +150,14 @@ export default function LeadershipSection() {
                     background: '#070F1E',
                     position: 'relative'
                   }}>
-                    <img
+                    <NECImage
                       src={leader.photo}
                       alt={leader.name}
+                      aspectRatio="1/1"
+                      fallbackTitle={leader.name}
                       style={{
                         width: '100%',
-                        height: '100%',
-                        objectFit: 'cover'
+                        height: '100%'
                       }}
                     />
                     <div style={{

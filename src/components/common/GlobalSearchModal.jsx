@@ -11,7 +11,8 @@ import {
   ArrowRight,
   Sparkles
 } from 'lucide-react';
-import { FACULTY_DATA, DEPARTMENTS, CAMPUS_VIDEOS } from '../../data/masterData.js';
+import { FACULTY_DATA, DEPARTMENTS } from '../../data/masterData.js';
+import { MEDIA_ASSETS, getMediaByType } from '../../data/mediaAssets.js';
 import { getPublications, getPatents, getStudentAchievements } from '../../data/portalStore.js';
 
 export default function GlobalSearchModal({ 
@@ -72,7 +73,7 @@ export default function GlobalSearchModal({
     pat.facultyName.toLowerCase().includes(q)
   ).slice(0, 3) : [];
 
-  const matchingVideos = q ? CAMPUS_VIDEOS.filter(v => 
+  const matchingVideos = q ? getMediaByType('VIDEO').filter(v => 
     v.title.toLowerCase().includes(q) || 
     v.category.toLowerCase().includes(q)
   ).slice(0, 3) : [];
