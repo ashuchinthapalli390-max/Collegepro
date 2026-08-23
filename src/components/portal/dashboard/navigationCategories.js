@@ -90,7 +90,8 @@ export const NAVIGATION_CATEGORIES = [
       { id: 'publications', label: 'Journal & Conference Papers', icon: FileText, badge: '1,420+' },
       { id: 'patents', label: 'Patents & IPR Records', icon: Lightbulb, badge: '48' },
       { id: 'funded-projects', label: 'Funded Research Projects', icon: Briefcase },
-      { id: 'sync-publications', label: 'Scopus / Scholar Sync', icon: Sparkles }
+      { id: 'research-discovery', label: 'Research Discovery & Local Index', icon: Sparkles, badge: 'OpenAlex' },
+      { id: 'research-data-sources', label: 'Research Datasets & Index', icon: Database }
     ]
   },
   {

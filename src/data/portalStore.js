@@ -60,7 +60,9 @@ export const STORAGE_KEYS = {
   EMAIL_EVENTS: 'nec_portal_email_events_v2',
   AUTH_SETTINGS: 'nec_portal_auth_settings_v2',
   EMAIL_TEMPLATES: 'nec_portal_email_templates_v2',
-  FACULTY_RESEARCH_PROFILES: 'nec_portal_faculty_research_profiles_v2'
+  FACULTY_RESEARCH_PROFILES: 'nec_portal_faculty_research_profiles_v2',
+  DATASET_VERSIONS: 'nec_portal_dataset_versions_v2',
+  METRIC_SNAPSHOTS: 'nec_portal_metric_snapshots_v2'
 };
 
 // Initial Provisioned Accounts (Zero public sign-up)
@@ -1347,8 +1349,15 @@ export function saveFacultyResearchProfile(facultyId, profileData, user) {
     orcid: (profileData.orcid || '').trim(),
     scopusAuthorId: (profileData.scopusAuthorId || '').trim(),
     wosResearcherId: (profileData.wosResearcherId || '').trim(),
+    openAlexAuthorId: (profileData.openAlexAuthorId || '').trim(),
     googleScholarId: (profileData.googleScholarId || '').trim(),
     vidwanId: (profileData.vidwanId || '').trim(),
+    openAlexMatchStatus: profileData.openAlexMatchStatus || 'NOT_DISCOVERED',
+    openAlexWorksCount: profileData.openAlexWorksCount || 0,
+    openAlexCitedByCount: profileData.openAlexCitedByCount || 0,
+    openAlexHIndex: profileData.openAlexHIndex || 0,
+    profileVerifiedBy: user?.name || null,
+    profileVerifiedAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     updatedBy: user?.name || 'System'
   };
@@ -1359,8 +1368,95 @@ export function saveFacultyResearchProfile(facultyId, profileData, user) {
     profiles.push(updated);
   }
   saveStore(STORAGE_KEYS.FACULTY_RESEARCH_PROFILES, profiles);
-  addAuditLog('UPDATE_RESEARCH_PROFILE', 'Publications', `Updated research identifiers for faculty ID: ${facultyId}`, user);
+  addAuditLog('UPDATE_RESEARCH_PROFILE', 'Publications', `Updated research profile for faculty ID: ${facultyId}`, user);
   return updated;
+}
+
+export function linkFacultyResearcher(facultyId, candidate, user) {
+  if (!facultyId || !candidate) return;
+  const profileData = {
+    openAlexAuthorId: candidate.openAlexAuthorId || candidate.openAlexShortId || '',
+    orcid: candidate.orcid || '',
+    openAlexMatchStatus: 'MANUALLY_CONFIRMED',
+    openAlexWorksCount: candidate.worksCount || 0,
+    openAlexCitedByCount: candidate.citedByCount || 0,
+    openAlexHIndex: candidate.hIndex || 0
+  };
+  const res = saveFacultyResearchProfile(facultyId, profileData, user);
+  addAuditLog('RESEARCH_PROFILE_LINKED', 'Publications', `Linked faculty ID ${facultyId} to OpenAlex Author: ${candidate.canonicalName} (${candidate.openAlexShortId || candidate.openAlexAuthorId})`, user);
+  return res;
+}
+
+export function unlinkFacultyResearcher(facultyId, user) {
+  if (!facultyId) return;
+  const profiles = loadStore(STORAGE_KEYS.FACULTY_RESEARCH_PROFILES, []);
+  const idx = profiles.findIndex(p => p.facultyId === facultyId);
+  if (idx >= 0) {
+    profiles[idx].openAlexAuthorId = '';
+    profiles[idx].openAlexMatchStatus = 'NOT_DISCOVERED';
+    profiles[idx].updatedAt = new Date().toISOString();
+    profiles[idx].updatedBy = user?.name || 'System';
+    saveStore(STORAGE_KEYS.FACULTY_RESEARCH_PROFILES, profiles);
+    addAuditLog('RESEARCH_PROFILE_UNLINKED', 'Publications', `Unlinked research profile for faculty ID: ${facultyId}`, user);
+  }
+}
+
+export function getDatasetVersions() {
+  const defaultVersions = [
+    {
+      id: 'ds_openalex_2026_06',
+      source: 'OPENALEX',
+      name: 'OpenAlex Public Snapshot (Parquet)',
+      datasetVersion: '2026-06-01',
+      publishedDate: '2026-06-01',
+      status: 'READY',
+      totalGlobalRecords: '649M Works / 112M Authors',
+      relevantRecordCount: 486,
+      checksum: 'sha256:7f4a9b2c8e1d3f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a',
+      ingestedAt: '2026-06-15T08:30:00Z',
+      active: true
+    },
+    {
+      id: 'ds_crossref_2026_03',
+      source: 'CROSSREF',
+      name: 'Crossref Annual Public Data File',
+      datasetVersion: '2026-03-31',
+      publishedDate: '2026-03-31',
+      status: 'READY',
+      totalGlobalRecords: '180M DOI Records',
+      relevantRecordCount: 312,
+      checksum: 'sha256:3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d',
+      ingestedAt: '2026-06-16T10:15:00Z',
+      active: true
+    },
+    {
+      id: 'ds_orcid_2025_annual',
+      source: 'ORCID',
+      name: 'ORCID Annual Public Data File (CC0)',
+      datasetVersion: '2025-10-01',
+      publishedDate: '2025-10-01',
+      status: 'READY',
+      totalGlobalRecords: '21M Public Records',
+      relevantRecordCount: 38,
+      checksum: 'sha256:9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b',
+      ingestedAt: '2026-06-16T14:45:00Z',
+      active: true
+    }
+  ];
+  return loadStore(STORAGE_KEYS.DATASET_VERSIONS, defaultVersions);
+}
+
+export function saveDatasetVersion(version, user) {
+  const versions = getDatasetVersions();
+  const idx = versions.findIndex(v => v.id === version.id);
+  if (idx >= 0) {
+    versions[idx] = { ...versions[idx], ...version, updatedAt: new Date().toISOString() };
+  } else {
+    versions.push({ ...version, id: `ds_${Date.now()}`, createdAt: new Date().toISOString() });
+  }
+  saveStore(STORAGE_KEYS.DATASET_VERSIONS, versions);
+  addAuditLog('DATASET_INDEXED', 'Research Data', `Updated dataset version record: ${version.name} (${version.datasetVersion})`, user);
+  return versions;
 }
 
 // ─────────────────────────────────────────────────────────────

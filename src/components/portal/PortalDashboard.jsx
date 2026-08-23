@@ -111,6 +111,8 @@ import StaffProfilesManager from './governance/StaffProfilesManager.jsx';
 import AcademicCouncilManager from './governance/AcademicCouncilManager.jsx';
 import RegulationsHubManager from './governance/RegulationsHubManager.jsx';
 import FundedProjectsManager from './research/FundedProjectsManager.jsx';
+import ResearchDiscoveryView from './research/ResearchDiscoveryView.jsx';
+import ResearchDataSourcesView from './research/ResearchDataSourcesView.jsx';
 import { NaacPortalManager, NbaTier1Manager, NirfDataManager, ExportHubManager } from './compliance/ComplianceHubs.jsx';
 import { IamMatrixManager, IamSessionsManager, IamSettingsManager } from './iam/IamModules.jsx';
 import PortalModuleFallback from './common/PortalModuleFallback.jsx';
@@ -682,11 +684,30 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
           {/* ────────────────────────────────────────────────────────── */}
           {/* VIEW 10: RESEARCH PUBLICATIONS SUITE */}
           {/* ────────────────────────────────────────────────────────── */}
-          {(activeModule === 'publications' || activeModule === 'research-papers' || activeModule === 'sync-publications') && (
+          {(activeModule === 'publications' || activeModule === 'research-papers') && (
             <PublicationsManager
               currentUser={currentUser}
               onDataChange={refreshData}
-              onOpenSyncModal={() => setSyncModalOpen(true)}
+              onOpenSyncModal={() => setActiveModule('research-discovery')}
+            />
+          )}
+
+          {/* ────────────────────────────────────────────────────────── */}
+          {/* VIEW 10B: RESEARCH DISCOVERY & LOCAL SCHOLARLY INDEX */}
+          {/* ────────────────────────────────────────────────────────── */}
+          {(activeModule === 'research-discovery' || activeModule === 'sync-publications') && (
+            <ResearchDiscoveryView
+              currentUser={currentUser}
+              onNavigate={(mod) => setActiveModule(mod)}
+            />
+          )}
+
+          {/* ────────────────────────────────────────────────────────── */}
+          {/* VIEW 10C: RESEARCH DATA SOURCES & DATASET MANAGEMENT */}
+          {/* ────────────────────────────────────────────────────────── */}
+          {activeModule === 'research-data-sources' && (
+            <ResearchDataSourcesView
+              currentUser={currentUser}
             />
           )}
 
@@ -867,6 +888,8 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
             'patents',
             'ipr-patents',
             'funded-projects',
+            'research-discovery',
+            'research-data-sources',
             'sync-publications',
             'mous-collaborations',
             'mous',
