@@ -1,5 +1,6 @@
 /**
  * Clarivate Web of Science (WoS) Integration Service
+ * Honest API adapter with zero mock fallbacks.
  */
 
 /**
@@ -25,40 +26,100 @@ export function normalizeWosResearcherId(rawId) {
 /**
  * Fetches Web of Science researcher profile and documents
  * @param {string} rawWosId 
- * @returns {Promise<{success: boolean, profile?: object, documents?: Array, error?: string}>}
+ * @param {string} apiKey (optional server key)
+ * @returns {Promise<{success: boolean, status: string, profile?: object, documents?: Array, error?: string}>}
  */
-export async function fetchWosData(rawWosId) {
+export async function fetchWosData(rawWosId, apiKey = null) {
   const wosId = normalizeWosResearcherId(rawWosId);
   if (!isValidWosResearcherId(wosId)) {
-    return { success: false, error: 'Invalid Web of Science ResearcherID. Expected format: ABC-1234-2024.' };
+    return { 
+      success: false, 
+      status: 'INVALID_ID',
+      error: 'Invalid Web of Science ResearcherID. Expected format: ABC-1234-2024.' 
+    };
   }
 
-  // Institutional record adapter
-  return {
-    success: true,
-    profile: {
-      wosResearcherId: wosId,
-      fullName: 'Verified WoS Researcher',
-      totalPublications: 24,
-      totalTimesCited: 310,
-      hIndex: 9,
-      verifiedAt: new Date().toISOString()
-    },
-    documents: [
-      {
-        id: `WOS-${wosId}-01`,
-        wosUid: `WOS:0009${wosId.replace(/-/g, '')}01`,
-        title: 'Optimized Deep Neural Architecture for Real-Time Edge Video Analytics',
-        publicationType: 'Journal Article',
-        journalName: 'IEEE Transactions on Consumer Electronics',
-        publicationYear: 2025,
-        publicationDate: '2025-06-15',
-        doi: '10.1109/TCE.2025.3421098',
-        wosIndexed: 'Yes',
-        wosCitations: 11,
-        source: 'WOS',
-        url: 'https://doi.org/10.1109/TCE.2025.3421098'
+  const activeApiKey = apiKey || (typeof process !== 'undefined' ? process.env?.WOS_API_KEY : null);
+
+  if (!activeApiKey) {
+    // Honest status reporting
+    return {
+      success: false,
+      status: 'NOT_CONFIGURED',
+      error: 'Clarivate Web of Science API key is not configured in institutional server environment.'
+    };
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+    const response = await fetch(`https://api.clarivate.com/api/wos?databaseId=WOS&usrQuery=AI=${encodeURIComponent(wosId)}&count=25&firstRecord=1`, {
+      headers: {
+        'Accept': 'application/json',
+        'X-ApiKey': activeApiKey
+      },
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        return {
+          success: false,
+          status: 'LIMITED_ACCESS',
+          error: `Web of Science API access restricted (HTTP ${response.status}). Check institutional license.`
+        };
       }
-    ]
-  };
+      return {
+        success: false,
+        status: 'ERROR',
+        error: `Web of Science API returned HTTP ${response.status}`
+      };
+    }
+
+    const json = await response.json();
+    const records = json?.Data?.Records?.records?.REC || [];
+
+    const documents = records.map((rec, idx) => {
+      const title = rec?.static_data?.summary?.titles?.title?.find(t => t.type === 'item')?.content || 'Untitled WoS Work';
+      const pubInfo = rec?.static_data?.summary?.pub_info;
+      const pubYear = pubInfo?.pubyear ? parseInt(pubInfo.pubyear, 10) : new Date().getFullYear();
+      const doi = rec?.dynamic_data?.cluster_related?.identifiers?.identifier?.find(i => i.type === 'doi')?.value || '';
+      const uid = rec?.UID || `WOS:${wosId}-${idx + 1}`;
+
+      return {
+        id: `WOS-${uid}`,
+        wosUid: uid,
+        title: title,
+        publicationType: 'Journal Article',
+        journalName: pubInfo?.source || '',
+        publicationYear: pubYear,
+        publicationDate: `${pubYear}-01-01`,
+        doi: doi,
+        wosIndexed: 'Yes',
+        wosCitations: parseInt(rec?.dynamic_data?.citation_related?.tc_list?.silo_tc?.local_count || '0', 10),
+        source: 'WOS',
+        url: doi ? `https://doi.org/${doi}` : ''
+      };
+    });
+
+    return {
+      success: true,
+      status: 'VERIFIED',
+      profile: {
+        wosResearcherId: wosId,
+        fullName: 'Web of Science Researcher',
+        totalPublications: documents.length,
+        verifiedAt: new Date().toISOString()
+      },
+      documents: documents
+    };
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      return { success: false, status: 'TIMEOUT', error: 'Web of Science request timed out.' };
+    }
+    return { success: false, status: 'ERROR', error: err.message || 'Failed to fetch Web of Science data' };
+  }
 }

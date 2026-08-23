@@ -59,7 +59,8 @@ export const STORAGE_KEYS = {
   LOGIN_EVENTS: 'nec_portal_login_events_v2',
   EMAIL_EVENTS: 'nec_portal_email_events_v2',
   AUTH_SETTINGS: 'nec_portal_auth_settings_v2',
-  EMAIL_TEMPLATES: 'nec_portal_email_templates_v2'
+  EMAIL_TEMPLATES: 'nec_portal_email_templates_v2',
+  FACULTY_RESEARCH_PROFILES: 'nec_portal_faculty_research_profiles_v2'
 };
 
 // Initial Provisioned Accounts (Zero public sign-up)
@@ -1311,6 +1312,55 @@ export function softDeletePublication(id, user) {
     addAuditLog('DELETE (Soft)', 'Publications', `Soft-deleted publication ID: ${id}`, user);
   }
   return items.filter(i => !i.isDeleted).map((it, idx) => normalizePublicationRecord(it, idx));
+}
+
+export function getFacultyResearchProfile(facultyId) {
+  if (!facultyId) return { orcid: '', scopusAuthorId: '', wosResearcherId: '', googleScholarId: '', vidwanId: '' };
+  const profiles = loadStore(STORAGE_KEYS.FACULTY_RESEARCH_PROFILES, []);
+  const found = profiles.find(p => p.facultyId === facultyId);
+  if (found) {
+    return {
+      orcid: found.orcid || '',
+      scopusAuthorId: found.scopusAuthorId || '',
+      wosResearcherId: found.wosResearcherId || '',
+      googleScholarId: found.googleScholarId || '',
+      vidwanId: found.vidwanId || '',
+      lastSyncedAt: found.lastSyncedAt || null
+    };
+  }
+  return {
+    orcid: '',
+    scopusAuthorId: '',
+    wosResearcherId: '',
+    googleScholarId: '',
+    vidwanId: '',
+    lastSyncedAt: null
+  };
+}
+
+export function saveFacultyResearchProfile(facultyId, profileData, user) {
+  if (!facultyId) return;
+  const profiles = loadStore(STORAGE_KEYS.FACULTY_RESEARCH_PROFILES, []);
+  const idx = profiles.findIndex(p => p.facultyId === facultyId);
+  const updated = {
+    facultyId,
+    orcid: (profileData.orcid || '').trim(),
+    scopusAuthorId: (profileData.scopusAuthorId || '').trim(),
+    wosResearcherId: (profileData.wosResearcherId || '').trim(),
+    googleScholarId: (profileData.googleScholarId || '').trim(),
+    vidwanId: (profileData.vidwanId || '').trim(),
+    updatedAt: new Date().toISOString(),
+    updatedBy: user?.name || 'System'
+  };
+
+  if (idx >= 0) {
+    profiles[idx] = { ...profiles[idx], ...updated };
+  } else {
+    profiles.push(updated);
+  }
+  saveStore(STORAGE_KEYS.FACULTY_RESEARCH_PROFILES, profiles);
+  addAuditLog('UPDATE_RESEARCH_PROFILE', 'Publications', `Updated research identifiers for faculty ID: ${facultyId}`, user);
+  return updated;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -3199,80 +3249,6 @@ export function checkPublicationDuplicate(candidatePaper, existingPapers = []) {
   }
 
   return { isDuplicate: false };
-}
-
-export async function simulateResearchProfileSync(faculty, onProgress) {
-  if (onProgress) onProgress('Connecting to ORCID Public API (https://pub.orcid.org/v3.0)...');
-  await new Promise(r => setTimeout(r, 600));
-
-  if (onProgress) onProgress('Querying Elsevier Scopus Author Search (AuthorID: ' + (faculty?.scopus || '57215069303') + ')...');
-  await new Promise(r => setTimeout(r, 600));
-
-  if (onProgress) onProgress('Analyzing Web of Science Core Collection & Crossref DOIs...');
-  await new Promise(r => setTimeout(r, 600));
-
-  if (onProgress) onProgress('Executing 4-tier real-time duplicate prevention & normalization...');
-  await new Promise(r => setTimeout(r, 500));
-
-  const mockExternalWorks = [
-    {
-      title: "Blockchain-Empowered Decentralized Key Management in 6G Heterogeneous Networks",
-      firstAuthor: faculty?.name || "Dr. B. Jhansi Vazram",
-      secondAuthor: "V. Venkata Rao",
-      journalConference: "IEEE Transactions on Information Forensics and Security",
-      publicationType: "Journal",
-      publicationDate: "2025-02-10",
-      academicYear: "2024-25",
-      department: faculty?.department || "IT",
-      doi: "10.1109/TIFS.2025.3401129",
-      scopusEid: "2-s2.0-85199201923",
-      scopusIndexed: "Yes",
-      wosIndexed: "Yes",
-      importedSource: "IEEE / Scopus API"
-    },
-    {
-      title: "Optimized Routing Protocols in Wireless Sensor Networks for Agricultural IoT Applications",
-      firstAuthor: faculty?.name || "Dr. B. Jhansi Vazram",
-      journalConference: "Wireless Personal Communications (Springer)",
-      publicationType: "Journal",
-      publicationDate: "2024-11-15",
-      academicYear: "2024-25",
-      department: faculty?.department || "IT",
-      doi: "10.1007/s11277-024-11420-1",
-      scopusEid: "2-s2.0-85191029381",
-      scopusIndexed: "Yes",
-      wosIndexed: "Yes",
-      importedSource: "ORCID Works API"
-    },
-    {
-      title: "Explainable Deep Convolutional Neural Networks for Automated Crop Disease Classification",
-      firstAuthor: faculty?.name || "Dr. B. Jhansi Vazram",
-      journalConference: "Computers and Electronics in Agriculture (Elsevier)",
-      publicationType: "Journal",
-      publicationDate: "2024-05-18",
-      academicYear: "2023-24",
-      department: faculty?.department || "IT",
-      doi: "10.1016/j.compag.2024.108920",
-      scopusEid: "2-s2.0-85189203912",
-      scopusIndexed: "Yes",
-      wosIndexed: "Yes",
-      importedSource: "Scopus API"
-    }
-  ];
-
-  const existingRepo = getPublications(true);
-  return mockExternalWorks.map(paper => {
-    const dupCheck = checkPublicationDuplicate(paper, existingRepo);
-    return {
-      ...paper,
-      id: 'FETCHED-' + Math.floor(Math.random() * 100000),
-      isDuplicate: dupCheck.isDuplicate,
-      duplicateReason: dupCheck.reason,
-      existingRecord: dupCheck.existingRecord,
-      stageStatus: dupCheck.isDuplicate ? 'Duplicate Found' : 'New Paper Ready to Import',
-      selectedForImport: !dupCheck.isDuplicate
-    };
-  });
 }
 
 // -------------------------------------------------------------

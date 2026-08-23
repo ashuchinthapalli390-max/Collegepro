@@ -1,5 +1,6 @@
 /**
  * Elsevier Scopus Author and Document Integration Service
+ * Uses official Elsevier API (when configured) with zero mock fallbacks.
  */
 
 /**
@@ -23,94 +24,145 @@ export function normalizeScopusAuthorId(rawId) {
 }
 
 /**
- * Fetches Scopus author profile and documents
+ * Fetches Scopus author profile and documents from official Elsevier APIs
  * @param {string} rawAuthorId 
  * @param {string} apiKey (optional server key)
- * @returns {Promise<{success: boolean, profile?: object, documents?: Array, error?: string}>}
+ * @returns {Promise<{success: boolean, status: string, profile?: object, documents?: Array, error?: string}>}
  */
 export async function fetchScopusData(rawAuthorId, apiKey = null) {
   const authorId = normalizeScopusAuthorId(rawAuthorId);
   if (!isValidScopusAuthorId(authorId)) {
-    return { success: false, error: 'Invalid Scopus Author ID. Must be a 10-11 digit numeric identifier.' };
+    return { 
+      success: false, 
+      status: 'INVALID_ID',
+      error: 'Invalid Scopus Author ID. Must be a 10-11 digit numeric identifier.' 
+    };
   }
 
-  // If server API key is configured
-  if (apiKey) {
-    try {
-      const response = await fetch(`https://api.elsevier.com/content/author/author_id/${authorId}?view=ENHANCED`, {
-        headers: {
-          'Accept': 'application/json',
-          'X-ELS-APIKey': apiKey
-        }
-      });
-      if (response.ok) {
-        const json = await response.json();
-        // Parse enhanced author profile
-        const authorProfile = json['author-retrieval-response']?.[0];
-        const docCount = parseInt(authorProfile?.['coredata']?.['document-count'] || '0', 10);
-        const citedBy = parseInt(authorProfile?.['coredata']?.['cited-by-count'] || '0', 10);
-        const hIndex = parseInt(authorProfile?.['h-index'] || '0', 10);
-        
+  // Check for server-configured or environment Scopus API key
+  const activeApiKey = apiKey || (typeof process !== 'undefined' ? process.env?.SCOPUS_API_KEY : null);
+
+  if (!activeApiKey) {
+    // Honest status reporting: API key not configured
+    return {
+      success: false,
+      status: 'NOT_CONFIGURED',
+      error: 'Elsevier Scopus API key is not configured in institutional server environment.'
+    };
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+    const response = await fetch(`https://api.elsevier.com/content/author/author_id/${authorId}?view=ENHANCED`, {
+      headers: {
+        'Accept': 'application/json',
+        'X-ELS-APIKey': activeApiKey
+      },
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
         return {
-          success: true,
-          profile: {
-            scopusAuthorId: authorId,
-            fullName: authorProfile?.['author-profile']?.['preferred-name']?.['indexed-name'] || 'Scopus Author',
-            documentCount: docCount,
-            citationCount: citedBy,
-            hIndex: hIndex,
-            subjectAreas: ['Computer Science', 'Engineering']
-          },
-          documents: []
+          success: false,
+          status: 'LIMITED_ACCESS',
+          error: `Scopus API access restricted (HTTP ${response.status}). Check institutional entitlement.`
         };
       }
-    } catch (err) {
-      console.warn('Scopus API lookup error:', err);
-    }
-  }
-
-  // Authoritative fallback adapter for institutional records
-  return {
-    success: true,
-    profile: {
-      scopusAuthorId: authorId,
-      fullName: 'Verified Scopus Researcher',
-      documentCount: 28,
-      citationCount: 420,
-      hIndex: 11,
-      subjectAreas: ['Computer Science', 'Artificial Intelligence', 'Electronics']
-    },
-    documents: [
-      {
-        id: `SCOPUS-${authorId}-01`,
-        scopusEid: `2-s2.0-${authorId}01`,
-        title: 'Optimized Deep Neural Architecture for Real-Time Edge Video Analytics',
-        publicationType: 'Journal Article',
-        journalName: 'IEEE Transactions on Consumer Electronics',
-        publicationYear: 2025,
-        publicationDate: '2025-06-15',
-        doi: '10.1109/TCE.2025.3421098',
-        scopusIndexed: 'Yes',
-        wosIndexed: 'Yes',
-        scopusCitations: 14,
-        source: 'SCOPUS',
-        url: 'https://doi.org/10.1109/TCE.2025.3421098'
-      },
-      {
-        id: `SCOPUS-${authorId}-02`,
-        scopusEid: `2-s2.0-${authorId}02`,
-        title: 'Fault-Tolerant Hybrid Routing Protocol for Urban IoT Sensing Grids',
-        publicationType: 'Journal Article',
-        journalName: 'Elsevier Computer Communications',
-        publicationYear: 2024,
-        publicationDate: '2024-11-10',
-        doi: '10.1016/j.comcom.2024.108921',
-        scopusIndexed: 'Yes',
-        wosIndexed: 'Yes',
-        scopusCitations: 22,
-        source: 'SCOPUS',
-        url: 'https://doi.org/10.1016/j.comcom.2024.108921'
+      if (response.status === 429) {
+        return {
+          success: false,
+          status: 'RATE_LIMITED',
+          error: 'Scopus API rate limit reached. Please try again later.'
+        };
       }
-    ]
-  };
+      if (response.status === 404) {
+        return {
+          success: false,
+          status: 'NOT_FOUND',
+          error: `Scopus author profile ${authorId} not found.`
+        };
+      }
+      return {
+        success: false,
+        status: 'ERROR',
+        error: `Scopus API returned HTTP ${response.status}`
+      };
+    }
+
+    const json = await response.json();
+    const authorProfile = json['author-retrieval-response']?.[0];
+    if (!authorProfile) {
+      return {
+        success: false,
+        status: 'NOT_FOUND',
+        error: 'No author retrieval response returned by Scopus.'
+      };
+    }
+
+    const docCount = parseInt(authorProfile?.['coredata']?.['document-count'] || '0', 10);
+    const citedBy = parseInt(authorProfile?.['coredata']?.['cited-by-count'] || '0', 10);
+    const hIndex = parseInt(authorProfile?.['h-index'] || '0', 10);
+    const preferredName = authorProfile?.['author-profile']?.['preferred-name'];
+    const fullName = `${preferredName?.['given-name'] || ''} ${preferredName?.['surname'] || ''}`.trim() || 'Scopus Author';
+    
+    // Now fetch real author documents using Scopus Search API if documents exist
+    let documents = [];
+    if (docCount > 0) {
+      try {
+        const searchResp = await fetch(`https://api.elsevier.com/content/search/scopus?query=AU-ID(${authorId})&count=25`, {
+          headers: {
+            'Accept': 'application/json',
+            'X-ELS-APIKey': activeApiKey
+          }
+        });
+        if (searchResp.ok) {
+          const searchJson = await searchResp.json();
+          const entries = searchJson['search-results']?.['entry'] || [];
+          documents = entries.map((e, idx) => ({
+            id: `SCOPUS-${authorId}-${idx + 1}`,
+            scopusEid: e['eid'] || '',
+            title: e['dc:title'] || 'Untitled Scopus Document',
+            publicationType: e['subtypeDescription'] || 'Journal Article',
+            journalName: e['prism:publicationName'] || '',
+            publicationYear: parseInt((e['prism:coverDate'] || '').substring(0, 4), 10) || new Date().getFullYear(),
+            publicationDate: e['prism:coverDate'] || '',
+            doi: e['prism:doi'] || '',
+            volume: e['prism:volume'] || '',
+            issue: e['prism:issueIdentifier'] || '',
+            pages: e['prism:pageRange'] || '',
+            scopusIndexed: 'Yes',
+            scopusCitations: parseInt(e['citedby-count'] || '0', 10),
+            source: 'SCOPUS',
+            url: e['prism:doi'] ? `https://doi.org/${e['prism:doi']}` : (e['eid'] ? `https://www.scopus.com/record/display.uri?eid=${e['eid']}&origin=resultslist` : '')
+          }));
+        }
+      } catch (err) {
+        console.warn('Scopus document search warning:', err);
+      }
+    }
+
+    return {
+      success: true,
+      status: 'VERIFIED',
+      profile: {
+        scopusAuthorId: authorId,
+        fullName: fullName,
+        documentCount: docCount,
+        citationCount: citedBy,
+        hIndex: hIndex,
+        subjectAreas: []
+      },
+      documents: documents
+    };
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      return { success: false, status: 'TIMEOUT', error: 'Scopus API request timed out.' };
+    }
+    return { success: false, status: 'ERROR', error: err.message || 'Failed to fetch Scopus data' };
+  }
 }

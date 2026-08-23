@@ -517,7 +517,7 @@ export default function PublicationWizardModal({
 
                 <FormField label="PUBLICATION TITLE *" error={errors.title}>
                   <Input
-                    placeholder="e.g. Optimized Deep Neural Architecture for Real-Time Edge Video Analytics"
+                    placeholder="Enter official paper title as published..."
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     error={!!errors.title}

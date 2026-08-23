@@ -1,6 +1,7 @@
 /**
  * Unified Multi-Source Research Profile & Publication Synchronization Engine
  * Connects ORCID, Elsevier Scopus, Clarivate Web of Science, and Crossref
+ * ZERO mock data — strictly reflects genuine provider API payloads.
  */
 
 import { fetchCrossrefMetadata, normalizeDOI, isValidDOI } from './doiService.js';
@@ -27,7 +28,7 @@ export function normalizeTitle(title) {
  * Executes a full multi-source research discovery and deduplication pipeline
  * @param {object} identifiers { orcid, scopusAuthorId, wosResearcherId }
  * @param {function} onProgress (statusObj) => void
- * @returns {Promise<{success: boolean, summary: object, candidates: Array, profiles: object, error?: string}>}
+ * @returns {Promise<{success: boolean, summary: object, candidates: Array, profiles: object, sourceStatuses: object, error?: string}>}
  */
 export async function runResearchSyncJob(identifiers = {}, onProgress = null) {
   const emit = (stage, message, percent) => {
@@ -41,7 +42,7 @@ export async function runResearchSyncJob(identifiers = {}, onProgress = null) {
   if (!orcid && !scopusId && !wosId) {
     return {
       success: false,
-      error: 'Please provide at least one valid researcher identifier (ORCID, Scopus Author ID, or WoS ResearcherID).'
+      error: 'Please provide at least one valid researcher identifier (ORCID, Scopus Author ID, or WoS ResearcherID) to start synchronization.'
     };
   }
 
@@ -51,52 +52,69 @@ export async function runResearchSyncJob(identifiers = {}, onProgress = null) {
     wos: null
   };
 
+  const sourceStatuses = {
+    orcid: orcid ? 'VERIFYING' : 'NOT_CONFIGURED',
+    scopus: scopusId ? 'VERIFYING' : 'NOT_CONFIGURED',
+    wos: wosId ? 'VERIFYING' : 'NOT_CONFIGURED',
+    crossref: 'READY'
+  };
+
   const collectedWorks = [];
 
   try {
     // ──────── STAGE 1: ORCID DISCOVERY ────────
     if (orcid) {
-      emit('ORCID', `Connecting to official ORCID registry for ${orcid}...`, 15);
+      emit('ORCID', `Connecting to official ORCID Public API v3.0 for ${orcid}...`, 15);
       const orcidRes = await fetchOrcidData(orcid);
       if (orcidRes.success) {
         profiles.orcid = orcidRes.profile;
+        sourceStatuses.orcid = 'VERIFIED';
         if (Array.isArray(orcidRes.works)) {
           collectedWorks.push(...orcidRes.works);
         }
-        emit('ORCID', `✓ Loaded ORCID profile and ${orcidRes.works?.length || 0} works`, 30);
+        emit('ORCID', `✓ Loaded ORCID profile and ${orcidRes.works?.length || 0} public works`, 30);
       } else {
+        sourceStatuses.orcid = 'ERROR';
         emit('ORCID', `⚠ ORCID Notice: ${orcidRes.error}`, 30);
       }
     }
 
     // ──────── STAGE 2: SCOPUS DISCOVERY ────────
     if (scopusId) {
-      emit('SCOPUS', `Querying Elsevier Scopus Author ID ${scopusId}...`, 40);
+      emit('SCOPUS', `Checking Elsevier Scopus Author ID ${scopusId}...`, 40);
       const scopusRes = await fetchScopusData(scopusId);
       if (scopusRes.success) {
         profiles.scopus = scopusRes.profile;
+        sourceStatuses.scopus = 'VERIFIED';
         if (Array.isArray(scopusRes.documents)) {
           collectedWorks.push(...scopusRes.documents);
         }
-        emit('SCOPUS', `✓ Loaded Scopus author profile and ${scopusRes.documents?.length || 0} documents`, 55);
+        emit('SCOPUS', `✓ Loaded Scopus profile and ${scopusRes.documents?.length || 0} documents`, 55);
+      } else {
+        sourceStatuses.scopus = scopusRes.status || 'LIMITED_ACCESS';
+        emit('SCOPUS', `ℹ Scopus Notice: ${scopusRes.error}`, 55);
       }
     }
 
     // ──────── STAGE 3: WEB OF SCIENCE DISCOVERY ────────
     if (wosId) {
-      emit('WOS', `Retrieving Web of Science ResearcherID ${wosId}...`, 60);
+      emit('WOS', `Checking Web of Science ResearcherID ${wosId}...`, 60);
       const wosRes = await fetchWosData(wosId);
       if (wosRes.success) {
         profiles.wos = wosRes.profile;
+        sourceStatuses.wos = 'VERIFIED';
         if (Array.isArray(wosRes.documents)) {
           collectedWorks.push(...wosRes.documents);
         }
         emit('WOS', `✓ Loaded WoS profile and ${wosRes.documents?.length || 0} documents`, 70);
+      } else {
+        sourceStatuses.wos = wosRes.status || 'NOT_CONFIGURED';
+        emit('WOS', `ℹ Web of Science Notice: ${wosRes.error}`, 70);
       }
     }
 
     // ──────── STAGE 4: CROSSREF DOI METADATA ENRICHMENT ────────
-    emit('CROSSREF', 'Enriching publication records with Crossref bibliographic metadata...', 75);
+    emit('CROSSREF', 'Cross-referencing verified DOIs with Crossref bibliographic metadata...', 75);
     const enrichedMap = new Map();
 
     for (let i = 0; i < collectedWorks.length; i++) {
@@ -110,14 +128,14 @@ export async function runResearchSyncJob(identifiers = {}, onProgress = null) {
             enrichedMap.set(canonicalDoi, crossrefRes.data);
           }
         } catch {
-          // Graceful fallback
+          // Graceful network timeout fallback
         }
       }
     }
-    emit('CROSSREF', `✓ Enriched metadata for ${enrichedMap.size} publications with official DOI registration`, 85);
+    emit('CROSSREF', `✓ Enriched metadata for ${enrichedMap.size} DOIs from official Crossref repository`, 85);
 
     // ──────── STAGE 5: MERGING & DEDUPLICATION ────────
-    emit('DEDUPLICATION', 'Matching existing institutional records and removing cross-source duplicates...', 90);
+    emit('DEDUPLICATION', 'Checking existing institutional records and removing cross-source duplicates...', 90);
 
     const existingPubs = getPublications(true);
     const candidateMap = new Map();
@@ -137,6 +155,7 @@ export async function runResearchSyncJob(identifiers = {}, onProgress = null) {
         if (work.wosCitations) existing.wosCitations = work.wosCitations;
       } else {
         const enriched = canonicalDoi ? enrichedMap.get(canonicalDoi) : null;
+        const initialSources = [work.source, ...(enriched ? ['CROSSREF'] : [])];
 
         const candidate = {
           candidateId: 'CAND-' + Math.random().toString(36).substring(2, 9),
@@ -156,7 +175,7 @@ export async function runResearchSyncJob(identifiers = {}, onProgress = null) {
           scopusEid: work.scopusEid || '',
           wosUid: work.wosUid || '',
           url: enriched?.url || work.url || (canonicalDoi ? `https://doi.org/${canonicalDoi}` : ''),
-          sources: [work.source, ...(enriched ? ['CROSSREF'] : [])],
+          sources: initialSources,
           authors: enriched?.authors?.length ? enriched.authors : (work.authors || []),
           scopusCitations: work.scopusCitations || null,
           wosCitations: work.wosCitations || null,
@@ -165,7 +184,7 @@ export async function runResearchSyncJob(identifiers = {}, onProgress = null) {
             ...(work.wosUid || work.wosIndexed === 'Yes' ? ['Web of Science'] : []),
             'Crossref'
           ],
-          classification: 'NEW', // Default
+          classification: 'NEW',
           matchReason: '',
           existingRecordId: null,
           selected: true
@@ -194,12 +213,12 @@ export async function runResearchSyncJob(identifiers = {}, onProgress = null) {
           candidate.selected = false;
         } else if (titleMatch) {
           candidate.classification = 'LIKELY_DUPLICATE';
-          candidate.matchReason = `Title and Year match with existing record ${titleMatch.publicationRecordNumber || titleMatch.id}`;
+          candidate.matchReason = `Title & Year match with existing record ${titleMatch.publicationRecordNumber || titleMatch.id}`;
           candidate.existingRecordId = titleMatch.id;
           candidate.selected = false;
         } else {
           candidate.classification = 'NEW';
-          candidate.matchReason = 'Unique research record';
+          candidate.matchReason = 'Unique discovered research publication';
           candidate.selected = true;
         }
 
@@ -214,16 +233,18 @@ export async function runResearchSyncJob(identifiers = {}, onProgress = null) {
       uniqueWorks: candidateList.length,
       newRecords: candidateList.filter(c => c.classification === 'NEW').length,
       duplicates: candidateList.filter(c => c.classification === 'EXACT_DUPLICATE' || c.classification === 'LIKELY_DUPLICATE').length,
+      crossSourceEnriched: candidateList.filter(c => c.sources && c.sources.length >= 2).length,
       updates: candidateList.filter(c => c.classification === 'UPDATE_AVAILABLE').length
     };
 
-    emit('COMPLETE', `Sync complete: ${summary.newRecords} new publications ready for review.`, 100);
+    emit('COMPLETE', `Discovery complete: ${summary.newRecords} new publications ready for review.`, 100);
 
     return {
       success: true,
       summary: summary,
       candidates: candidateList,
-      profiles: profiles
+      profiles: profiles,
+      sourceStatuses: sourceStatuses
     };
   } catch (err) {
     emit('ERROR', `Sync error: ${err.message}`, 100);
