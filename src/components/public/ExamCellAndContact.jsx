@@ -129,52 +129,75 @@ export default function ExamCellAndContact({ onOpenPortal }) {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
-                {examNotices.map(notice => (
-                  <div
-                    key={notice.id}
-                    style={{
-                      padding: '0.9rem 1.1rem',
-                      borderRadius: '10px',
-                      background: '#F8FAFC',
-                      border: '1px solid #E2E8F0',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      gap: '1rem'
-                    }}
-                  >
-                    <div>
-                      <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.2rem' }}>
-                        <span className="badge badge-navy" style={{ fontSize: '0.65rem' }}>{notice.category}</span>
-                        <span className="badge badge-gold" style={{ fontSize: '0.65rem' }}>{notice.regulation}</span>
-                      </div>
-                      <div style={{ fontWeight: 700, color: '#0B192C', fontSize: '0.88rem' }}>
-                        {notice.title}
-                      </div>
-                      <div style={{ fontSize: '0.74rem', color: '#64748B', marginTop: '0.2rem' }}>
-                        Date: {notice.date}
-                      </div>
+                {examNotices.length === 0 ? (
+                  <div style={{
+                    padding: '2.5rem 1.5rem',
+                    textAlign: 'center',
+                    background: '#F8FAFC',
+                    borderRadius: '12px',
+                    border: '1px dashed #CBD5E1',
+                    color: '#64748B'
+                  }}>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0F172A', marginBottom: '0.3rem' }}>
+                      No Active Examination Notices
                     </div>
-
-                    <button
-                      onClick={() => alert(`Downloading circular document: ${notice.pdf}`)}
+                    <div style={{ fontSize: '0.8rem' }}>
+                      Upcoming autonomous semester schedules, timetables, and revaluation announcements will be published here.
+                    </div>
+                  </div>
+                ) : (
+                  examNotices.map(notice => (
+                    <div
+                      key={notice.id}
                       style={{
-                        padding: '0.4rem 0.75rem',
-                        borderRadius: '6px',
-                        background: '#0B192C',
-                        color: '#FFF',
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
+                        padding: '0.9rem 1.1rem',
+                        borderRadius: '10px',
+                        background: '#F8FAFC',
+                        border: '1px solid #E2E8F0',
                         display: 'flex',
+                        justifyContent: 'space-between',
                         alignItems: 'center',
-                        gap: '4px',
-                        whiteSpace: 'nowrap'
+                        gap: '1rem'
                       }}
                     >
-                      <Download size={12} /> PDF
-                    </button>
-                  </div>
-                ))}
+                      <div>
+                        <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.2rem' }}>
+                          <span className="badge badge-navy" style={{ fontSize: '0.65rem' }}>{notice.category}</span>
+                          {notice.regulation && <span className="badge badge-gold" style={{ fontSize: '0.65rem' }}>{notice.regulation}</span>}
+                        </div>
+                        <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.88rem' }}>
+                          {notice.title}
+                        </div>
+                        <div style={{ fontSize: '0.74rem', color: '#64748B', marginTop: '0.2rem' }}>
+                          Date: {notice.date}
+                        </div>
+                      </div>
+
+                      {notice.pdf && (
+                        <a
+                          href={`/assets/docs/${notice.pdf}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            padding: '0.4rem 0.75rem',
+                            borderRadius: '6px',
+                            background: '#0B192C',
+                            color: '#FFF',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            whiteSpace: 'nowrap',
+                            textDecoration: 'none'
+                          }}
+                        >
+                          <Download size={12} /> PDF
+                        </a>
+                      )}
+                    </div>
+                  ))
+                )}
               </div>
             </div>
 

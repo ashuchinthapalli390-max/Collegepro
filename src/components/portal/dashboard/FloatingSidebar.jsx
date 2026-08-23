@@ -317,13 +317,16 @@ export default function FloatingSidebar({
                         const isActive = activeModule === item.id;
 
                         return (
-                          <button
+                          <motion.button
                             key={item.id}
                             type="button"
                             onClick={() => {
                               onSelectModule(item.id);
                               if (isMobileDrawer && onCloseMobileDrawer) onCloseMobileDrawer();
                             }}
+                            whileHover={{ x: (sidebarExpanded || isMobileDrawer) ? 2 : 0, scale: 1.015 }}
+                            whileTap={{ scale: 0.98 }}
+                            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                             title={!sidebarExpanded && !isMobileDrawer ? item.label : undefined}
                             style={{
                               display: 'flex',
@@ -341,7 +344,7 @@ export default function FloatingSidebar({
                               fontWeight: isActive ? 700 : 500,
                               cursor: 'pointer',
                               textAlign: 'left',
-                              transition: 'all 0.15s ease',
+                              transition: 'background 0.15s ease, border-color 0.15s ease',
                               position: 'relative'
                             }}
                             className={isActive ? 'shadow-sm' : 'hover:bg-white/5 hover:text-white'}
@@ -351,7 +354,8 @@ export default function FloatingSidebar({
                                 size={15}
                                 style={{
                                   color: isActive ? '#F1C40F' : '#94A3B8',
-                                  flexShrink: 0
+                                  flexShrink: 0,
+                                  transition: 'transform 0.15s ease'
                                 }}
                               />
                               {(sidebarExpanded || isMobileDrawer) && (
@@ -378,7 +382,7 @@ export default function FloatingSidebar({
                                 {item.badge}
                               </span>
                             )}
-                          </button>
+                          </motion.button>
                         );
                       })}
                     </motion.div>

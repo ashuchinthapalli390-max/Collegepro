@@ -11,3 +11,7 @@ export { default as MotionTabs } from './MotionTabs.jsx';
 export { default as MotionCollapse } from './MotionCollapse.jsx';
 export { MotionTable, MotionTableRow } from './MotionTable.jsx';
 export { default as MotionEmptyState } from './MotionEmptyState.jsx';
+export { default as AnimatedIconButton } from './AnimatedIconButton.jsx';
+export { default as AnimatedActionButton } from './AnimatedActionButton.jsx';
+export { default as AnimatedBadge } from './AnimatedBadge.jsx';
+export { default as AnimatedQuickAction } from './AnimatedQuickAction.jsx';

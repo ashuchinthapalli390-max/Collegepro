@@ -3317,12 +3317,30 @@ export function savePlacementRecord(item, user) {
 
 // Exam Notices
 export function getExamNotifications() {
-  return loadStore(STORAGE_KEYS.EXAM_NOTICES, INITIAL_EXAM_NOTIFICATIONS);
+  return loadStore(STORAGE_KEYS.EXAM_NOTICES, []);
 }
 
 // News
 export function getNews() {
-  return loadStore(STORAGE_KEYS.NEWS, INITIAL_NEWS);
+  return loadStore(STORAGE_KEYS.NEWS, []);
+}
+
+// Official Circulars & Orders
+export function getCirculars() {
+  return loadStore('nec_circulars_v2', []);
+}
+
+export function saveCircular(circular, user = 'Admin') {
+  const items = getCirculars();
+  const newItem = {
+    ...circular,
+    id: circular.id || `CIR-${new Date().getFullYear()}-${String(items.length + 1).padStart(4, '0')}`,
+    createdAt: circular.createdAt || new Date().toISOString()
+  };
+  items.unshift(newItem);
+  saveStore('nec_circulars_v2', items);
+  addAuditLog('CREATE', 'Circulars', `Issued official circular: ${newItem.title}`, user);
+  return items;
 }
 
 // -------------------------------------------------------------
