@@ -1,0 +1,191 @@
+[
+  {
+    "category": "branding",
+    "renamed_file": "branding/accreditations-badges.png",
+    "size_bytes": 161354,
+    "sha256": "8b9ba53409447780328e10f3420827ebb723668e1fba26c4d43b0f89af3aa605",
+    "source_url": "https://www.nrtec.in/wp-content/uploads/2026/07/acceradarations-1.png"
+  },
+  {
+    "category": "branding",
+    "renamed_file": "branding/nec-main-logo.webp",
+    "size_bytes": 15746,
+    "sha256": "8e3ac0c9da84f44967fe82ff689b8194ce9fa450c53a357e7170d4d1d6f9dcdf",
+    "source_url": "https://i0.wp.com/www.nrtec.in/wp-content/uploads/2018/05/logo-nec1.png?ssl=1&w=1170"
+  },
+  {
+    "category": "branding",
+    "renamed_file": "branding/organization-chart.webp",
+    "size_bytes": 70986,
+    "sha256": "0a26c2b5b72c4d9e41c1cb92052e34f833376f4e8b536e5176b040728a3ce7b6",
+    "source_url": "https://i0.wp.com/www.nrtec.in/wp-content/uploads/2026/06/Organization-chat.jpeg?fit=1600%2C1131&ssl=1"
+  },
+  {
+    "category": "events",
+    "renamed_file": "events/advanced-robotics-ai-workshop-poster.webp",
+    "size_bytes": 65988,
+    "sha256": "58c6f39a11c8729a1480a7598e082ead19d2c84dc469590b166542bbf9754087",
+    "source_url": "https://i0.wp.com/www.nrtec.in/wp-content/uploads/2026/07/01.jpg?resize=1170%2C614&ssl=1"
+  },
+  {
+    "category": "events",
+    "renamed_file": "events/advanced-robotics-ai-workshop-session-01.webp",
+    "size_bytes": 101602,
+    "sha256": "4724c9d03e454536d0d6b3d34c5d719f4e167bfef74b48a5e6a804cf74605f1a",
+    "source_url": "https://i0.wp.com/www.nrtec.in/wp-content/uploads/2026/07/02.jpg?resize=1170%2C614&ssl=1"
+  },
+  {
+    "category": "events",
+    "renamed_file": "events/advanced-robotics-ai-workshop-session-02.webp",
+    "size_bytes": 68100,
+    "sha256": "e8c9b93173f36afca7408a3e2a59e466f135d98cda0cb57aece3441aaac8d356",
+    "source_url": "https://i0.wp.com/www.nrtec.in/wp-content/uploads/2026/07/03.jpg?resize=1170%2C614&ssl=1"
+  },
+  {
+    "category": "events",
+    "renamed_file": "events/advanced-robotics-ai-workshop-session-03.webp",
+    "size_bytes": 76792,
+    "sha256": "22c2ec7717e7d69301792aa4fe4beb48c7c7bb7d9e05e744375ef1d4a95aa9c5",
+    "source_url": "https://i0.wp.com/www.nrtec.in/wp-content/uploads/2026/07/04.jpg?resize=1170%2C614&ssl=1"
+  },
+  {
+    "category": "events",
+    "renamed_file": "events/advanced-robotics-ai-workshop-session-04.webp",
+    "size_bytes": 73818,
+    "sha256": "567300334e28df6dab1e13e72eb5b298cd100cc14ad78d033e5669781f3e4edf",
+    "source_url": "https://i0.wp.com/www.nrtec.in/wp-content/uploads/2026/07/05.jpg?resize=1170%2C614&ssl=1"
+  },
+  {
+    "category": "events",
+    "renamed_file": "events/mechanical-industrial-visit-group.webp",
+    "size_bytes": 115060,
+    "sha256": "bce16adb40ac31ae83e0f4b3241afe0235ab9b7c7f8b2b667e2bbc77c9a70a44",
+    "source_url": "https://i0.wp.com/www.nrtec.in/wp-content/uploads/2026/07/023.jpg?resize=1170%2C614&ssl=1"
+  },
+  {
+    "category": "events",
+    "renamed_file": "events/mechanical-industrial-visit-machinery.webp",
+    "size_bytes": 46532,
+    "sha256": "0e92d453dfdc203fb95386baa4530933468726b37e2e49357aec481127aedad8",
+    "source_url": "https://i0.wp.com/www.nrtec.in/wp-content/uploads/2026/07/022.jpg?resize=1170%2C614&ssl=1"
+  },
+  {
+    "category": "events",
+    "renamed_file": "events/quantum-computing-fdp-poster.webp",
+    "size_bytes": 371038,
+    "sha256": "346b078ab07de91d9af476e09e6247ed7d9e551b37883e861830289b9556f398",
+    "source_url": "https://i0.wp.com/www.nrtec.in/wp-content/uploads/2026/06/01.png?resize=1170%2C614&ssl=1"
+  },
+  {
+    "category": "events",
+    "renamed_file": "events/quantum-computing-fdp-session-01.webp",
+    "size_bytes": 653768,
+    "sha256": "2187ddedc596387ce52509128760952c4bd9c73bc4b5379cd677ab897dcd2154",
+    "source_url": "https://i0.wp.com/www.nrtec.in/wp-content/uploads/2026/06/03.png?resize=1170%2C614&ssl=1"
+  },
+  {
+    "category": "homepage",
+    "renamed_file": "homepage/about-us-students.webp",
+    "size_bytes": 20466,
+    "sha256": "4fc15c5e7617d0b0156a2ad8c9d926b73dfa0911b4bf27d4f6de9f7ddaa99b2b",
+    "source_url": "https://i0.wp.com/www.nrtec.in/wp-content/uploads/2018/04/about-us-image.jpg?fit=570%2C390&ssl=1"
+  },
+  {
+    "category": "homepage",
+    "renamed_file": "homepage/india-today-ranking-2026-mobile.webp",
+    "size_bytes": 66270,
+    "sha256": "7c4d6ce6ec2c417211f42dba079d0ebf589f2f9f321c91d438754ef37b50934f",
+    "source_url": "https://i0.wp.com/www.nrtec.in/wp-content/uploads/2026/06/india-today.png?fit=360%2C640&ssl=1"
+  },
+  {
+    "category": "homepage",
+    "renamed_file": "homepage/student-feature-image.webp",
+    "size_bytes": 14134,
+    "sha256": "665a207c3bc154ae72deef60abbcdd5225fad976f159afb4e83ce6fe3a290f8b",
+    "source_url": "https://i0.wp.com/www.nrtec.in/wp-content/uploads/2018/05/student3.jpg?fit=467%2C465&ssl=1"
+  },
+  {
+    "category": "homepage",
+    "renamed_file": "homepage/times-engineering-ranking-2026-mobile.webp",
+    "size_bytes": 51496,
+    "sha256": "372ec7274da25c29f02d470b2ba1a2b740da2344ff7725ff0bbd8b58b92067c1",
+    "source_url": "https://i0.wp.com/www.nrtec.in/wp-content/uploads/2026/07/nec_mobile_slider_times_engineering.png?fit=360%2C640&ssl=1"
+  },
+  {
+    "category": "people",
+    "renamed_file": "people/chairman-mittapalli-venkata-koteswara-rao.webp",
+    "size_bytes": 21718,
+    "sha256": "602a3c3733a5b273ecc34011753a1ca387d2e15973ac6f9248b4bd441752ee50",
+    "source_url": "https://i0.wp.com/www.nrtec.in/wp-content/uploads/2021/07/chairman-of-NEC.jpg?fit=853%2C1280&ssl=1"
+  },
+  {
+    "category": "people",
+    "renamed_file": "people/director-suhasini-mittapalli.webp",
+    "size_bytes": 11140,
+    "sha256": "719874e4e68952457f652549e14185ada57776e52baacf20523372b27edb31ec",
+    "source_url": "https://i0.wp.com/www.nrtec.in/wp-content/uploads/2018/05/Director2.jpg?fit=300%2C315&ssl=1"
+  },
+  {
+    "category": "people",
+    "renamed_file": "people/principal-s-venkateswarlu.webp",
+    "size_bytes": 87626,
+    "sha256": "617c4a496904173e56dd5556e5ec9e4ad3aaf389c10e0f0c58229a470cf34542",
+    "source_url": "https://i0.wp.com/www.nrtec.in/wp-content/uploads/2026/04/principal.webp?fit=1200%2C1598&ssl=1"
+  },
+  {
+    "category": "people",
+    "renamed_file": "people/secretary-mittapalli-ramesh-babu.webp",
+    "size_bytes": 7646,
+    "sha256": "899dfe65c1671c080a0e28ecce0eab908277900d868ea9b0a12c7116b2fd2d13",
+    "source_url": "https://i0.wp.com/www.nrtec.in/wp-content/uploads/2024/04/iamges.jpg?fit=400%2C400&ssl=1"
+  },
+  {
+    "category": "people",
+    "renamed_file": "people/vice-chairman-chakravarthi-portrait.webp",
+    "size_bytes": 436778,
+    "sha256": "db7121254c08ac1ed926c7fb40b4e003162f4191b9dc3e817be88ee62e7531bd",
+    "source_url": "https://i0.wp.com/www.nrtec.in/wp-content/uploads/2019/03/chakri-mittapalli.jpg?fit=2032%2C2112&ssl=1"
+  },
+  {
+    "category": "people",
+    "renamed_file": "people/vice-chairman-chakravarthi.webp",
+    "size_bytes": 7820,
+    "sha256": "1217060ecc4c58abae9cc8cf0b815f042666eada9aeb19770c28cb3d00526061",
+    "source_url": "https://i0.wp.com/www.nrtec.in/wp-content/uploads/2019/03/chakravarthi-vice-chairman.jpg?resize=289%2C200&ssl=1"
+  },
+  {
+    "category": "people",
+    "renamed_file": "people/vice-principal-d-suneel.webp",
+    "size_bytes": 35540,
+    "sha256": "7000afa967418f6895ca86e21c38b57ec4fd7c76c4a1bf084d02a1d5a593dca6",
+    "source_url": "https://i0.wp.com/www.nrtec.in/wp-content/uploads/2026/02/suneel-dr-3.webp?fit=1200%2C630&ssl=1"
+  },
+  {
+    "category": "placements",
+    "renamed_file": "placements/ls-automotive-35-students-group.webp",
+    "size_bytes": 761592,
+    "sha256": "1b6f97275d8db10f8d2304c388101276d7d37db50d2a854f9d3bf1edbd5a17e7",
+    "source_url": "https://i0.wp.com/www.nrtec.in/wp-content/uploads/2026/07/35-students-from-the-ECE-EEE-and-Mechanical-Engineering-departments-at-Narasaraopeta-Engineering-College-selected-by-LS-Automotive-Chennai-through-an-on-campus-placement-drive-with-a-CTC-of-3.24-LPA.png?resize=1170%2C614&ssl=1"
+  },
+  {
+    "category": "placements",
+    "renamed_file": "placements/ls-automotive-35-students-vertical.webp",
+    "size_bytes": 141844,
+    "sha256": "1155d58aeef0af62f9879684318873bfe47608da5d8ceec2a48eee857be47cf5",
+    "source_url": "https://i0.wp.com/www.nrtec.in/wp-content/uploads/2026/07/ls-automative-placements-from-nec.png?fit=720%2C1280&ssl=1"
+  },
+  {
+    "category": "placements",
+    "renamed_file": "placements/savantis-117-students-vertical.webp",
+    "size_bytes": 168934,
+    "sha256": "80e427a4552edb73a8045ad8706df88c389a3b5c88304f29f6ca66d2d2e72710",
+    "source_url": "https://i0.wp.com/www.nrtec.in/wp-content/uploads/2026/07/savantis-slide.png?fit=360%2C640&ssl=1"
+  },
+  {
+    "category": "ui",
+    "renamed_file": "ui/call-admissions-icon.png",
+    "size_bytes": 8378,
+    "sha256": "94d1024a28d9f1774a0be56a914755863d0c8fe19224c32cb72bf7e1d25180ed",
+    "source_url": "https://www.nrtec.in/wp-content/uploads/2020/09/call-for-admissions.png"
+  }
+]

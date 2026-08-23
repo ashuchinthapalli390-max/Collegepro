@@ -14,6 +14,8 @@ import { FACULTY_DATA, DEPARTMENTS } from '../../data/masterData.js';
 import { getPublications, getPatents, getMoUs } from '../../data/portalStore.js';
 import { MotionNumber } from '../motion/index.js';
 import { staggerContainer, staggerChild } from '../../lib/motion/variants.js';
+import { VERIFIED_MEDIA } from '../../config/verifiedMedia.js';
+import NECImage from '../common/NECImage.jsx';
 
 export default function StatsCounter() {
   const [stats, setStats] = useState({
@@ -179,6 +181,83 @@ export default function StatsCounter() {
             );
           })}
         </motion.div>
+
+        {/* ────────────────────────────────────────────────────────── */}
+        {/* VERIFIED ACCREDITATIONS & NATIONAL RANKINGS SHOWCASE */}
+        {/* ────────────────────────────────────────────────────────── */}
+        <div style={{ marginTop: '4rem', borderTop: '1px solid rgba(212, 175, 55, 0.25)', paddingTop: '3.5rem' }}>
+          <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+            <span className="badge badge-gold" style={{ marginBottom: '0.6rem' }}>
+              National Quality Benchmarks
+            </span>
+            <h3 style={{ color: '#FFFFFF', fontSize: 'clamp(1.5rem, 2.8vw, 2.2rem)', marginBottom: '0.6rem' }}>
+              Recognitions, Accreditations & Survey Standings
+            </h3>
+            <p style={{ color: '#94A3B8', maxWidth: '620px', margin: '0 auto', fontSize: '0.92rem' }}>
+              Autonomous institution recognized by statutory national evaluation boards with premier survey rankings.
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem', alignItems: 'center' }}>
+            {/* Accreditation Badges Banner Card */}
+            <div style={{ background: '#FFFFFF', borderRadius: '18px', padding: '1.8rem', border: '1px solid rgba(212, 175, 55, 0.35)', boxShadow: '0 10px 30px rgba(0,0,0,0.3)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+              <div style={{ width: '100%', maxWidth: '420px', marginBottom: '1rem' }}>
+                <NECImage
+                  src={VERIFIED_MEDIA.branding.accreditationBadges.src}
+                  alt={VERIFIED_MEDIA.branding.accreditationBadges.alt}
+                  width={802}
+                  height={311}
+                  objectFit="contain"
+                  style={{ width: '100%', height: 'auto', maxHeight: '140px' }}
+                />
+              </div>
+              <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', marginBottom: '0.3rem' }}>
+                Premier National Accreditations
+              </h4>
+              <p style={{ fontSize: '0.82rem', color: '#64748B', margin: 0, lineHeight: 1.5 }}>
+                NAAC A+ Grade (Cycle-2) • Tier-1 NBA Accredited Programs • JNTUK Autonomous Permanent Affiliation
+              </p>
+            </div>
+
+            {/* India Today 2026 Ranking Card */}
+            <div style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)', borderRadius: '18px', padding: '1.5rem', border: '1px solid rgba(255,255,255,0.12)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+              <div style={{ width: '100%', maxWidth: '200px', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(212, 175, 55, 0.35)', boxShadow: '0 8px 25px rgba(0,0,0,0.4)', marginBottom: '1rem' }}>
+                <NECImage
+                  src={VERIFIED_MEDIA.homepage.indiaTodayRanking.src}
+                  alt={VERIFIED_MEDIA.homepage.indiaTodayRanking.alt}
+                  width={360}
+                  height={640}
+                  aspectRatio="9 / 16"
+                  objectFit="contain"
+                  style={{ width: '100%', height: 'auto' }}
+                />
+              </div>
+              <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.2rem' }}>
+                India Today Best Colleges 2026
+              </h4>
+              <span style={{ fontSize: '0.76rem', color: '#D4AF37', fontWeight: 700 }}>National Engineering Band</span>
+            </div>
+
+            {/* Times Engineering 2026 Ranking Card */}
+            <div style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)', borderRadius: '18px', padding: '1.5rem', border: '1px solid rgba(255,255,255,0.12)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+              <div style={{ width: '100%', maxWidth: '200px', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(212, 175, 55, 0.35)', boxShadow: '0 8px 25px rgba(0,0,0,0.4)', marginBottom: '1rem' }}>
+                <NECImage
+                  src={VERIFIED_MEDIA.homepage.timesRanking.src}
+                  alt={VERIFIED_MEDIA.homepage.timesRanking.alt}
+                  width={360}
+                  height={640}
+                  aspectRatio="9 / 16"
+                  objectFit="contain"
+                  style={{ width: '100%', height: 'auto' }}
+                />
+              </div>
+              <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.2rem' }}>
+                Times Engineering Survey 2026
+              </h4>
+              <span style={{ fontSize: '0.76rem', color: '#D4AF37', fontWeight: 700 }}>Top Ranked Tech Institute</span>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );

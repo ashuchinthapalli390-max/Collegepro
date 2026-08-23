@@ -28,9 +28,11 @@ import {
   getBoSMeetings
 } from '../../data/portalStore.js';
 import { routeVariants } from '../../lib/motion/variants.js';
+import { VERIFIED_MEDIA } from '../../config/verifiedMedia.js';
+import NECImage from '../common/NECImage.jsx';
 
 export default function MadamShowcase({ onOpenPortal }) {
-  const [activeModuleTab, setActiveModuleTab] = useState('achievements');
+  const [activeModuleTab, setActiveModuleTab] = useState('placements');
 
   const achievements = getStudentAchievements();
   const internships = getInternships();
@@ -43,6 +45,7 @@ export default function MadamShowcase({ onOpenPortal }) {
   const nptelList = getNPTEL();
 
   const moduleTabs = [
+    { id: 'placements', label: 'Placement Drives & Selections', icon: Briefcase },
     { id: 'achievements', label: `Student Achievements (${achievements.length})`, icon: Trophy },
     { id: 'internships', label: `Student Internships (${internships.length})`, icon: Briefcase },
     { id: 'projects', label: `Capstone Projects (${projects.length})`, icon: Code },
@@ -119,6 +122,90 @@ export default function MadamShowcase({ onOpenPortal }) {
 
         <AnimatePresence mode="wait">
           <motion.div key={activeModuleTab} variants={routeVariants} initial="initial" animate="animate" exit="exit">
+            {/* 0. Dedicated Placements Showcase */}
+            {activeModuleTab === 'placements' && (
+              <div>
+                <div style={{ background: 'linear-gradient(135deg, #070F1E 0%, #122846 100%)', borderRadius: '18px', padding: '2rem', color: '#FFFFFF', marginBottom: '2.5rem', border: '1px solid rgba(212, 175, 55, 0.3)' }}>
+                  <span className="badge badge-gold" style={{ marginBottom: '0.5rem' }}>
+                    Training & Placement Cell Records
+                  </span>
+                  <h3 style={{ color: '#FFFFFF', fontSize: '1.45rem', marginBottom: '0.4rem' }}>
+                    Campus Recruitment Drives & Select Announcements
+                  </h3>
+                  <p style={{ color: '#CBD5E1', fontSize: '0.9rem', margin: 0 }}>
+                    Official selections and campus recruitment milestones from leading automotive, enterprise software, and engineering corporations.
+                  </p>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem', alignItems: 'flex-start' }}>
+                  {/* LS Automotive Group Selection Card */}
+                  <div style={{ background: '#FFFFFF', borderRadius: '16px', overflow: 'hidden', border: '1px solid #E2E8F0', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
+                    <div style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+                      <NECImage
+                        src={VERIFIED_MEDIA.placements.lsAutomotiveGroup.src}
+                        alt={VERIFIED_MEDIA.placements.lsAutomotiveGroup.alt}
+                        width={1170}
+                        height={614}
+                        aspectRatio="16 / 9"
+                        objectFit="cover"
+                      />
+                    </div>
+                    <div style={{ padding: '1.5rem' }}>
+                      <span className="badge badge-navy" style={{ marginBottom: '0.5rem' }}>Automotive Electronics</span>
+                      <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0F172A', marginBottom: '0.35rem' }}>
+                        LS Automotive India — 35 Selections
+                      </h4>
+                      <p style={{ fontSize: '0.84rem', color: '#64748B', lineHeight: 1.5, margin: 0 }}>
+                        35 students from ECE, EEE, and Mechanical Engineering selected through on-campus placement drive.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* LS Automotive Vertical Poster Card */}
+                  <div style={{ background: '#FFFFFF', borderRadius: '16px', overflow: 'hidden', border: '1px solid #E2E8F0', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div style={{ width: '100%', maxWidth: '240px', padding: '1rem 0 0.5rem' }}>
+                      <NECImage
+                        src={VERIFIED_MEDIA.placements.lsAutomotiveVertical.src}
+                        alt={VERIFIED_MEDIA.placements.lsAutomotiveVertical.alt}
+                        width={720}
+                        height={1280}
+                        aspectRatio="9 / 16"
+                        objectFit="contain"
+                        style={{ borderRadius: '10px' }}
+                      />
+                    </div>
+                    <div style={{ padding: '1.2rem', textAlign: 'center', width: '100%', borderTop: '1px solid #F1F5F9' }}>
+                      <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', marginBottom: '0.2rem' }}>
+                        LS Automotive Official Notice
+                      </h4>
+                      <span style={{ fontSize: '0.78rem', color: '#D4AF37', fontWeight: 700 }}>CTC: 3.24 LPA</span>
+                    </div>
+                  </div>
+
+                  {/* Savantis Vertical Poster Card */}
+                  <div style={{ background: '#FFFFFF', borderRadius: '16px', overflow: 'hidden', border: '1px solid #E2E8F0', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div style={{ width: '100%', maxWidth: '240px', padding: '1rem 0 0.5rem' }}>
+                      <NECImage
+                        src={VERIFIED_MEDIA.placements.savantisVertical.src}
+                        alt={VERIFIED_MEDIA.placements.savantisVertical.alt}
+                        width={360}
+                        height={640}
+                        aspectRatio="9 / 16"
+                        objectFit="contain"
+                        style={{ borderRadius: '10px' }}
+                      />
+                    </div>
+                    <div style={{ padding: '1.2rem', textAlign: 'center', width: '100%', borderTop: '1px solid #F1F5F9' }}>
+                      <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', marginBottom: '0.2rem' }}>
+                        Savantis Solutions — 117 Selections
+                      </h4>
+                      <span style={{ fontSize: '0.78rem', color: '#10B981', fontWeight: 700 }}>Mass Placement Drive</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* 1. Student Achievements */}
             {activeModuleTab === 'achievements' && (
               achievements.length === 0 ? (

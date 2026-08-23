@@ -8,14 +8,19 @@ import {
   Cpu, 
   GraduationCap, 
   ChevronRight, 
-  Filter 
+  Filter,
+  Network,
+  Maximize2
 } from 'lucide-react';
 import { GOVERNING_BODY, ACADEMIC_COUNCIL, AICTE_IDEA_LAB_TEAM } from '../../data/masterData.js';
+import { VERIFIED_MEDIA } from '../../config/verifiedMedia.js';
+import NECImage from '../common/NECImage.jsx';
 
 export default function GovernanceSection() {
   const [activeTab, setActiveTab] = useState('governing-body');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [chartModalOpen, setChartModalOpen] = useState(false);
 
   const filteredGoverningBody = GOVERNING_BODY.filter(m => {
     const matchesSearch = m.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -105,6 +110,25 @@ export default function GovernanceSection() {
             }}
           >
             <Cpu size={18} style={{ color: '#D4AF37' }} /> AICTE IDEA Lab Team ({AICTE_IDEA_LAB_TEAM.length})
+          </button>
+
+          <button
+            onClick={() => setActiveTab('org-chart')}
+            style={{
+              padding: '0.75rem 1.6rem',
+              borderRadius: '12px',
+              fontWeight: 700,
+              fontSize: '0.92rem',
+              background: activeTab === 'org-chart' ? '#0B192C' : '#FFFFFF',
+              color: activeTab === 'org-chart' ? '#FFFFFF' : '#475569',
+              border: '1.5px solid ' + (activeTab === 'org-chart' ? '#0B192C' : '#E2E8F0'),
+              boxShadow: activeTab === 'org-chart' ? '0 8px 20px rgba(11,25,44,0.15)' : 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <Network size={18} style={{ color: '#D4AF37' }} /> Organization Structure
           </button>
         </div>
 
@@ -273,6 +297,92 @@ export default function GovernanceSection() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Organization Structure Chart View */}
+        {activeTab === 'org-chart' && (
+          <div style={{ background: '#FFFFFF', borderRadius: '20px', padding: '2rem', border: '1px solid #E2E8F0', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0B192C', margin: '0 0 0.35rem 0' }}>
+                  Institutional Organization & Governance Hierarchy
+                </h3>
+                <p style={{ color: '#64748B', fontSize: '0.9rem', margin: 0 }}>
+                  Official administrative and academic governance structure of Narasaraopeta Engineering College (Autonomous).
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setChartModalOpen(true)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  background: '#0B192C',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  padding: '0.6rem 1.25rem',
+                  borderRadius: '8px',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                <Maximize2 size={14} /> View Fullscreen / Zoom
+              </button>
+            </div>
+
+            <div 
+              onClick={() => setChartModalOpen(true)}
+              style={{
+                borderRadius: '14px',
+                overflow: 'hidden',
+                border: '1px solid #CBD5E1',
+                cursor: 'pointer',
+                background: '#F8FAFC'
+              }}
+            >
+              <NECImage
+                src={VERIFIED_MEDIA.branding.organizationChart.src}
+                alt={VERIFIED_MEDIA.branding.organizationChart.alt}
+                width={1600}
+                height={1131}
+                objectFit="contain"
+                style={{ maxHeight: '680px', width: '100%' }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Fullscreen Zoom Modal */}
+        {chartModalOpen && (
+          <div 
+            onClick={() => setChartModalOpen(false)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(7, 15, 30, 0.95)',
+              backdropFilter: 'blur(12px)',
+              zIndex: 9999,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '1.5rem'
+            }}
+          >
+            <div style={{ position: 'relative', maxWidth: '95vw', maxHeight: '90vh', overflow: 'auto' }}>
+              <img
+                src={VERIFIED_MEDIA.branding.organizationChart.src}
+                alt="NEC Organization Structure"
+                style={{ width: '100%', height: 'auto', maxHeight: '88vh', objectFit: 'contain', borderRadius: '12px', boxShadow: '0 25px 60px rgba(0,0,0,0.5)' }}
+              />
+            </div>
+            <div style={{ color: '#D4AF37', marginTop: '1rem', fontSize: '0.85rem', fontWeight: 600 }}>
+              Click anywhere outside or press Esc to close
             </div>
           </div>
         )}
