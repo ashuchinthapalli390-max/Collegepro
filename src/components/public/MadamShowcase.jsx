@@ -114,170 +114,191 @@ export default function MadamShowcase({ onOpenPortal }) {
 
         {/* 1. Student Achievements */}
         {activeModuleTab === 'achievements' && (
-          <div className="grid-3" style={{ gap: '1.5rem' }}>
-            {achievements.map(ach => (
-              <div
-                key={ach.id}
-                className="glass-card-light card-hover"
-                style={{
-                  padding: '1.8rem',
-                  background: '#FFFFFF',
-                  borderRadius: '16px',
-                  border: '1px solid #E2E8F0',
-                  borderTop: '4px solid #D4AF37',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between'
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.8rem' }}>
-                    <span className="badge badge-success">{ach.position}</span>
-                    <span className="badge badge-navy">{ach.level} Level</span>
+          achievements.length === 0 ? (
+            <div style={{ padding: '3.5rem 1.5rem', background: '#F8FAFC', borderRadius: '16px', border: '1px dashed #CBD5E1', textAlign: 'center', color: '#64748B' }}>
+              <div style={{ fontSize: '1rem', fontWeight: 700, color: '#0F172A', marginBottom: '0.35rem' }}>No Student Achievements Recorded</div>
+              <div style={{ fontSize: '0.84rem' }}>Verified state and national level competition achievements will appear here once approved.</div>
+            </div>
+          ) : (
+            <div className="grid-3" style={{ gap: '1.5rem' }}>
+              {achievements.map(ach => (
+                <div
+                  key={ach.id}
+                  className="glass-card-light card-hover"
+                  style={{
+                    padding: '1.8rem',
+                    background: '#FFFFFF',
+                    borderRadius: '16px',
+                    border: '1px solid #E2E8F0',
+                    borderTop: '4px solid #D4AF37',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between'
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.8rem' }}>
+                      <span className="badge badge-success">{ach.position}</span>
+                      <span className="badge badge-navy">{ach.level} Level</span>
+                    </div>
+
+                    <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0B192C', marginBottom: '0.3rem' }}>
+                      {ach.studentName}
+                    </h3>
+
+                    <div style={{ color: '#64748B', fontSize: '0.82rem', fontWeight: 600, marginBottom: '0.8rem' }}>
+                      Roll No: {ach.rollNumber} • {ach.department} ({ach.year})
+                    </div>
+
+                    <div style={{ background: '#F8FAFC', padding: '0.8rem', borderRadius: '8px', marginBottom: '0.8rem' }}>
+                      <div style={{ color: '#0B192C', fontWeight: 700, fontSize: '0.9rem' }}>{ach.eventName}</div>
+                      <div style={{ color: '#64748B', fontSize: '0.8rem', marginTop: '0.2rem' }}>Organized by: {ach.organizedBy}</div>
+                    </div>
+
+                    <p style={{ color: '#475569', fontSize: '0.85rem', lineHeight: 1.5, marginBottom: '1rem' }}>
+                      {ach.eventDetails}
+                    </p>
                   </div>
 
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0B192C', marginBottom: '0.3rem' }}>
-                    {ach.studentName}
-                  </h3>
-
-                  <div style={{ color: '#64748B', fontSize: '0.82rem', fontWeight: 600, marginBottom: '0.8rem' }}>
-                    Roll No: {ach.rollNumber} • {ach.department} ({ach.year})
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #F1F5F9', paddingTop: '0.8rem' }}>
+                    {ach.prizeAmount > 0 ? (
+                      <span style={{ color: '#B38600', fontWeight: 800, fontSize: '0.95rem' }}>
+                        🏆 Cash Award: ₹{ach.prizeAmount.toLocaleString('en-IN')}
+                      </span>
+                    ) : (
+                      <span style={{ color: '#10B981', fontWeight: 700, fontSize: '0.82rem' }}>
+                        Certificate of Merit
+                      </span>
+                    )}
+                    <span className="badge badge-navy" style={{ fontSize: '0.7rem' }}>{ach.achievementType}</span>
                   </div>
-
-                  <div style={{ background: '#F8FAFC', padding: '0.8rem', borderRadius: '8px', marginBottom: '0.8rem' }}>
-                    <div style={{ color: '#0B192C', fontWeight: 700, fontSize: '0.9rem' }}>{ach.eventName}</div>
-                    <div style={{ color: '#64748B', fontSize: '0.8rem', marginTop: '0.2rem' }}>Organized by: {ach.organizedBy}</div>
-                  </div>
-
-                  <p style={{ color: '#475569', fontSize: '0.85rem', lineHeight: 1.5, marginBottom: '1rem' }}>
-                    {ach.eventDetails}
-                  </p>
                 </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #F1F5F9', paddingTop: '0.8rem' }}>
-                  {ach.prizeAmount > 0 ? (
-                    <span style={{ color: '#B38600', fontWeight: 800, fontSize: '0.95rem' }}>
-                      🏆 Cash Award: ₹{ach.prizeAmount.toLocaleString('en-IN')}
-                    </span>
-                  ) : (
-                    <span style={{ color: '#10B981', fontWeight: 700, fontSize: '0.82rem' }}>
-                      Certificate of Merit
-                    </span>
-                  )}
-                  <span className="badge badge-navy" style={{ fontSize: '0.7rem' }}>{ach.achievementType}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )
         )}
 
         {/* 2. Internships */}
         {activeModuleTab === 'internships' && (
-          <div className="grid-3" style={{ gap: '1.5rem' }}>
-            {internships.map(intern => (
-              <div
-                key={intern.id}
-                className="glass-card-light card-hover"
-                style={{
-                  padding: '1.8rem',
-                  background: '#FFFFFF',
-                  borderRadius: '16px',
-                  border: '1px solid #E2E8F0',
-                  borderTop: '4px solid #0EA5E9',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between'
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.8rem' }}>
-                    <span className="badge badge-info">{intern.internshipType}</span>
-                    <span className="badge badge-gold">{intern.weeks} Weeks Duration</span>
+          internships.length === 0 ? (
+            <div style={{ padding: '3.5rem 1.5rem', background: '#F8FAFC', borderRadius: '16px', border: '1px dashed #CBD5E1', textAlign: 'center', color: '#64748B' }}>
+              <div style={{ fontSize: '1rem', fontWeight: 700, color: '#0F172A', marginBottom: '0.35rem' }}>No Student Internships Recorded</div>
+              <div style={{ fontSize: '0.84rem' }}>Verified corporate and research internships will appear here once approved by department coordinators.</div>
+            </div>
+          ) : (
+            <div className="grid-3" style={{ gap: '1.5rem' }}>
+              {internships.map(intern => (
+                <div
+                  key={intern.id}
+                  className="glass-card-light card-hover"
+                  style={{
+                    padding: '1.8rem',
+                    background: '#FFFFFF',
+                    borderRadius: '16px',
+                    border: '1px solid #E2E8F0',
+                    borderTop: '4px solid #0EA5E9',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between'
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.8rem' }}>
+                      <span className="badge badge-info">{intern.internshipType}</span>
+                      <span className="badge badge-gold">{intern.weeks} Weeks Duration</span>
+                    </div>
+
+                    <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0B192C', marginBottom: '0.2rem' }}>
+                      {intern.studentName}
+                    </h3>
+
+                    <div style={{ color: '#64748B', fontSize: '0.82rem', marginBottom: '0.8rem' }}>
+                      {intern.rollNumber} • {intern.branch} ({intern.batch})
+                    </div>
+
+                    <div style={{ background: '#F0F9FF', padding: '0.8rem', borderRadius: '8px', marginBottom: '0.8rem', border: '1px solid #BAE6FD' }}>
+                      <div style={{ color: '#0369A1', fontWeight: 800, fontSize: '0.95rem' }}>{intern.organization}</div>
+                      <div style={{ color: '#0284C7', fontSize: '0.82rem', fontWeight: 600 }}>{intern.internshipTitle}</div>
+                      <div style={{ color: '#64748B', fontSize: '0.75rem', marginTop: '0.2rem' }}>Domain: {intern.domain}</div>
+                    </div>
+
+                    <div style={{ fontSize: '0.82rem', color: '#475569', marginBottom: '0.8rem' }}>
+                      Period: {intern.startDate} to {intern.endDate} (Mode: <strong>{intern.mode}</strong>)
+                    </div>
                   </div>
 
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0B192C', marginBottom: '0.2rem' }}>
-                    {intern.studentName}
-                  </h3>
-
-                  <div style={{ color: '#64748B', fontSize: '0.82rem', marginBottom: '0.8rem' }}>
-                    {intern.rollNumber} • {intern.branch} ({intern.batch})
-                  </div>
-
-                  <div style={{ background: '#F0F9FF', padding: '0.8rem', borderRadius: '8px', marginBottom: '0.8rem', border: '1px solid #BAE6FD' }}>
-                    <div style={{ color: '#0369A1', fontWeight: 800, fontSize: '0.95rem' }}>{intern.organization}</div>
-                    <div style={{ color: '#0284C7', fontSize: '0.82rem', fontWeight: 600 }}>{intern.internshipTitle}</div>
-                    <div style={{ color: '#64748B', fontSize: '0.75rem', marginTop: '0.2rem' }}>Domain: {intern.domain}</div>
-                  </div>
-
-                  <div style={{ fontSize: '0.82rem', color: '#475569', marginBottom: '0.8rem' }}>
-                    Period: {intern.startDate} to {intern.endDate} (Mode: <strong>{intern.mode}</strong>)
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #F1F5F9', paddingTop: '0.8rem' }}>
+                    {intern.stipend === 'Yes' ? (
+                      <span style={{ color: '#059669', fontWeight: 800, fontSize: '0.9rem' }}>
+                        Stipend: ₹{intern.stipendAmount.toLocaleString('en-IN')}/mo
+                      </span>
+                    ) : (
+                      <span style={{ color: '#64748B', fontSize: '0.8rem' }}>Academic Internship</span>
+                    )}
+                    <span className="badge badge-success">Verified</span>
                   </div>
                 </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #F1F5F9', paddingTop: '0.8rem' }}>
-                  {intern.stipend === 'Yes' ? (
-                    <span style={{ color: '#059669', fontWeight: 800, fontSize: '0.9rem' }}>
-                      Stipend: ₹{intern.stipendAmount.toLocaleString('en-IN')}/mo
-                    </span>
-                  ) : (
-                    <span style={{ color: '#64748B', fontSize: '0.8rem' }}>Academic Internship</span>
-                  )}
-                  <span className="badge badge-success">Verified</span>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )
         )}
 
         {/* 3. Student Capstone Projects */}
         {activeModuleTab === 'projects' && (
-          <div className="grid-2" style={{ gap: '1.8rem' }}>
-            {projects.map(proj => (
-              <div
-                key={proj.id}
-                className="glass-card-light"
-                style={{
-                  padding: '2rem',
-                  background: '#FFFFFF',
-                  borderRadius: '16px',
-                  border: '1px solid #E2E8F0',
-                  borderLeft: '5px solid #0B192C'
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
-                  <span className="badge badge-gold">{proj.projectType} Project</span>
-                  <span className="badge badge-navy">{proj.branch} ({proj.academicYear})</span>
+          projects.length === 0 ? (
+            <div style={{ padding: '3.5rem 1.5rem', background: '#F8FAFC', borderRadius: '16px', border: '1px dashed #CBD5E1', textAlign: 'center', color: '#64748B' }}>
+              <div style={{ fontSize: '1rem', fontWeight: 700, color: '#0F172A', marginBottom: '0.35rem' }}>No Capstone Projects Recorded</div>
+              <div style={{ fontSize: '0.84rem' }}>Approved major and mini student projects will appear here once verified.</div>
+            </div>
+          ) : (
+            <div className="grid-2" style={{ gap: '1.8rem' }}>
+              {projects.map(proj => (
+                <div
+                  key={proj.id}
+                  className="glass-card-light"
+                  style={{
+                    padding: '2rem',
+                    background: '#FFFFFF',
+                    borderRadius: '16px',
+                    border: '1px solid #E2E8F0',
+                    borderLeft: '5px solid #0B192C'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
+                    <span className="badge badge-gold">{proj.projectType} Project</span>
+                    <span className="badge badge-navy">{proj.branch} ({proj.academicYear})</span>
+                  </div>
+
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0B192C', lineHeight: 1.35, marginBottom: '0.6rem' }}>
+                    {proj.projectTitle}
+                  </h3>
+
+                  <div style={{ background: '#F8FAFC', padding: '0.8rem 1rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.85rem' }}>
+                    <div><strong>Faculty Guide:</strong> <span style={{ color: '#D4AF37', fontWeight: 700 }}>{proj.guide}</span></div>
+                    <div><strong>Team Lead:</strong> {proj.teamLeader}</div>
+                    <div><strong>Team Members:</strong> {proj.member1} {proj.member2 && `, ${proj.member2}`} {proj.member3 && `, ${proj.member3}`}</div>
+                  </div>
+
+                  <p style={{ color: '#475569', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '1.2rem' }}>
+                    {proj.abstract}
+                  </p>
+
+                  <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', borderTop: '1px solid #E2E8F0', paddingTop: '1rem' }}>
+                    {proj.githubLink && (
+                      <a href={proj.githubLink} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#0F172A', fontWeight: 600, fontSize: '0.85rem', background: '#F1F5F9', padding: '0.4rem 0.8rem', borderRadius: '6px' }}>
+                        <Code size={14} /> GitHub Repository <ExternalLink size={12} />
+                      </a>
+                    )}
+                    {proj.demoLink && (
+                      <a href={proj.demoLink} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#0284C7', fontWeight: 600, fontSize: '0.85rem', background: '#E0F2FE', padding: '0.4rem 0.8rem', borderRadius: '6px' }}>
+                        <ExternalLink size={14} /> Live Demo
+                      </a>
+                    )}
+                  </div>
                 </div>
-
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0B192C', lineHeight: 1.35, marginBottom: '0.6rem' }}>
-                  {proj.projectTitle}
-                </h3>
-
-                <div style={{ background: '#F8FAFC', padding: '0.8rem 1rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.85rem' }}>
-                  <div><strong>Faculty Guide:</strong> <span style={{ color: '#D4AF37', fontWeight: 700 }}>{proj.guide}</span></div>
-                  <div><strong>Team Lead:</strong> {proj.teamLeader}</div>
-                  <div><strong>Team Members:</strong> {proj.member1} {proj.member2 && `, ${proj.member2}`} {proj.member3 && `, ${proj.member3}`}</div>
-                </div>
-
-                <p style={{ color: '#475569', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '1.2rem' }}>
-                  {proj.abstract}
-                </p>
-
-                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', borderTop: '1px solid #E2E8F0', paddingTop: '1rem' }}>
-                  {proj.githubLink && (
-                    <a href={proj.githubLink} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#0F172A', fontWeight: 600, fontSize: '0.85rem', background: '#F1F5F9', padding: '0.4rem 0.8rem', borderRadius: '6px' }}>
-                      <Code size={14} /> GitHub Repository <ExternalLink size={12} />
-                    </a>
-                  )}
-                  {proj.demoLink && (
-                    <a href={proj.demoLink} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#0284C7', fontWeight: 600, fontSize: '0.85rem', background: '#E0F2FE', padding: '0.4rem 0.8rem', borderRadius: '6px' }}>
-                      <ExternalLink size={14} /> Live Demo
-                    </a>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )
         )}
 
         {/* 4. Board of Studies (BoS) */}
@@ -300,120 +321,138 @@ export default function MadamShowcase({ onOpenPortal }) {
               </p>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              {bosMeetings.map(bos => (
-                <div
-                  key={bos.id}
-                  style={{
-                    padding: '2rem',
-                    background: '#FFFFFF',
-                    borderRadius: '16px',
-                    border: '1px solid #E2E8F0',
-                    boxShadow: 'var(--shadow-sm)'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <span className="badge badge-gold">{bos.regulation} Regulation</span>
-                      <span className="badge badge-navy">{bos.department}</span>
+            {bosMeetings.length === 0 ? (
+              <div style={{ padding: '3.5rem 1.5rem', background: '#F8FAFC', borderRadius: '16px', border: '1px dashed #CBD5E1', textAlign: 'center', color: '#64748B' }}>
+                <div style={{ fontSize: '1rem', fontWeight: 700, color: '#0F172A', marginBottom: '0.35rem' }}>No BoS Minutes Uploaded</div>
+                <div style={{ fontSize: '0.84rem' }}>Official signed Board of Studies meeting minutes will be displayed here.</div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                {bosMeetings.map(bos => (
+                  <div
+                    key={bos.id}
+                    style={{
+                      padding: '2rem',
+                      background: '#FFFFFF',
+                      borderRadius: '16px',
+                      border: '1px solid #E2E8F0',
+                      boxShadow: 'var(--shadow-sm)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <span className="badge badge-gold">{bos.regulation} Regulation</span>
+                        <span className="badge badge-navy">{bos.department}</span>
+                      </div>
+                      <span style={{ fontSize: '0.82rem', color: '#64748B' }}>
+                        Ref No: <strong>{bos.bosNo}</strong> • Date: <strong>{bos.bosDate}</strong>
+                      </span>
                     </div>
-                    <span style={{ fontSize: '0.82rem', color: '#64748B' }}>
-                      Ref No: <strong>{bos.bosNo}</strong> • Date: <strong>{bos.bosDate}</strong>
-                    </span>
+
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0B192C', marginBottom: '0.6rem' }}>
+                      {bos.chairman}
+                    </h3>
+
+                    <p style={{ color: '#475569', fontSize: '0.92rem', lineHeight: 1.6, marginBottom: '1.2rem' }}>
+                      {bos.summary}
+                    </p>
+
+                    <div className="grid-3" style={{ gap: '1rem', background: '#F8FAFC', padding: '1.2rem', borderRadius: '12px', marginBottom: '1rem', fontSize: '0.85rem' }}>
+                      <div>
+                        <div style={{ color: '#0284C7', fontWeight: 700 }}>University Nominee</div>
+                        <div style={{ fontWeight: 600, color: '#0B192C' }}>{bos.universityNominee?.name || '—'}</div>
+                        <div style={{ color: '#64748B', fontSize: '0.78rem' }}>{bos.universityNominee?.designation}, {bos.universityNominee?.institution}</div>
+                      </div>
+
+                      <div>
+                        <div style={{ color: '#D4AF37', fontWeight: 700 }}>External Academicians</div>
+                        <div style={{ color: '#334155' }}>{bos.academician1 || '—'}</div>
+                        <div style={{ color: '#334155' }}>{bos.academician2 || '—'}</div>
+                      </div>
+
+                      <div>
+                        <div style={{ color: '#10B981', fontWeight: 700 }}>Industry & Alumni</div>
+                        <div style={{ color: '#334155' }}>{bos.industryMember || '—'}</div>
+                        <div style={{ color: '#334155' }}>{bos.alumniMember || '—'}</div>
+                      </div>
+                    </div>
                   </div>
-
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0B192C', marginBottom: '0.6rem' }}>
-                    {bos.chairman}
-                  </h3>
-
-                  <p style={{ color: '#475569', fontSize: '0.92rem', lineHeight: 1.6, marginBottom: '1.2rem' }}>
-                    {bos.summary}
-                  </p>
-
-                  <div className="grid-3" style={{ gap: '1rem', background: '#F8FAFC', padding: '1.2rem', borderRadius: '12px', marginBottom: '1rem', fontSize: '0.85rem' }}>
-                    <div>
-                      <div style={{ color: '#0284C7', fontWeight: 700 }}>University Nominee</div>
-                      <div style={{ fontWeight: 600, color: '#0B192C' }}>{bos.universityNominee.name}</div>
-                      <div style={{ color: '#64748B', fontSize: '0.78rem' }}>{bos.universityNominee.designation}, {bos.universityNominee.institution}</div>
-                    </div>
-
-                    <div>
-                      <div style={{ color: '#D4AF37', fontWeight: 700 }}>External Academicians</div>
-                      <div style={{ color: '#334155' }}>{bos.academician1}</div>
-                      <div style={{ color: '#334155' }}>{bos.academician2}</div>
-                    </div>
-
-                    <div>
-                      <div style={{ color: '#10B981', fontWeight: 700 }}>Industry & Alumni</div>
-                      <div style={{ color: '#334155' }}>{bos.industryMember}</div>
-                      <div style={{ color: '#334155' }}>{bos.alumniMember}</div>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    <button
-                      onClick={() => alert(`Downloading signed minutes: ${bos.minutesPdf}`)}
-                      className="btn-navy"
-                      style={{ padding: '0.5rem 1.2rem', fontSize: '0.82rem' }}
-                    >
-                      <Download size={14} /> Download Approved Minutes (PDF)
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
         {/* 5. FDPs Organized */}
         {activeModuleTab === 'fdps' && (
-          <div className="grid-2" style={{ gap: '1.5rem' }}>
-            {fdps.map(f => (
-              <div key={f.id} style={{ padding: '1.8rem', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
-                  <span className="badge badge-gold">{f.department}</span>
-                  <span className="badge badge-navy">{f.academicYear}</span>
+          fdps.length === 0 ? (
+            <div style={{ padding: '3.5rem 1.5rem', background: '#F8FAFC', borderRadius: '16px', border: '1px dashed #CBD5E1', textAlign: 'center', color: '#64748B' }}>
+              <div style={{ fontSize: '1rem', fontWeight: 700, color: '#0F172A', marginBottom: '0.35rem' }}>No Faculty Development Programmes Recorded</div>
+              <div style={{ fontSize: '0.84rem' }}>FDP records organized under AICTE / institutional sponsorships will appear here once verified.</div>
+            </div>
+          ) : (
+            <div className="grid-2" style={{ gap: '1.5rem' }}>
+              {fdps.map(f => (
+                <div key={f.id} style={{ padding: '1.8rem', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
+                    <span className="badge badge-gold">{f.department}</span>
+                    <span className="badge badge-navy">{f.academicYear}</span>
+                  </div>
+                  <h3 style={{ fontSize: '1.15rem', color: '#0B192C', fontWeight: 800, marginBottom: '0.4rem' }}>
+                    {f.fdpTitle}
+                  </h3>
+                  <div style={{ background: '#F8FAFC', padding: '0.8rem', borderRadius: '8px', fontSize: '0.82rem', color: '#475569', marginBottom: '0.8rem' }}>
+                    <div>Coordinators: <strong>{f.coordinator}</strong></div>
+                    <div>Resource Persons: <strong>{f.resourcePerson}</strong></div>
+                    <div>Grant Amount: <strong>₹{f.amount?.toLocaleString('en-IN') || 0}</strong></div>
+                    <div>Participants: <strong>{f.noParticipants} Faculty Members</strong></div>
+                  </div>
                 </div>
-                <h3 style={{ fontSize: '1.15rem', color: '#0B192C', fontWeight: 800, marginBottom: '0.4rem' }}>
-                  {f.fdpTitle}
-                </h3>
-                <div style={{ background: '#F8FAFC', padding: '0.8rem', borderRadius: '8px', fontSize: '0.82rem', color: '#475569', marginBottom: '0.8rem' }}>
-                  <div>Coordinators: <strong>{f.coordinator}</strong></div>
-                  <div>Resource Persons: <strong>{f.resourcePerson}</strong></div>
-                  <div>Grant Amount: <strong>₹{f.amount.toLocaleString('en-IN')}</strong> (Invoice: {f.invoiceNumber})</div>
-                  <div>Participants: <strong>{f.noParticipants} Faculty Members</strong></div>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )
         )}
 
         {/* 6. Professional Memberships */}
         {activeModuleTab === 'memberships' && (
-          <div className="grid-3" style={{ gap: '1.5rem' }}>
-            {memberships.map(mem => (
-              <div key={mem.id} style={{ padding: '1.5rem', background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
-                <span className="badge badge-navy" style={{ marginBottom: '0.4rem' }}>{mem.membershipType} Member</span>
-                <h4 style={{ fontSize: '1.1rem', color: '#0B192C', fontWeight: 800 }}>{mem.organization}</h4>
-                <div style={{ color: '#D4AF37', fontWeight: 700, fontSize: '0.88rem', margin: '0.3rem 0' }}>{mem.facultyName}</div>
-                <div style={{ color: '#64748B', fontSize: '0.8rem' }}>Membership No: <strong>{mem.membershipNumber}</strong></div>
-              </div>
-            ))}
-          </div>
+          memberships.length === 0 ? (
+            <div style={{ padding: '3.5rem 1.5rem', background: '#F8FAFC', borderRadius: '16px', border: '1px dashed #CBD5E1', textAlign: 'center', color: '#64748B' }}>
+              <div style={{ fontSize: '1rem', fontWeight: 700, color: '#0F172A', marginBottom: '0.35rem' }}>No Faculty Memberships Recorded</div>
+              <div style={{ fontSize: '0.84rem' }}>Professional society memberships (IEEE, ISTE, IEI, ACM, CSI) will appear here once added.</div>
+            </div>
+          ) : (
+            <div className="grid-3" style={{ gap: '1.5rem' }}>
+              {memberships.map(mem => (
+                <div key={mem.id} style={{ padding: '1.5rem', background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
+                  <span className="badge badge-navy" style={{ marginBottom: '0.4rem' }}>{mem.membershipType} Member</span>
+                  <h4 style={{ fontSize: '1.1rem', color: '#0B192C', fontWeight: 800 }}>{mem.organization}</h4>
+                  <div style={{ color: '#D4AF37', fontWeight: 700, fontSize: '0.88rem', margin: '0.3rem 0' }}>{mem.facultyName}</div>
+                  <div style={{ color: '#64748B', fontSize: '0.8rem' }}>Membership No: <strong>{mem.membershipNumber}</strong></div>
+                </div>
+              ))}
+            </div>
+          )
         )}
 
         {/* 7. NPTEL */}
         {activeModuleTab === 'nptel' && (
-          <div className="grid-3" style={{ gap: '1.5rem' }}>
-            {nptelList.map(n => (
-              <div key={n.id} style={{ padding: '1.6rem', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
-                <span className="badge badge-gold" style={{ marginBottom: '0.4rem' }}>{n.badge}</span>
-                <h4 style={{ fontSize: '1.1rem', color: '#0B192C', fontWeight: 800 }}>{n.course}</h4>
-                <div style={{ color: '#0284C7', fontWeight: 700, fontSize: '0.9rem', margin: '0.3rem 0' }}>{n.name} ({n.participant})</div>
-                <div style={{ color: '#64748B', fontSize: '0.82rem' }}>Score: <strong style={{ color: '#059669' }}>{n.score}%</strong> • Duration: {n.duration}</div>
-              </div>
-            ))}
-          </div>
+          nptelList.length === 0 ? (
+            <div style={{ padding: '3.5rem 1.5rem', background: '#F8FAFC', borderRadius: '16px', border: '1px dashed #CBD5E1', textAlign: 'center', color: '#64748B' }}>
+              <div style={{ fontSize: '1rem', fontWeight: 700, color: '#0F172A', marginBottom: '0.35rem' }}>No NPTEL / MOOC Certifications Recorded</div>
+              <div style={{ fontSize: '0.84rem' }}>Faculty and student Elite/Gold SWAYAM-NPTEL course certifications will appear here once verified.</div>
+            </div>
+          ) : (
+            <div className="grid-3" style={{ gap: '1.5rem' }}>
+              {nptelList.map(n => (
+                <div key={n.id} style={{ padding: '1.6rem', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
+                  <span className="badge badge-gold" style={{ marginBottom: '0.4rem' }}>{n.badge}</span>
+                  <h4 style={{ fontSize: '1.1rem', color: '#0B192C', fontWeight: 800 }}>{n.course}</h4>
+                  <div style={{ color: '#0284C7', fontWeight: 700, fontSize: '0.9rem', margin: '0.3rem 0' }}>{n.name} ({n.participant})</div>
+                  <div style={{ color: '#64748B', fontSize: '0.82rem' }}>Score: <strong style={{ color: '#059669' }}>{n.score}%</strong> • Duration: {n.duration}</div>
+                </div>
+              ))}
+            </div>
+          )
         )}
 
         {/* 8. Placements */}

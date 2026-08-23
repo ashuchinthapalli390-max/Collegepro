@@ -32,38 +32,62 @@ import {
 } from './masterData.js';
 
 // -------------------------------------------------------------
-// Storage Keys & Security Core
+// Storage Keys & Security Core (v3 Production Clean)
 // -------------------------------------------------------------
 export const STORAGE_KEYS = {
-  FACULTY: 'nec_portal_faculty_v2',
-  PUBLICATIONS: 'nec_portal_publications_v2',
-  PATENTS: 'nec_portal_patents_v2',
-  BOS: 'nec_portal_bos_v2',
-  STUDENT_ACHIEVEMENTS: 'nec_portal_student_achievements_v2',
-  INTERNSHIPS: 'nec_portal_internships_v2',
-  PROJECTS: 'nec_portal_projects_v2',
-  FDPS: 'nec_portal_fdps_v2',
-  FACULTY_ACHIEVEMENTS: 'nec_portal_faculty_achievements_v2',
-  EVENTS: 'nec_portal_events_v2',
-  MEMBERSHIPS: 'nec_portal_memberships_v2',
-  MOUS: 'nec_portal_mous_v2',
-  NPTEL: 'nec_portal_nptel_v2',
-  PLACEMENTS: 'nec_portal_placements_v2',
-  EXAM_NOTICES: 'nec_portal_exam_notices_v2',
-  NEWS: 'nec_portal_news_v2',
-  AUDIT_LOGS: 'nec_portal_audit_logs_v2',
-  USERS: 'nec_portal_users_v2',
-  ROLE_PERMISSIONS: 'nec_portal_role_permissions_v2',
-  AUTH_CHALLENGES: 'nec_portal_auth_challenges_v2',
-  ACTIVE_SESSIONS: 'nec_portal_active_sessions_v2',
-  LOGIN_EVENTS: 'nec_portal_login_events_v2',
-  EMAIL_EVENTS: 'nec_portal_email_events_v2',
-  AUTH_SETTINGS: 'nec_portal_auth_settings_v2',
-  EMAIL_TEMPLATES: 'nec_portal_email_templates_v2',
-  FACULTY_RESEARCH_PROFILES: 'nec_portal_faculty_research_profiles_v2',
-  DATASET_VERSIONS: 'nec_portal_dataset_versions_v2',
-  METRIC_SNAPSHOTS: 'nec_portal_metric_snapshots_v2'
+  FACULTY: 'nec_portal_faculty_v3',
+  PUBLICATIONS: 'nec_portal_publications_v3',
+  PATENTS: 'nec_portal_patents_v3',
+  BOS: 'nec_portal_bos_v3',
+  STUDENT_ACHIEVEMENTS: 'nec_portal_student_achievements_v3',
+  INTERNSHIPS: 'nec_portal_internships_v3',
+  PROJECTS: 'nec_portal_projects_v3',
+  FDPS: 'nec_portal_fdps_v3',
+  FACULTY_ACHIEVEMENTS: 'nec_portal_faculty_achievements_v3',
+  EVENTS: 'nec_portal_events_v3',
+  MEMBERSHIPS: 'nec_portal_memberships_v3',
+  MOUS: 'nec_portal_mous_v3',
+  NPTEL: 'nec_portal_nptel_v3',
+  PLACEMENTS: 'nec_portal_placements_v3',
+  EXAM_NOTICES: 'nec_portal_exam_notices_v3',
+  NEWS: 'nec_portal_news_v3',
+  AUDIT_LOGS: 'nec_portal_audit_logs_v3',
+  USERS: 'nec_portal_users_v3',
+  ROLE_PERMISSIONS: 'nec_portal_role_permissions_v3',
+  AUTH_CHALLENGES: 'nec_portal_auth_challenges_v3',
+  ACTIVE_SESSIONS: 'nec_portal_active_sessions_v3',
+  LOGIN_EVENTS: 'nec_portal_login_events_v3',
+  EMAIL_EVENTS: 'nec_portal_email_events_v3',
+  AUTH_SETTINGS: 'nec_portal_auth_settings_v3',
+  EMAIL_TEMPLATES: 'nec_portal_email_templates_v3',
+  FACULTY_RESEARCH_PROFILES: 'nec_portal_faculty_research_profiles_v3',
+  DATASET_VERSIONS: 'nec_portal_dataset_versions_v3',
+  METRIC_SNAPSHOTS: 'nec_portal_metric_snapshots_v3'
 };
+
+// Automatic one-time cleanup of obsolete legacy demo caches
+if (typeof window !== 'undefined' && window.localStorage) {
+  try {
+    const legacyKeys = [
+      'nec_portal_publications_v1', 'nec_portal_publications_v2',
+      'nec_portal_patents_v1', 'nec_portal_patents_v2',
+      'nec_portal_bos_v1', 'nec_portal_bos_v2',
+      'nec_portal_student_achievements_v1', 'nec_portal_student_achievements_v2',
+      'nec_portal_internships_v1', 'nec_portal_internships_v2',
+      'nec_portal_projects_v1', 'nec_portal_projects_v2',
+      'nec_portal_fdps_v1', 'nec_portal_fdps_v2',
+      'nec_portal_faculty_achievements_v1', 'nec_portal_faculty_achievements_v2',
+      'nec_portal_events_v1', 'nec_portal_events_v2',
+      'nec_portal_memberships_v1', 'nec_portal_memberships_v2',
+      'nec_portal_mous_v1', 'nec_portal_mous_v2',
+      'nec_portal_nptel_v1', 'nec_portal_nptel_v2',
+      'nec_portal_placements_v1', 'nec_portal_placements_v2'
+    ];
+    legacyKeys.forEach(k => localStorage.removeItem(k));
+  } catch (e) {
+    console.warn('Storage purge non-fatal error:', e);
+  }
+}
 
 // Initial Provisioned Accounts (Zero public sign-up)
 export const USER_ROLES = [

@@ -14,14 +14,12 @@ import { getPublications, getPatents, getMoUs } from '../../data/portalStore.js'
 
 export default function StatsCounter() {
   const [stats, setStats] = useState({
-    faculty: 418,
-    departments: 13,
-    publications: 125,
-    patents: 35,
-    placements: 1200,
-    mous: 45,
-    acres: 40,
-    citations: 2800
+    faculty: FACULTY_DATA.length,
+    departments: DEPARTMENTS.length,
+    publications: 0,
+    patents: 0,
+    mous: 0,
+    acres: 40
   });
 
   useEffect(() => {
@@ -32,12 +30,10 @@ export default function StatsCounter() {
       setStats({
         faculty: FACULTY_DATA.length,
         departments: DEPARTMENTS.length,
-        publications: Math.max(125, livePubs + 120),
-        patents: Math.max(35, livePatents + 30),
-        placements: 1200,
-        mous: Math.max(45, liveMoUs + 40),
-        acres: 40,
-        citations: 2850
+        publications: livePubs,
+        patents: livePatents,
+        mous: liveMoUs,
+        acres: 40
       });
     } catch (e) {
       console.error(e);
@@ -45,14 +41,13 @@ export default function StatsCounter() {
   }, []);
 
   const statCards = [
-    { label: "Verified Faculty Members", value: `${stats.faculty}+`, icon: Users, desc: "PhD, M.Tech & Senior Scholars across all disciplines", color: "#D4AF37" },
+    { label: "Verified Faculty Members", value: `${stats.faculty}`, icon: Users, desc: "PhD, M.Tech & Senior Scholars across 13 departments", color: "#D4AF37" },
     { label: "Academic Departments", value: `${stats.departments}`, icon: Building, desc: "Engineering, Computing, Management & Sciences", color: "#60A5FA" },
-    { label: "Research Publications", value: `${stats.publications}+`, icon: FileText, desc: "SCI, Scopus, IEEE & WoS indexed scholarly works", color: "#34D399" },
-    { label: "Patents Published & Granted", value: `${stats.patents}+`, icon: Lightbulb, desc: "AICTE IDEA Lab & faculty innovation breakthroughs", color: "#FBBF24" },
-    { label: "Placement Offers (2024-25)", value: `${stats.placements}+`, icon: Briefcase, desc: "Highest package of 44.0 LPA at Amazon AWS", color: "#A78BFA" },
-    { label: "Active Industry MoUs", value: `${stats.mous}+`, icon: Handshake, desc: "TCS, Infosys, Cadence, Oracle, AWS & APSSDC", color: "#F472B6" },
-    { label: "Campus Infrastructure", value: `${stats.acres}+ Acres`, icon: MapPin, desc: "Wi-Fi enabled lush green tech hub & sports arena", color: "#38BDF8" },
-    { label: "Autonomous CBCS Batches", value: "R23 / R26", icon: GraduationCap, desc: "Future-ready industry aligned curriculum", color: "#F87171" }
+    { label: "Research Publications", value: `${stats.publications}`, icon: FileText, desc: "Peer-reviewed publications recorded in institutional repository", color: "#34D399" },
+    { label: "Patents Portfolio", value: `${stats.patents}`, icon: Lightbulb, desc: "Official patent filings and granted intellectual property", color: "#FBBF24" },
+    { label: "Active Industry MoUs", value: `${stats.mous}`, icon: Handshake, desc: "Active industry collaborations and skill training partnerships", color: "#F472B6" },
+    { label: "Campus Infrastructure", value: `${stats.acres}+ Acres`, icon: MapPin, desc: "Wi-Fi enabled green tech campus & sports facilities", color: "#38BDF8" },
+    { label: "Autonomous CBCS Batches", value: "R23 / R20", icon: GraduationCap, desc: "Industry-aligned autonomous regulations", color: "#F87171" }
   ];
 
   return (

@@ -95,7 +95,7 @@ export default function StudentProjectWizardModal({
       };
     }
 
-    const defaultFac = FACULTY_DATA.find(f => f.id === currentUser?.facultyId) || FACULTY_DATA[0];
+    const defaultFac = currentUser?.facultyId ? FACULTY_DATA.find(f => f.id === currentUser.facultyId) : null;
 
     return {
       projectTitle: '',
@@ -105,7 +105,7 @@ export default function StudentProjectWizardModal({
       academicYear: '2025-26',
       year: 'IV Year',
       semester: 'II Sem',
-      domains: ['Artificial Intelligence / ML'],
+      domains: [],
       problemStatement: '',
       description: '',
       objectives: '',
@@ -114,24 +114,14 @@ export default function StudentProjectWizardModal({
       expectedCompletion: '',
       
       // Team
-      teamMembers: [
-        {
-          rollNumber: '22471A0589',
-          name: 'K. Sai Praneeth',
-          department: defaultDept,
-          year: 'IV Year',
-          semester: 'II Sem',
-          email: '22471a0589@nrtec.in',
-          isLeader: true
-        }
-      ],
+      teamMembers: [],
       
       // Guides & Industry
       guide: {
         facultyId: defaultFac?.id || '',
-        name: defaultFac?.name || 'Dr. S. V. N. Sreenivasu',
-        department: defaultDept,
-        designation: defaultFac?.designation || 'Professor',
+        name: defaultFac?.name || '',
+        department: defaultFac?.department || defaultDept,
+        designation: defaultFac?.designation || '',
         email: defaultFac?.email || ''
       },
       coGuide: null,
@@ -144,14 +134,14 @@ export default function StudentProjectWizardModal({
       },
       
       // Tech Stack
-      technologies: ['Python', 'React', 'TensorFlow', 'FastAPI'],
+      technologies: [],
       
       // Milestone Reviews
       reviews: [
-        { reviewName: 'Proposal / Synopsis Review', reviewDate: '2025-08-15', panelMembers: 'Project Review Committee', marksAwarded: 18, maxMarks: 20, feedback: 'Problem statement approved.', status: 'COMPLETED' },
-        { reviewName: 'Review 1 (Architecture)', reviewDate: '2025-10-20', panelMembers: 'Internal Panel', marksAwarded: 22, maxMarks: 25, feedback: 'Design approved.', status: 'COMPLETED' },
-        { reviewName: 'Review 2 (Implementation)', reviewDate: '2025-12-10', panelMembers: 'Internal Panel', marksAwarded: 21, maxMarks: 25, feedback: 'Testing with baseline model.', status: 'IN_PROGRESS' },
-        { reviewName: 'Final Viva & Demo', reviewDate: '2026-03-25', panelMembers: 'External & Internal Panel', marksAwarded: 0, maxMarks: 30, feedback: '', status: 'PENDING' }
+        { reviewName: 'Proposal / Synopsis Review', reviewDate: '', panelMembers: 'Project Review Committee', marksAwarded: 0, maxMarks: 20, feedback: '', status: 'PENDING' },
+        { reviewName: 'Review 1 (Architecture)', reviewDate: '', panelMembers: 'Internal Panel', marksAwarded: 0, maxMarks: 25, feedback: '', status: 'PENDING' },
+        { reviewName: 'Review 2 (Implementation)', reviewDate: '', panelMembers: 'Internal Panel', marksAwarded: 0, maxMarks: 25, feedback: '', status: 'PENDING' },
+        { reviewName: 'Final Viva & Demo', reviewDate: '', panelMembers: 'External & Internal Panel', marksAwarded: 0, maxMarks: 30, feedback: '', status: 'PENDING' }
       ],
       
       // Links & Research Outcomes
