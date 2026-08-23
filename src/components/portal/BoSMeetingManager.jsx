@@ -89,6 +89,16 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
   const [reviewModalMeeting, setReviewModalMeeting] = useState(null);
   const [reviewAction, setReviewAction] = useState('APPROVED'); // 'APPROVED' | 'NEEDS_REVISION'
   const [reviewComments, setReviewComments] = useState('');
+  const [reviewError, setReviewError] = useState('');
+
+  // Toast & Delete Modal States
+  const [toastMessage, setToastMessage] = useState(null);
+  const [deleteDraftMeeting, setDeleteDraftMeeting] = useState(null);
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   // Regulations Master List
   const availableRegulations = ['R16', 'R19', 'R20', 'R23', 'R26'];
@@ -170,7 +180,7 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
     const saved = saveBoSMeeting(payload, currentUser);
     refreshMeetings();
     setWizardModalOpen(false);
-    alert(`Draft saved successfully for ${saved.bosNumber}.`);
+    showToast(`Draft saved successfully for ${saved.bosNumber}.`);
   };
 
   // Submit for Review Handler
@@ -183,17 +193,18 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
     const saved = saveBoSMeeting(payload, currentUser);
     refreshMeetings();
     setWizardModalOpen(false);
-    alert(`BoS Meeting ${saved.bosNumber} submitted for Administrative Review!`);
+    showToast(`BoS Meeting ${saved.bosNumber} submitted for Administrative Review!`);
   };
 
   // Handle Review Action (Approve / Request Revision)
   const handleExecuteReview = () => {
     if (!reviewModalMeeting) return;
     if (reviewAction === 'NEEDS_REVISION' && !reviewComments.trim()) {
-      alert('Please provide specific feedback/revision requirements in the comments box.');
+      setReviewError('Please provide specific feedback/revision requirements in the comments box.');
       return;
     }
 
+    setReviewError('');
     updateBoSMeetingStatus(
       reviewModalMeeting.id,
       reviewAction,
@@ -202,19 +213,27 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
     );
 
     refreshMeetings();
+    const currentBosNum = reviewModalMeeting.bosNumber;
     setReviewModalMeeting(null);
     setReviewComments('');
-    alert(`BoS record ${reviewModalMeeting.bosNumber} marked as ${reviewAction}!`);
+    showToast(`BoS record ${currentBosNum} marked as ${reviewAction}!`);
   };
 
   // Handle Delete Draft
   const handleDeleteDraft = (meeting) => {
-    if (confirm(`Are you sure you want to delete draft ${meeting.bosNumber}? This cannot be undone.`)) {
+    setDeleteDraftMeeting(meeting);
+  };
+
+  const handleConfirmDeleteDraft = () => {
+    if (deleteDraftMeeting) {
       try {
-        softDeleteBoSMeeting(meeting.id, currentUser);
+        softDeleteBoSMeeting(deleteDraftMeeting.id, currentUser);
         refreshMeetings();
+        showToast(`Draft ${deleteDraftMeeting.bosNumber} moved to Recycle Bin.`);
       } catch (err) {
-        alert(err.message);
+        showToast(err.message);
+      } finally {
+        setDeleteDraftMeeting(null);
       }
     }
   };
@@ -239,7 +258,13 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
   };
 
   return (
-    <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.4rem' }}>
+    <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.4rem', position: 'relative' }}>
+      {toastMessage && (
+        <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#047857', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.84rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <CheckCircle2 size={16} />
+          <span>{toastMessage}</span>
+        </div>
+      )}
       {/* 1. Page Title & Action Header */}
       <ModulePageHeader
         breadcrumbs={[
@@ -303,7 +328,7 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
             <button
               type="button"
-              onClick={() => alert('Exporting Board of Studies dataset to Excel...')}
+              onClick={() => showToast('Exporting Board of Studies dataset to Excel...')}
               style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: '#F8FAFC', border: '1px solid #CBD5E1', color: '#334155', padding: '0.5rem 0.75rem', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}
               className="hover:bg-slate-100"
             >
@@ -311,7 +336,7 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
             </button>
             <button
               type="button"
-              onClick={() => alert('Generating formal BoS governance PDF summary...')}
+              onClick={() => showToast('Generating formal BoS governance PDF summary...')}
               style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: '#F8FAFC', border: '1px solid #CBD5E1', color: '#334155', padding: '0.5rem 0.75rem', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}
               className="hover:bg-slate-100"
             >
@@ -633,7 +658,7 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <button
                   type="button"
-                  onClick={() => alert(`Printing official dossier for ${detailModalMeeting.bosNumber}...`)}
+                  onClick={() => showToast(`Printing official dossier for ${detailModalMeeting.bosNumber}...`)}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)', color: '#FFFFFF', padding: '0.4rem 0.75rem', borderRadius: '6px', fontSize: '0.74rem', cursor: 'pointer' }}
                 >
                   <Printer size={13} /> Print
@@ -735,7 +760,7 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
                       </div>
                       <button
                         type="button"
-                        onClick={() => alert(`Downloading verified document ${doc.filename}...`)}
+                        onClick={() => showToast(`Downloading verified document ${doc.filename}...`)}
                         style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: '#F8FAFC', border: '1px solid #CBD5E1', padding: '0.35rem 0.75rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}
                       >
                         <Download size={12} /> Download
@@ -838,6 +863,13 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
               </button>
             </div>
 
+            {reviewError && (
+              <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#DC2626', padding: '0.6rem 0.8rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <AlertCircle size={14} />
+                <span>{reviewError}</span>
+              </div>
+            )}
+
             <div style={{ marginBottom: '1.25rem' }}>
               <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '0.3rem' }}>
                 REVIEWER COMMENTS & INSTRUCTIONS *
@@ -847,7 +879,7 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
                 required
                 placeholder={reviewAction === 'APPROVED' ? 'Formal approval remarks for Academic Council...' : 'Specify items requiring revision from the department HOD...'}
                 value={reviewComments}
-                onChange={(e) => setReviewComments(e.target.value)}
+                onChange={(e) => { setReviewComments(e.target.value); setReviewError(''); }}
                 style={{ width: '100%', padding: '0.55rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.8rem', boxSizing: 'border-box' }}
               />
             </div>
@@ -855,7 +887,7 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.6rem' }}>
               <button
                 type="button"
-                onClick={() => setReviewModalMeeting(null)}
+                onClick={() => { setReviewModalMeeting(null); setReviewError(''); }}
                 style={{ padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#FFFFFF', fontSize: '0.8rem', cursor: 'pointer' }}
               >
                 Cancel
@@ -878,6 +910,53 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
               </button>
             </div>
           </motion.div>
+        </div>
+      )}
+
+      {/* 8. Delete Draft Confirmation Modal */}
+      {deleteDraftMeeting && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(7, 15, 30, 0.85)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1.5rem',
+          zIndex: 7000
+        }}>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '16px',
+            padding: '1.8rem',
+            maxWidth: '420px',
+            textAlign: 'center',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.4)'
+          }}>
+            <AlertCircle size={36} style={{ color: '#DC2626', margin: '0 auto 0.6rem' }} />
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.4rem 0' }}>
+              Delete Draft Record?
+            </h3>
+            <p style={{ fontSize: '0.84rem', color: '#64748B', marginBottom: '1.4rem', lineHeight: 1.5 }}>
+              Are you sure you want to delete draft <strong>{deleteDraftMeeting.bosNumber}</strong>? It will be moved to the Recycle Bin.
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+              <button
+                type="button"
+                onClick={() => setDeleteDraftMeeting(null)}
+                style={{ padding: '0.6rem 1.25rem', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#FFFFFF', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteDraft}
+                style={{ padding: '0.6rem 1.4rem', borderRadius: '8px', border: 'none', background: '#DC2626', color: '#FFFFFF', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Delete Draft
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </MotionPage>

@@ -59,6 +59,14 @@ export default function ResearchDiscoveryView({ currentUser, onNavigate }) {
   const [comparisonCandidate, setComparisonCandidate] = useState(null);
   const [importing, setImporting] = useState(false);
   const [importNotice, setImportNotice] = useState('');
+  const [discoveryError, setDiscoveryError] = useState('');
+  const [discoveryToast, setDiscoveryToast] = useState('');
+  const [unlinkConfirmOpen, setUnlinkConfirmOpen] = useState(false);
+
+  const showToast = (msg) => {
+    setDiscoveryToast(msg);
+    setTimeout(() => setDiscoveryToast(''), 3500);
+  };
 
   // Load faculty's current stored profile when faculty changes
   useEffect(() => {
@@ -70,6 +78,7 @@ export default function ResearchDiscoveryView({ currentUser, onNavigate }) {
       setDiscoveredCandidates(null);
       setSelectedCandidateKeys({});
       setImportNotice('');
+      setDiscoveryError('');
       setMatchingProgress({ stage: 'IDLE', message: '', percent: 0 });
       setExtractProgress({ stage: 'IDLE', message: '', percent: 0 });
     }
@@ -81,6 +90,7 @@ export default function ResearchDiscoveryView({ currentUser, onNavigate }) {
     setMatchResult(null);
     setDiscoveredCandidates(null);
     setImportNotice('');
+    setDiscoveryError('');
 
     setMatchingProgress({ stage: 'SEARCHING', message: 'Preparing faculty identity & normalized tokens...', percent: 25 });
     await new Promise(r => setTimeout(r, 250));
@@ -102,6 +112,7 @@ export default function ResearchDiscoveryView({ currentUser, onNavigate }) {
     const updated = linkFacultyResearcher(selectedFacultyId, candidate, currentUser);
     setCurrentProfile(updated);
     setMatchResult(null);
+    showToast(`Linked OpenAlex profile (${candidate.openAlexAuthorId}) for ${facultyRecord.name}.`);
 
     // Auto-trigger publication extraction from local dataset for confirmed researcher
     handleDiscoverWorks(candidate);
@@ -109,12 +120,16 @@ export default function ResearchDiscoveryView({ currentUser, onNavigate }) {
 
   // Handle Unlinking Researcher Profile
   const handleUnlinkProfile = () => {
-    if (window.confirm(`Are you sure you want to unlink the research profile for ${facultyRecord.name}?`)) {
-      unlinkFacultyResearcher(selectedFacultyId, currentUser);
-      setCurrentProfile(getFacultyResearchProfile(selectedFacultyId));
-      setDiscoveredCandidates(null);
-      setSelectedCandidateKeys({});
-    }
+    setUnlinkConfirmOpen(true);
+  };
+
+  const handleConfirmUnlink = () => {
+    unlinkFacultyResearcher(selectedFacultyId, currentUser);
+    setCurrentProfile(getFacultyResearchProfile(selectedFacultyId));
+    setDiscoveredCandidates(null);
+    setSelectedCandidateKeys({});
+    setUnlinkConfirmOpen(false);
+    showToast(`Unlinked research profile for ${facultyRecord.name}.`);
   };
 
   // Handle Discovering Works for Confirmed Researcher
@@ -126,10 +141,11 @@ export default function ResearchDiscoveryView({ currentUser, onNavigate }) {
     };
 
     if (!candidateToQuery.openAlexAuthorId) {
-      alert('No confirmed OpenAlex researcher ID linked to this faculty member.');
+      setDiscoveryError('No confirmed OpenAlex researcher ID linked to this faculty member.');
       return;
     }
 
+    setDiscoveryError('');
     setExtractingWorks(true);
     setDiscoveredCandidates(null);
     setSelectedCandidateKeys({});
@@ -151,7 +167,7 @@ export default function ResearchDiscoveryView({ currentUser, onNavigate }) {
       });
       setSelectedCandidateKeys(initialSelection);
     } else {
-      alert(result.error || 'Failed to extract publications from local index.');
+      setDiscoveryError(result.error || 'Failed to extract publications from local index.');
     }
   };
 
@@ -186,10 +202,11 @@ export default function ResearchDiscoveryView({ currentUser, onNavigate }) {
     }
 
     if (toImport.length === 0) {
-      alert(onlyNew ? 'No NEW publications ready to import.' : 'Please select at least one publication to import.');
+      setDiscoveryError(onlyNew ? 'No NEW publications ready to import.' : 'Please select at least one publication to import.');
       return;
     }
 
+    setDiscoveryError('');
     setImporting(true);
     const preparedCandidates = toImport.map(c => ({
       ...c,
@@ -213,12 +230,10 @@ export default function ResearchDiscoveryView({ currentUser, onNavigate }) {
 
     importPublicationsBatch(preparedCandidates, currentUser);
 
-    setTimeout(() => {
-      setImporting(false);
-      setImportNotice(`Successfully imported ${toImport.length} publication(s) into institutional review queue (Status: IMPORTED_PENDING_REVIEW).`);
-      // Update candidate selections
-      setSelectedCandidateKeys({});
-    }, 450);
+    setImporting(false);
+    setSelectedCandidateKeys({});
+    showToast(`Successfully imported ${toImport.length} publication(s) into review queue.`);
+    setImportNotice(`Successfully imported ${toImport.length} publication(s) into review queue.`);
   };
 
   const filteredCandidates = discoveredCandidates?.candidates.filter(c => {
@@ -230,7 +245,19 @@ export default function ResearchDiscoveryView({ currentUser, onNavigate }) {
   const isProfileLinked = currentProfile?.openAlexAuthorId && currentProfile?.openAlexMatchStatus === 'MANUALLY_CONFIRMED';
 
   return (
-    <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', position: 'relative' }}>
+      {discoveryToast && (
+        <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#047857', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.84rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <CheckCircle2 size={16} />
+          <span>{discoveryToast}</span>
+        </div>
+      )}
+      {discoveryError && (
+        <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#DC2626', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <AlertCircle size={16} />
+          <span>{discoveryError}</span>
+        </div>
+      )}
       {/* 1. Header Banner */}
       <div style={{
         background: 'linear-gradient(135deg, #070F1E 0%, #0B192C 60%, #122846 100%)',
@@ -745,6 +772,52 @@ export default function ResearchDiscoveryView({ currentUser, onNavigate }) {
             </div>
             <div style={{ padding: '0.75rem 1.25rem', background: '#F8FAFC', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end' }}>
               <button type="button" onClick={() => setComparisonCandidate(null)} style={{ padding: '0.4rem 0.85rem', background: '#070F1E', color: '#F1C40F', border: 'none', borderRadius: '6px', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer' }}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* 8. Unlink Profile Confirmation Modal */}
+      {unlinkConfirmOpen && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(7, 15, 30, 0.85)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1.5rem',
+          zIndex: 7000
+        }}>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '16px',
+            padding: '1.8rem',
+            maxWidth: '400px',
+            textAlign: 'center',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.4)'
+          }}>
+            <AlertCircle size={36} style={{ color: '#DC2626', margin: '0 auto 0.6rem' }} />
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.4rem 0' }}>
+              Unlink Research Profile?
+            </h3>
+            <p style={{ fontSize: '0.84rem', color: '#64748B', marginBottom: '1.4rem', lineHeight: 1.5 }}>
+              Are you sure you want to unlink the research profile for <strong>{facultyRecord.name}</strong>?
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+              <button
+                type="button"
+                onClick={() => setUnlinkConfirmOpen(false)}
+                style={{ padding: '0.6rem 1.25rem', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#FFFFFF', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmUnlink}
+                style={{ padding: '0.6rem 1.4rem', borderRadius: '8px', border: 'none', background: '#DC2626', color: '#FFFFFF', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Unlink Profile
+              </button>
             </div>
           </div>
         </div>

@@ -137,15 +137,19 @@ export default function PublicationWizardModal({
     };
   });
 
+  const [doiLookupError, setDoiLookupError] = useState('');
+  const [submitError, setSubmitError] = useState('');
+
   // Crossref DOI Instant Lookup Handler
   const handleCrossrefLookup = async () => {
     if (!formData.doi) {
-      alert('Please enter a DOI to search (e.g. 10.1109/TCE.2025.3421098)');
+      setDoiLookupError('Please enter a DOI to search (e.g. 10.1109/TCE.2025.3421098)');
       return;
     }
 
     setDoiLookupLoading(true);
     setDoiLookupSuccess(false);
+    setDoiLookupError('');
 
     const result = await fetchCrossrefMetadata(formData.doi);
     setDoiLookupLoading(false);
@@ -175,7 +179,7 @@ export default function PublicationWizardModal({
       setDoiLookupSuccess(true);
       setTimeout(() => setDoiLookupSuccess(false), 3000);
     } else {
-      alert(result.error || 'Could not fetch DOI metadata. Please check the DOI format or enter manually.');
+      setDoiLookupError(result.error || 'Could not fetch DOI metadata. Please check the DOI format or enter manually.');
     }
   };
 
@@ -311,17 +315,18 @@ export default function PublicationWizardModal({
       }, 400);
     } catch (err) {
       setIsSavingDraft(false);
-      alert(err.message);
+      setSubmitError(err.message);
     }
   };
 
   const handleSubmit = () => {
     if (!validateStep(1) || !validateStep(2)) {
-      alert('Please fill mandatory fields before submitting.');
+      setSubmitError('Please fill mandatory fields before submitting.');
       return;
     }
 
     setIsSubmitting(true);
+    setSubmitError('');
     try {
       const saved = savePublication({
         ...formData,
@@ -335,7 +340,7 @@ export default function PublicationWizardModal({
       }, 500);
     } catch (err) {
       setIsSubmitting(false);
-      alert(err.message);
+      setSubmitError(err.message);
     }
   };
 
@@ -452,6 +457,18 @@ export default function PublicationWizardModal({
 
         {/* 3. Form Body Canvas */}
         <div style={{ padding: '1.5rem 1.75rem', overflowY: 'auto', flex: 1 }}>
+          {submitError && (
+            <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#DC2626', padding: '0.75rem 1rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <AlertCircle size={16} />
+              <span>{submitError}</span>
+            </div>
+          )}
+          {doiLookupError && (
+            <div style={{ background: '#FFFBEB', border: '1px solid #FCD34D', color: '#B45309', padding: '0.75rem 1rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <AlertCircle size={16} />
+              <span>{doiLookupError}</span>
+            </div>
+          )}
           <AnimatePresence mode="wait">
             {/* ──────── STEP 1: TYPE & OWNERSHIP ──────── */}
             {currentStep === 1 && (

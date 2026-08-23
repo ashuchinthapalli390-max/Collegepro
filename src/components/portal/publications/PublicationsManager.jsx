@@ -38,6 +38,7 @@ import {
   exportToPDF
 } from '../../../data/portalStore.js';
 import PublicationWizardModal from './PublicationWizardModal.jsx';
+import ConfirmDeleteDialog from '../common/ConfirmDeleteDialog.jsx';
 import { 
   MotionPage, 
   ModulePageHeader, 
@@ -68,6 +69,13 @@ export default function PublicationsManager({ currentUser, onDataChange, onOpenS
   const [reviewModalItem, setReviewModalItem] = useState(null);
   const [reviewAction, setReviewAction] = useState('APPROVE');
   const [reviewRemarks, setReviewRemarks] = useState('');
+  const [deleteConfirmItem, setDeleteConfirmItem] = useState(null);
+  const [toastMessage, setToastMessage] = useState(null);
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   // Filters State
   const [selectedQuickTab, setSelectedQuickTab] = useState('ALL');
@@ -88,13 +96,13 @@ export default function PublicationsManager({ currentUser, onDataChange, onOpenS
     return getPublications();
   }, [dataVersion]);
 
-  // KPIs
+  // Aggregate Stats
   const stats = useMemo(() => {
     const total = publications.length;
-    const journal = publications.filter(p => p.publicationType === 'Journal Article').length;
-    const conference = publications.filter(p => p.publicationType === 'Conference Paper').length;
-    const scopus = publications.filter(p => p.isScopusIndexed).length;
-    const wos = publications.filter(p => p.isWosIndexed).length;
+    const journal = publications.filter(p => p.publicationType === 'JOURNAL').length;
+    const conference = publications.filter(p => p.publicationType === 'CONFERENCE').length;
+    const scopus = publications.filter(p => p.isScopusIndexed === 'YES' || p.isScopusIndexed === true).length;
+    const wos = publications.filter(p => p.isWosIndexed === 'YES' || p.isWosIndexed === true).length;
     const pendingReview = publications.filter(p => p.workflowStatus === 'SUBMITTED' || p.workflowStatus === 'UNDER_REVIEW' || p.workflowStatus === 'IMPORTED_PENDING_REVIEW').length;
     const thisYear = publications.filter(p => p.academicYear === '2025-26' || p.academicYear === '2024-25').length;
     return { total, journal, conference, scopus, wos, pendingReview, thisYear };
@@ -105,32 +113,29 @@ export default function PublicationsManager({ currentUser, onDataChange, onOpenS
     return publications.filter(item => {
       const q = searchQuery.toLowerCase().trim();
       const matchSearch = !q ||
-        (item.publicationRecordNumber && item.publicationRecordNumber.toLowerCase().includes(q)) ||
+        (item.publicationNumber && item.publicationNumber.toLowerCase().includes(q)) ||
         (item.title && item.title.toLowerCase().includes(q)) ||
-        (item.doi && item.doi.toLowerCase().includes(q)) ||
         (item.journalName && item.journalName.toLowerCase().includes(q)) ||
-        (item.conferenceName && item.conferenceName.toLowerCase().includes(q)) ||
+        (item.doi && item.doi.toLowerCase().includes(q)) ||
         (item.authors && item.authors.some(a => a.name && a.name.toLowerCase().includes(q)));
 
-      const matchDept = selectedDept === 'ALL' || (item.department || '').toLowerCase().includes(selectedDept.toLowerCase());
+      const itemDept = item.department || '';
+      const matchDept = selectedDept === 'ALL' || itemDept.toLowerCase().includes(selectedDept.toLowerCase());
       const matchAy = selectedAy === 'ALL' || item.academicYear === selectedAy;
       const matchType = selectedType === 'ALL' || item.publicationType === selectedType;
-      const matchScopus = selectedScopusFilter === 'ALL' ||
-        (selectedScopusFilter === 'SCOPUS' && item.isScopusIndexed) ||
-        (selectedScopusFilter === 'WOS' && item.isWosIndexed) ||
-        (selectedScopusFilter === 'BOTH' && item.isScopusIndexed && item.isWosIndexed);
+      const matchScopus = selectedScopusFilter === 'ALL' || (selectedScopusFilter === 'SCOPUS' && (item.isScopusIndexed === 'YES' || item.isScopusIndexed === true));
       const matchWorkflow = selectedWorkflowStatus === 'ALL' || item.workflowStatus === selectedWorkflowStatus;
 
-      // Quick Tabs Filter
-      let matchQuick = true;
-      if (selectedQuickTab === 'JOURNAL') matchQuick = item.publicationType === 'Journal Article';
-      if (selectedQuickTab === 'CONFERENCE') matchQuick = item.publicationType === 'Conference Paper';
-      if (selectedQuickTab === 'SCOPUS') matchQuick = !!item.isScopusIndexed;
-      if (selectedQuickTab === 'WOS') matchQuick = !!item.isWosIndexed;
-      if (selectedQuickTab === 'PENDING') matchQuick = item.workflowStatus === 'SUBMITTED' || item.workflowStatus === 'UNDER_REVIEW' || item.workflowStatus === 'IMPORTED_PENDING_REVIEW';
-      if (selectedQuickTab === 'IMPORTED') matchQuick = item.source === 'OPENALEX_LOCAL_INDEX' || item.source === 'SCOPUS_API' || item.source === 'WOS_API';
+      // Quick Tab Filter
+      let matchTab = true;
+      if (selectedQuickTab === 'JOURNAL') matchTab = item.publicationType === 'JOURNAL';
+      else if (selectedQuickTab === 'CONFERENCE') matchTab = item.publicationType === 'CONFERENCE';
+      else if (selectedQuickTab === 'SCOPUS') matchTab = item.isScopusIndexed === 'YES' || item.isScopusIndexed === true;
+      else if (selectedQuickTab === 'WOS') matchTab = item.isWosIndexed === 'YES' || item.isWosIndexed === true;
+      else if (selectedQuickTab === 'PENDING') matchTab = item.workflowStatus === 'SUBMITTED' || item.workflowStatus === 'UNDER_REVIEW';
+      else if (selectedQuickTab === 'IMPORTED') matchTab = item.workflowStatus === 'IMPORTED_PENDING_REVIEW';
 
-      return matchSearch && matchDept && matchAy && matchType && matchScopus && matchWorkflow && matchQuick;
+      return matchSearch && matchDept && matchAy && matchType && matchScopus && matchWorkflow && matchTab;
     });
   }, [publications, searchQuery, selectedDept, selectedAy, selectedType, selectedScopusFilter, selectedWorkflowStatus, selectedQuickTab]);
 
@@ -141,15 +146,24 @@ export default function PublicationsManager({ currentUser, onDataChange, onOpenS
   const handleExecuteReview = () => {
     if (!reviewModalItem) return;
     reviewPublication(reviewModalItem.id, reviewAction, reviewRemarks, currentUser);
+    const num = reviewModalItem.publicationNumber || reviewModalItem.id;
     setReviewModalItem(null);
     setReviewRemarks('');
     refresh();
+    showToast(`Publication ${num} decision submitted.`);
   };
 
   const handleDelete = (item) => {
-    if (window.confirm(`Are you sure you want to move publication "${item.title}" to Recycle Bin?`)) {
-      softDeletePublication(item.id, currentUser);
+    setDeleteConfirmItem(item);
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteConfirmItem) {
+      softDeletePublication(deleteConfirmItem.id, currentUser);
+      const title = deleteConfirmItem.title;
+      setDeleteConfirmItem(null);
       refresh();
+      showToast(`Publication "${title}" moved to Recycle Bin.`);
     }
   };
 
@@ -173,7 +187,13 @@ export default function PublicationsManager({ currentUser, onDataChange, onOpenS
   };
 
   return (
-    <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem' }}>
+    <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem', position: 'relative' }}>
+      {toastMessage && (
+        <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#047857', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.84rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <CheckCircle2 size={16} />
+          <span>{toastMessage}</span>
+        </div>
+      )}
       {/* 1. Header & Quick Actions */}
       <ModulePageHeader
         breadcrumbs={[
@@ -735,6 +755,15 @@ export default function PublicationsManager({ currentUser, onDataChange, onOpenS
           </div>
         </div>
       )}
+      {/* Confirm Delete Dialog */}
+      <ConfirmDeleteDialog
+        isOpen={Boolean(deleteConfirmItem)}
+        title="Move Publication to Recycle Bin?"
+        itemName={deleteConfirmItem?.title}
+        itemType="publication"
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeleteConfirmItem(null)}
+      />
     </MotionPage>
   );
 }

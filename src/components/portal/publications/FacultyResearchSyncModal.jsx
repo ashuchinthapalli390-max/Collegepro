@@ -91,13 +91,17 @@ export default function FacultyResearchSyncModal({
     setTimeout(() => setIdSavedMessage(''), 3500);
   };
 
+  const [syncModalError, setSyncModalError] = useState('');
+  const [syncModalToast, setSyncModalToast] = useState('');
+
   const handleStartSync = async () => {
     const hasAtLeastOne = identifiers.orcid || identifiers.scopusAuthorId || identifiers.wosResearcherId;
     if (!hasAtLeastOne) {
-      alert('Please enter at least one research identifier (ORCID, Scopus Author ID, or WoS ResearcherID).');
+      setSyncModalError('Please enter at least one research identifier (ORCID, Scopus Author ID, or WoS ResearcherID).');
       return;
     }
 
+    setSyncModalError('');
     // Auto-save before sync
     saveFacultyResearchProfile(selectedFacultyId, identifiers, currentUser);
 
@@ -122,7 +126,7 @@ export default function FacultyResearchSyncModal({
       });
       setSelectedCandidateKeys(initialSelection);
     } else {
-      alert(result.error || 'Failed to sync with research registries.');
+      setSyncModalError(result.error || 'Failed to sync with research registries.');
     }
   };
 
@@ -150,10 +154,11 @@ export default function FacultyResearchSyncModal({
     if (!syncResult) return;
     const toImport = syncResult.candidates.filter(c => selectedCandidateKeys[c.candidateId]);
     if (toImport.length === 0) {
-      alert('Please select at least one publication to import.');
+      setSyncModalError('Please select at least one publication to import.');
       return;
     }
 
+    setSyncModalError('');
     setImporting(true);
     const preparedCandidates = toImport.map(c => ({
       ...c,
@@ -177,12 +182,12 @@ export default function FacultyResearchSyncModal({
 
     importPublicationsBatch(preparedCandidates, currentUser);
 
+    setImporting(false);
+    setSyncModalToast(`Successfully imported ${toImport.length} publication(s) into review pipeline.`);
     setTimeout(() => {
-      setImporting(false);
-      alert(`Successfully imported ${toImport.length} publication(s) into departmental review pipeline (Status: IMPORTED_PENDING_REVIEW).`);
       if (onSyncComplete) onSyncComplete();
       onClose();
-    }, 400);
+    }, 1200);
   };
 
   if (!isOpen) return null;
@@ -263,6 +268,18 @@ export default function FacultyResearchSyncModal({
 
         {/* 2. Scrollable Body */}
         <div style={{ padding: '1.5rem 1.75rem', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {syncModalError && (
+            <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#DC2626', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <AlertCircle size={16} />
+              <span>{syncModalError}</span>
+            </div>
+          )}
+          {syncModalToast && (
+            <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#047857', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <CheckCircle2 size={16} />
+              <span>{syncModalToast}</span>
+            </div>
+          )}
           {/* Faculty Selector & Real Identifier Inputs */}
           <div style={{ background: '#F8FAFC', borderRadius: '14px', border: '1px solid #E2E8F0', padding: '1.25rem' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>

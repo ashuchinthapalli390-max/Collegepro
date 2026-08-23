@@ -248,8 +248,16 @@ export default function PatentWizardModal({
     setCurrentStep(prev => Math.max(1, prev - 1));
   };
 
+  const [submitError, setSubmitError] = useState('');
+
   const handleSaveDraft = () => {
+    if (!formData.title.trim()) {
+      setSubmitError('Please provide at least a Patent Title to save draft.');
+      return;
+    }
+
     setIsSavingDraft(true);
+    setSubmitError('');
     try {
       const saved = savePatent({
         ...formData,
@@ -264,17 +272,18 @@ export default function PatentWizardModal({
       }, 400);
     } catch (err) {
       setIsSavingDraft(false);
-      alert(err.message);
+      setSubmitError(err.message);
     }
   };
 
   const handleSubmit = () => {
     if (!validateStep(1) || !validateStep(2) || !validateStep(3)) {
-      alert('Please complete all mandatory fields.');
+      setSubmitError('Please complete all mandatory fields across steps 1, 2, and 3.');
       return;
     }
 
     setIsSubmitting(true);
+    setSubmitError('');
     try {
       const saved = savePatent({
         ...formData,
@@ -288,7 +297,7 @@ export default function PatentWizardModal({
       }, 500);
     } catch (err) {
       setIsSubmitting(false);
-      alert(err.message);
+      setSubmitError(err.message);
     }
   };
 
@@ -404,6 +413,12 @@ export default function PatentWizardModal({
 
         {/* 3. Form Body */}
         <div style={{ padding: '1.5rem 1.75rem', overflowY: 'auto', flex: 1 }}>
+          {submitError && (
+            <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#DC2626', padding: '0.75rem 1rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <AlertCircle size={16} />
+              <span>{submitError}</span>
+            </div>
+          )}
           <AnimatePresence mode="wait">
             {/* ──────── STEP 1: PATENT DETAILS ──────── */}
             {currentStep === 1 && (

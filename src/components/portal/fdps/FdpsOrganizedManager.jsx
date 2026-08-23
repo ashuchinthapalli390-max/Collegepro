@@ -32,6 +32,7 @@ import {
   exportToPDF
 } from '../../../data/portalStore.js';
 import FdpOrganizedWizardModal from './FdpOrganizedWizardModal.jsx';
+import ConfirmDeleteDialog from '../common/ConfirmDeleteDialog.jsx';
 import { 
   MotionPage, 
   ModulePageHeader, 
@@ -51,6 +52,13 @@ export default function FdpsOrganizedManager({ currentUser, onDataChange }) {
   const [reviewModalItem, setReviewModalItem] = useState(null);
   const [reviewAction, setReviewAction] = useState('APPROVE');
   const [reviewRemarks, setReviewRemarks] = useState('');
+  const [deleteConfirmItem, setDeleteConfirmItem] = useState(null);
+  const [toastMessage, setToastMessage] = useState(null);
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -109,15 +117,24 @@ export default function FdpsOrganizedManager({ currentUser, onDataChange }) {
   const handleExecuteReview = () => {
     if (!reviewModalItem) return;
     reviewFDP(reviewModalItem.id, reviewAction, reviewRemarks, currentUser);
+    const title = reviewModalItem.fdpTitle;
     setReviewModalItem(null);
     setReviewRemarks('');
     refresh();
+    showToast(`FDP decision submitted for "${title}".`);
   };
 
   const handleDelete = (item) => {
-    if (window.confirm(`Are you sure you want to move FDP "${item.fdpTitle}" to Recycle Bin?`)) {
-      softDeleteFDP(item.id, currentUser);
+    setDeleteConfirmItem(item);
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteConfirmItem) {
+      softDeleteFDP(deleteConfirmItem.id, currentUser);
+      const title = deleteConfirmItem.fdpTitle;
+      setDeleteConfirmItem(null);
       refresh();
+      showToast(`FDP "${title}" moved to Recycle Bin.`);
     }
   };
 
@@ -137,7 +154,13 @@ export default function FdpsOrganizedManager({ currentUser, onDataChange }) {
   };
 
   return (
-    <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.4rem' }}>
+    <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.4rem', position: 'relative' }}>
+      {toastMessage && (
+        <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#047857', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.84rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <CheckCircle2 size={16} />
+          <span>{toastMessage}</span>
+        </div>
+      )}
       {/* 1. Header */}
       <ModulePageHeader
         breadcrumbs={[
@@ -452,6 +475,15 @@ export default function FdpsOrganizedManager({ currentUser, onDataChange }) {
           </div>
         </div>
       )}
+      {/* Confirm Delete Dialog */}
+      <ConfirmDeleteDialog
+        isOpen={Boolean(deleteConfirmItem)}
+        title="Move FDP to Recycle Bin?"
+        itemName={deleteConfirmItem?.fdpTitle}
+        itemType="FDP record"
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeleteConfirmItem(null)}
+      />
     </MotionPage>
   );
 }

@@ -25,11 +25,21 @@ import {
 } from '../../../data/portalStore.js';
 
 export function IamMatrixManager({ currentUser }) {
-  const [matrix, setMatrix] = useState(getRolePermissions());
-  const roles = ['SUPER_ADMIN', 'ADMIN', 'DEAN', 'HOD', 'FACULTY'];
+  return <PermissionsMatrixManager currentUser={currentUser} />;
+}
 
-  const togglePerm = (role, permId) => {
-    if (role === 'SUPER_ADMIN') return; // Super admin always has all permissions
+export function PermissionsMatrixManager({ currentUser }) {
+  const [matrix, setMatrix] = useState(getRolePermissions());
+  const [toastMessage, setToastMessage] = useState(null);
+  const roles = ['SUPER_ADMIN', 'ADMIN', 'HOD', 'FACULTY', 'STUDENT', 'AUDITOR'];
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const handleToggle = (role, permId) => {
+    if (role === 'SUPER_ADMIN') return;
     setMatrix(prev => {
       const current = prev[role] || [];
       const updated = current.includes(permId) ? current.filter(p => p !== permId) : [...current, permId];
@@ -39,11 +49,17 @@ export function IamMatrixManager({ currentUser }) {
 
   const handleSave = () => {
     saveRolePermissions(matrix, currentUser);
-    alert('RBAC Permissions Matrix saved successfully across all institutional roles!');
+    showToast('RBAC Permissions Matrix saved successfully across all institutional roles!');
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem', width: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem', width: '100%', position: 'relative' }}>
+      {toastMessage && (
+        <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#047857', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.84rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <CheckCircle2 size={16} />
+          <span>{toastMessage}</span>
+        </div>
+      )}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.74rem', color: '#64748B', marginBottom: '0.25rem' }}>
@@ -58,16 +74,16 @@ export function IamMatrixManager({ currentUser }) {
             Role-Based Access Control (RBAC) Matrix
           </h1>
           <p style={{ fontSize: '0.82rem', color: '#64748B', margin: 0 }}>
-            Configure granular module permissions for Super Admin, College Admin, Deans, HODs, and Faculty.
+            Configure granular institutional module privileges across system roles.
           </p>
         </div>
 
         <button
           type="button"
           onClick={handleSave}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', background: 'linear-gradient(135deg, #F1C40F 0%, #D4AF37 100%)', color: '#070F1E', padding: '0.55rem 1.05rem', borderRadius: '8px', fontWeight: 800, fontSize: '0.8rem', border: 'none', cursor: 'pointer' }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', background: 'linear-gradient(135deg, #F1C40F 0%, #D4AF37 100%)', color: '#070F1E', padding: '0.55rem 1.15rem', borderRadius: '8px', fontWeight: 800, fontSize: '0.82rem', border: 'none', cursor: 'pointer' }}
         >
-          <Save size={15} /> Save Matrix Changes
+          <Save size={15} /> Save Permissions
         </button>
       </div>
 
@@ -75,42 +91,32 @@ export function IamMatrixManager({ currentUser }) {
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem' }}>
           <thead>
             <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontSize: '0.72rem', textTransform: 'uppercase' }}>
-              <th style={{ padding: '0.85rem 1rem' }}>Capability / Resource</th>
+              <th style={{ padding: '0.75rem 1rem' }}>Module & Capability</th>
               {roles.map(r => (
-                <th key={r} style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>{r}</th>
+                <th key={r} style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>
+                  {r.replace('_', ' ')}
+                </th>
               ))}
             </tr>
           </thead>
           <tbody>
             {ALL_PERMISSIONS.map(p => (
-              <tr key={p.id} style={{ borderBottom: '1px solid #F1F5F9' }} className="hover:bg-slate-50">
+              <tr key={p.key} style={{ borderBottom: '1px solid #F1F5F9' }}>
                 <td style={{ padding: '0.75rem 1rem' }}>
-                  <div style={{ fontWeight: 800, color: '#0F172A' }}>{p.label}</div>
-                  <div style={{ fontSize: '0.7rem', color: '#64748B' }}>Module: {p.module}</div>
+                  <div style={{ fontWeight: 700, color: '#0F172A' }}>{p.label}</div>
+                  <div style={{ fontSize: '0.7rem', color: '#64748B' }}>{p.module} • <code>{p.key}</code></div>
                 </td>
-                {roles.map(role => {
-                  const allowed = role === 'SUPER_ADMIN' || (matrix[role] && matrix[role].includes(p.id));
+                {roles.map(r => {
+                  const isChecked = matrix[r]?.includes(p.key) || r === 'SUPER_ADMIN';
                   return (
-                    <td key={role} style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
-                      <button
-                        type="button"
-                        disabled={role === 'SUPER_ADMIN'}
-                        onClick={() => togglePerm(role, p.id)}
-                        style={{
-                          width: '28px',
-                          height: '28px',
-                          borderRadius: '6px',
-                          border: allowed ? '1px solid #A7F3D0' : '1px solid #E2E8F0',
-                          background: allowed ? '#ECFDF5' : '#F8FAFC',
-                          color: allowed ? '#047857' : '#94A3B8',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          cursor: role === 'SUPER_ADMIN' ? 'default' : 'pointer'
-                        }}
-                      >
-                        {allowed ? <Check size={16} /> : <X size={16} />}
-                      </button>
+                    <td key={r} style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        disabled={r === 'SUPER_ADMIN'}
+                        onChange={() => handleToggle(r, p.key)}
+                        style={{ cursor: r === 'SUPER_ADMIN' ? 'not-allowed' : 'pointer' }}
+                      />
                     </td>
                   );
                 })}
@@ -125,23 +131,35 @@ export function IamMatrixManager({ currentUser }) {
 
 export function IamSessionsManager({ currentUser }) {
   const [sessions, setSessions] = useState(getActiveSessions());
+  const [toastMessage, setToastMessage] = useState(null);
+  const [confirmRevokeAll, setConfirmRevokeAll] = useState(false);
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   const handleRevoke = (sessionId) => {
     revokeSession(sessionId, currentUser);
     setSessions(getActiveSessions());
-    alert('Session revoked immediately.');
+    showToast('Session revoked immediately.');
   };
 
-  const handleRevokeAll = () => {
-    if (confirm('Revoke all sessions except current?')) {
-      revokeAllOtherSessions(currentUser);
-      setSessions(getActiveSessions());
-      alert('All other active sessions revoked.');
-    }
+  const handleConfirmRevokeAll = () => {
+    revokeAllOtherSessions(currentUser);
+    setSessions(getActiveSessions());
+    setConfirmRevokeAll(false);
+    showToast('All other active sessions revoked.');
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem', width: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem', width: '100%', position: 'relative' }}>
+      {toastMessage && (
+        <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#047857', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.84rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <CheckCircle2 size={16} />
+          <span>{toastMessage}</span>
+        </div>
+      )}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.74rem', color: '#64748B', marginBottom: '0.25rem' }}>
@@ -162,7 +180,7 @@ export function IamSessionsManager({ currentUser }) {
 
         <button
           type="button"
-          onClick={handleRevokeAll}
+          onClick={() => setConfirmRevokeAll(true)}
           style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', padding: '0.5rem 0.85rem', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
         >
           <Trash2 size={14} /> Terminate All Other Sessions
@@ -216,20 +234,79 @@ export function IamSessionsManager({ currentUser }) {
           </tbody>
         </table>
       </div>
+
+      {/* Revoke All Custom Confirmation Modal */}
+      {confirmRevokeAll && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(7, 15, 30, 0.85)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1.5rem',
+          zIndex: 7000
+        }}>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '16px',
+            padding: '1.8rem',
+            maxWidth: '400px',
+            textAlign: 'center',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.4)'
+          }}>
+            <AlertCircle size={36} style={{ color: '#DC2626', margin: '0 auto 0.6rem' }} />
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.4rem 0' }}>
+              Terminate All Other Sessions?
+            </h3>
+            <p style={{ fontSize: '0.84rem', color: '#64748B', marginBottom: '1.4rem', lineHeight: 1.5 }}>
+              This will immediately log out all other active browser and mobile devices.
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+              <button
+                type="button"
+                onClick={() => setConfirmRevokeAll(false)}
+                style={{ padding: '0.6rem 1.25rem', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#FFFFFF', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmRevokeAll}
+                style={{ padding: '0.6rem 1.4rem', borderRadius: '8px', border: 'none', background: '#DC2626', color: '#FFFFFF', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Terminate All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 export function IamSettingsManager({ currentUser }) {
   const [settings, setSettings] = useState(getAuthSettings());
+  const [toastMessage, setToastMessage] = useState(null);
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   const handleSave = () => {
     updateAuthSettings(settings, currentUser);
-    alert('IAM Security & Authentication policies updated successfully!');
+    showToast('IAM Security & Authentication policies updated successfully!');
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem', width: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem', width: '100%', position: 'relative' }}>
+      {toastMessage && (
+        <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#047857', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.84rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <CheckCircle2 size={16} />
+          <span>{toastMessage}</span>
+        </div>
+      )}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.74rem', color: '#64748B', marginBottom: '0.25rem' }}>

@@ -35,6 +35,7 @@ import {
   deleteItem
 } from '../../data/portalStore.js';
 import { DEPARTMENTS, FACULTY_DATA } from '../../data/masterData.js';
+import ConfirmDeleteDialog from './common/ConfirmDeleteDialog.jsx';
 
 export default function MadamModulesCRUD({ activeModule, currentUser, onDataChange }) {
   // Safety guard: Dedicated workflows must never render in generic CRUD
@@ -79,6 +80,7 @@ export default function MadamModulesCRUD({ activeModule, currentUser, onDataChan
 
   // Form State
   const [formData, setFormData] = useState({});
+  const [toastMessage, setToastMessage] = useState(null);
 
   // Fetch current module records
   let items = [];
@@ -204,13 +206,23 @@ export default function MadamModulesCRUD({ activeModule, currentUser, onDataChan
     setModalOpen(true);
   };
 
+  const [deleteConfirmItem, setDeleteConfirmItem] = useState(null);
+
   const handleDelete = (id) => {
-    if (confirm(`Are you sure you want to move item ${id} to the Recycle Bin? (It can be restored at any time by Admin).`)) {
+    setDeleteConfirmItem(id);
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteConfirmItem) {
+      const id = deleteConfirmItem;
       if (activeModule === 'publications') softDeletePublication(id, currentUser);
       else if (activeModule === 'patents') softDeletePatent(id, currentUser);
       else deleteItem(activeModule, id, currentUser);
 
+      setDeleteConfirmItem(null);
       if (onDataChange) onDataChange();
+      setToastMessage(`Item ${id} moved to Recycle Bin.`);
+      setTimeout(() => setToastMessage(null), 3000);
     }
   };
 
@@ -242,7 +254,8 @@ export default function MadamModulesCRUD({ activeModule, currentUser, onDataChan
       savePlacementRecord(formData, currentUser);
     }
 
-    alert(`Record successfully saved to ${activeModule.toUpperCase()}!`);
+    setToastMessage(`Record successfully saved to ${activeModule.toUpperCase()}!`);
+    setTimeout(() => setToastMessage(null), 3000);
     setModalOpen(false);
     if (onDataChange) onDataChange();
   };
@@ -263,7 +276,13 @@ export default function MadamModulesCRUD({ activeModule, currentUser, onDataChan
   };
 
   return (
-    <div style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '1.5rem', boxShadow: 'var(--shadow-sm)' }}>
+    <div style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '1.5rem', boxShadow: 'var(--shadow-sm)', position: 'relative' }}>
+      {toastMessage && (
+        <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#047857', padding: '0.75rem 1rem', borderRadius: '8px', marginBottom: '1.2rem', fontSize: '0.84rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <CheckCircle2 size={16} />
+          <span>{toastMessage}</span>
+        </div>
+      )}
       {/* Control Action Bar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', flexWrap: 'wrap', flex: 1 }}>
@@ -838,6 +857,15 @@ export default function MadamModulesCRUD({ activeModule, currentUser, onDataChan
           </div>
         </div>
       )}
+      {/* Confirm Delete Dialog */}
+      <ConfirmDeleteDialog
+        isOpen={Boolean(deleteConfirmItem)}
+        title="Move Item to Recycle Bin?"
+        itemName={deleteConfirmItem}
+        itemType="record"
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeleteConfirmItem(null)}
+      />
     </div>
   );
 }

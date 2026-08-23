@@ -36,6 +36,7 @@ import {
   exportToPDF
 } from '../../../data/portalStore.js';
 import PatentWizardModal from './PatentWizardModal.jsx';
+import ConfirmDeleteDialog from '../common/ConfirmDeleteDialog.jsx';
 import { 
   MotionPage, 
   ModulePageHeader, 
@@ -56,6 +57,13 @@ export default function PatentsManager({ currentUser, onDataChange }) {
   const [reviewModalItem, setReviewModalItem] = useState(null);
   const [reviewAction, setReviewAction] = useState('APPROVE');
   const [reviewRemarks, setReviewRemarks] = useState('');
+  const [deleteConfirmItem, setDeleteConfirmItem] = useState(null);
+  const [toastMessage, setToastMessage] = useState(null);
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   // Filters State
   const [searchQuery, setSearchQuery] = useState('');
@@ -116,15 +124,24 @@ export default function PatentsManager({ currentUser, onDataChange }) {
   const handleExecuteReview = () => {
     if (!reviewModalItem) return;
     reviewPatent(reviewModalItem.id, reviewAction, reviewRemarks, currentUser);
+    const num = reviewModalItem.patentRecordNumber || reviewModalItem.id;
     setReviewModalItem(null);
     setReviewRemarks('');
     refresh();
+    showToast(`Patent ${num} decision submitted.`);
   };
 
   const handleDelete = (item) => {
-    if (window.confirm(`Are you sure you want to move patent "${item.title}" to Recycle Bin?`)) {
-      softDeletePatent(item.id, currentUser);
+    setDeleteConfirmItem(item);
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteConfirmItem) {
+      softDeletePatent(deleteConfirmItem.id, currentUser);
+      const title = deleteConfirmItem.title;
+      setDeleteConfirmItem(null);
       refresh();
+      showToast(`Patent "${title}" moved to Recycle Bin.`);
     }
   };
 
@@ -160,7 +177,13 @@ export default function PatentsManager({ currentUser, onDataChange }) {
   };
 
   return (
-    <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem' }}>
+    <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem', position: 'relative' }}>
+      {toastMessage && (
+        <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#047857', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.84rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <CheckCircle2 size={16} />
+          <span>{toastMessage}</span>
+        </div>
+      )}
       {/* 1. Header & Actions */}
       <ModulePageHeader
         breadcrumbs={[
@@ -659,6 +682,15 @@ export default function PatentsManager({ currentUser, onDataChange }) {
           </div>
         </div>
       )}
+      {/* Confirm Delete Dialog */}
+      <ConfirmDeleteDialog
+        isOpen={Boolean(deleteConfirmItem)}
+        title="Move Patent to Recycle Bin?"
+        itemName={deleteConfirmItem?.title}
+        itemType="patent"
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeleteConfirmItem(null)}
+      />
     </MotionPage>
   );
 }

@@ -79,7 +79,9 @@ export default function MembersStep({
   // 2. University Nominee Handlers
   const handleSaveNominee = () => {
     if (!formData.universityNominee?.name?.trim() || !formData.universityNominee?.institution?.trim()) {
-      alert('Please fill in the Nominee Name and University / Institution.');
+      if (setValidationErrors) {
+        setValidationErrors(prev => ({ ...prev, universityNominee: 'Please fill in Nominee Name and Institution.' }));
+      }
       return;
     }
     setFormData(prev => ({
@@ -143,11 +145,16 @@ export default function MembersStep({
   const handleSaveExpert = (idx) => {
     const expert = (formData.academicians || [])[idx];
     if (!expert?.name?.trim() || !expert?.institution?.trim()) {
-      alert('Please enter Expert Name and Institution.');
+      if (setValidationErrors) {
+        setValidationErrors(prev => ({ ...prev, academicians: 'Please enter Expert Name and Institution.' }));
+      }
       return;
     }
     handleUpdateExpert(idx, 'isSaved', true);
     setEditingExpertIdx(null);
+    if (validationErrors.academicians) {
+      setValidationErrors(prev => ({ ...prev, academicians: null }));
+    }
   };
 
   const handleRemoveExpert = (idx) => {
@@ -161,7 +168,9 @@ export default function MembersStep({
   // 4. Industry Member Handlers
   const handleSaveIndustry = () => {
     if (!formData.industryMember?.name?.trim() || !formData.industryMember?.company?.trim()) {
-      alert('Please fill in Industry Representative Name and Company / Organization.');
+      if (setValidationErrors) {
+        setValidationErrors(prev => ({ ...prev, industryMember: 'Please fill in Industry Representative Name and Organization.' }));
+      }
       return;
     }
     setFormData(prev => ({
@@ -172,6 +181,9 @@ export default function MembersStep({
       }
     }));
     setIndustryFormOpen(false);
+    if (validationErrors.industryMember) {
+      setValidationErrors(prev => ({ ...prev, industryMember: null }));
+    }
   };
 
   const handleRemoveIndustry = () => {
@@ -194,7 +206,9 @@ export default function MembersStep({
   // 5. Alumni Member Handlers
   const handleSaveAlumni = () => {
     if (!formData.alumniMember?.name?.trim()) {
-      alert('Please fill in Alumni Representative Name.');
+      if (setValidationErrors) {
+        setValidationErrors(prev => ({ ...prev, alumniMember: 'Please fill in Alumni Representative Name.' }));
+      }
       return;
     }
     setFormData(prev => ({
@@ -205,6 +219,9 @@ export default function MembersStep({
       }
     }));
     setAlumniFormOpen(false);
+    if (validationErrors.alumniMember) {
+      setValidationErrors(prev => ({ ...prev, alumniMember: null }));
+    }
   };
 
   const handleRemoveAlumni = () => {

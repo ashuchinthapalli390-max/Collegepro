@@ -29,13 +29,15 @@ export default function ResearchDataSourcesView({ currentUser }) {
   const [parsedRecords, setParsedRecords] = useState(null);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
+  const [parseError, setParseError] = useState('');
 
   const handleParseFile = (type) => {
     if (!uploadText.trim()) {
-      alert('Please paste or upload file content to parse.');
+      setParseError('Please paste or upload file content to parse.');
       return;
     }
 
+    setParseError('');
     try {
       let records = [];
       if (type === 'SCOPUS') {
@@ -45,14 +47,14 @@ export default function ResearchDataSourcesView({ currentUser }) {
       }
 
       if (records.length === 0) {
-        alert('No valid records found in the provided export text. Ensure valid CSV/Tab-delimited format.');
+        setParseError('No valid records found in the provided export text. Ensure valid CSV/Tab-delimited format.');
         return;
       }
 
       setParsedRecords(records);
       setImportResult(null);
     } catch (err) {
-      alert('Failed to parse export file: ' + err.message);
+      setParseError('Failed to parse export file: ' + err.message);
     }
   };
 
@@ -135,11 +137,11 @@ export default function ResearchDataSourcesView({ currentUser }) {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid #E2E8F0', paddingBottom: '0.5rem' }}>
+      {/* Tab Navigation */}
+      <div style={{ display: 'flex', gap: '0.6rem', borderBottom: '1px solid #E2E8F0', paddingBottom: '0.8rem' }}>
         {[
-          { id: 'DATASETS', label: 'Local Dataset Snapshots', icon: Database },
-          { id: 'SCOPUS_IMPORT', label: 'Import Scopus Export (CSV)', icon: Award },
+          { id: 'DATASETS', label: 'Authorized Research Repositories', icon: Database },
+          { id: 'SCOPUS_IMPORT', label: 'Import Scopus CSV Export', icon: FileSpreadsheet },
           { id: 'WOS_IMPORT', label: 'Import Web of Science Export', icon: Globe }
         ].map(tab => {
           const Icon = tab.icon;
@@ -148,7 +150,7 @@ export default function ResearchDataSourcesView({ currentUser }) {
             <button
               key={tab.id}
               type="button"
-              onClick={() => { setActiveTab(tab.id); setParsedRecords(null); setImportResult(null); }}
+              onClick={() => { setActiveTab(tab.id); setParsedRecords(null); setImportResult(null); setParseError(''); }}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -169,6 +171,13 @@ export default function ResearchDataSourcesView({ currentUser }) {
           );
         })}
       </div>
+
+      {parseError && (
+        <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#DC2626', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <AlertCircle size={16} />
+          <span>{parseError}</span>
+        </div>
+      )}
 
       {/* 1. Dataset Snapshots View */}
       {activeTab === 'DATASETS' && (

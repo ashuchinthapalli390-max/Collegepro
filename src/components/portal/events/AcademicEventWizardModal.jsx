@@ -493,13 +493,16 @@ export default function AcademicEventWizardModal({
     }, 400);
   };
 
+  const [submitError, setSubmitError] = useState('');
+
   const handleSubmit = () => {
     if (!validateStep(1) || !validateStep(2)) {
-      alert('Please fill mandatory fields before submitting.');
+      setSubmitError('Please fill mandatory fields before submitting.');
       return;
     }
 
     setIsSubmitting(true);
+    setSubmitError('');
     const saved = saveAcademicEvent({
       ...formData,
       workflowStatus: 'SUBMITTED'
@@ -629,6 +632,12 @@ export default function AcademicEventWizardModal({
 
         {/* 3. Form Body Canvas */}
         <div style={{ padding: '1.5rem 1.75rem', overflowY: 'auto', flex: 1 }}>
+          {submitError && (
+            <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#DC2626', padding: '0.75rem 1rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <AlertCircle size={16} />
+              <span>{submitError}</span>
+            </div>
+          )}
           <AnimatePresence mode="wait">
             {/* ──────── STEP 1: BASIC DETAILS ──────── */}
             {currentStep === 1 && (

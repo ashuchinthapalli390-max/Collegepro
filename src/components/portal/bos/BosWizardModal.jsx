@@ -39,6 +39,7 @@ export default function BosWizardModal({
   const [draftSavedToast, setDraftSavedToast] = useState(false);
   const [unsavedConfirmOpen, setUnsavedConfirmOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
+  const [modalError, setModalError] = useState('');
 
   const availableRegulations = ['R16', 'R19', 'R20', 'R23', 'R26'];
 
@@ -173,10 +174,11 @@ export default function BosWizardModal({
     if (!file) return;
 
     if (!file.name.toLowerCase().endsWith('.pdf')) {
-      alert('Only verified PDF files are supported for statutory records.');
+      setModalError('Only verified PDF files are supported for statutory records.');
       return;
     }
 
+    setModalError('');
     const newDoc = {
       id: 'doc_' + Date.now(),
       title: type === 'MINUTES' ? 'Minutes of Meeting (Signed)' : file.name.replace('.pdf', ''),
@@ -215,22 +217,25 @@ export default function BosWizardModal({
 
   const handleNextStep = () => {
     if (validateStep(currentStep)) {
+      setModalError('');
       setCurrentStep(prev => Math.min(prev + 1, 5));
     }
   };
 
   const handlePrevStep = () => {
+    setModalError('');
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
   const handleSaveDraftClick = async () => {
     setIsSavingDraft(true);
+    setModalError('');
     try {
       await onSaveDraft(formData);
       setDraftSavedToast(true);
       setTimeout(() => setDraftSavedToast(false), 3000);
     } catch (err) {
-      alert(err.message);
+      setModalError(err.message);
     } finally {
       setIsSavingDraft(false);
     }
@@ -238,9 +243,10 @@ export default function BosWizardModal({
 
   const handleSubmitReviewClick = () => {
     if (!validateStep(1) || !validateStep(2)) {
-      alert('Please ensure all required fields in Basic Details and Members are completed.');
+      setModalError('Please ensure all required fields in Basic Details and Members are completed.');
       return;
     }
+    setModalError('');
     onSubmitForReview(formData);
   };
 
@@ -339,6 +345,12 @@ export default function BosWizardModal({
 
         {/* 2. Step Content Canvas */}
         <div style={{ padding: '1.5rem 1.75rem', overflowY: 'auto', flex: 1, backgroundColor: '#FFFFFF' }}>
+          {modalError && (
+            <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#DC2626', padding: '0.75rem 1rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <AlertCircle size={16} />
+              <span>{modalError}</span>
+            </div>
+          )}
           <AnimatePresence mode="wait">
             <motion.div
               key={currentStep}

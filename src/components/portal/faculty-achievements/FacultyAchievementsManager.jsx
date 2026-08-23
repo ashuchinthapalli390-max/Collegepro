@@ -30,6 +30,7 @@ import {
   exportToPDF
 } from '../../../data/portalStore.js';
 import FacultyAchievementWizardModal from './FacultyAchievementWizardModal.jsx';
+import ConfirmDeleteDialog from '../common/ConfirmDeleteDialog.jsx';
 import { 
   MotionPage, 
   ModulePageHeader, 
@@ -49,6 +50,13 @@ export default function FacultyAchievementsManager({ currentUser, onDataChange }
   const [reviewModalItem, setReviewModalItem] = useState(null);
   const [reviewAction, setReviewAction] = useState('APPROVE');
   const [reviewRemarks, setReviewRemarks] = useState('');
+  const [deleteConfirmItem, setDeleteConfirmItem] = useState(null);
+  const [toastMessage, setToastMessage] = useState(null);
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -83,8 +91,9 @@ export default function FacultyAchievementsManager({ currentUser, onDataChange }
     return achievements.filter(item => {
       const q = searchQuery.toLowerCase().trim();
       const matchSearch = !q ||
-        (item.achievementNumber && item.achievementNumber.toLowerCase().includes(q)) ||
+        (item.achievementRecordNumber && item.achievementRecordNumber.toLowerCase().includes(q)) ||
         (item.facultyName && item.facultyName.toLowerCase().includes(q)) ||
+        (item.facultyId && item.facultyId.toLowerCase().includes(q)) ||
         (item.title && item.title.toLowerCase().includes(q)) ||
         (item.eventTitle && item.eventTitle.toLowerCase().includes(q)) ||
         (item.organization && item.organization.toLowerCase().includes(q));
@@ -92,11 +101,9 @@ export default function FacultyAchievementsManager({ currentUser, onDataChange }
       const itemDept = item.department || '';
       const matchDept = selectedDept === 'ALL' || itemDept.toLowerCase().includes(selectedDept.toLowerCase());
       const matchAy = selectedAy === 'ALL' || item.academicYear === selectedAy;
-      const matchType = selectedType === 'ALL' || item.type === selectedType || item.achievementType === selectedType;
+      const matchType = selectedType === 'ALL' || item.type === selectedType;
       const matchRole = selectedRole === 'ALL' || item.role === selectedRole;
-      
-      const itemStatus = item.workflowStatus || (item.status === 'Approved' ? 'APPROVED' : 'DRAFT');
-      const matchStatus = selectedStatus === 'ALL' || itemStatus === selectedStatus;
+      const matchStatus = selectedStatus === 'ALL' || item.workflowStatus === selectedStatus;
 
       return matchSearch && matchDept && matchAy && matchType && matchRole && matchStatus;
     });
@@ -108,15 +115,24 @@ export default function FacultyAchievementsManager({ currentUser, onDataChange }
   const handleExecuteReview = () => {
     if (!reviewModalItem) return;
     reviewFacultyAchievement(reviewModalItem.id, reviewAction, reviewRemarks, currentUser);
+    const title = reviewModalItem.title || reviewModalItem.eventTitle;
     setReviewModalItem(null);
     setReviewRemarks('');
     refresh();
+    showToast(`Achievement decision submitted for "${title}".`);
   };
 
   const handleDelete = (item) => {
-    if (window.confirm(`Are you sure you want to move achievement "${item.facultyName}: ${item.title || item.eventTitle}" to Recycle Bin?`)) {
-      softDeleteFacultyAchievement(item.id, currentUser);
+    setDeleteConfirmItem(item);
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteConfirmItem) {
+      softDeleteFacultyAchievement(deleteConfirmItem.id, currentUser);
+      const title = deleteConfirmItem.title || deleteConfirmItem.eventTitle;
+      setDeleteConfirmItem(null);
       refresh();
+      showToast(`Achievement "${title}" moved to Recycle Bin.`);
     }
   };
 
@@ -137,7 +153,13 @@ export default function FacultyAchievementsManager({ currentUser, onDataChange }
   };
 
   return (
-    <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.4rem' }}>
+    <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.4rem', position: 'relative' }}>
+      {toastMessage && (
+        <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#047857', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.84rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <CheckCircle2 size={16} />
+          <span>{toastMessage}</span>
+        </div>
+      )}
       {/* 1. Header */}
       <ModulePageHeader
         breadcrumbs={[
@@ -444,6 +466,15 @@ export default function FacultyAchievementsManager({ currentUser, onDataChange }
           </div>
         </div>
       )}
+      {/* Confirm Delete Dialog */}
+      <ConfirmDeleteDialog
+        isOpen={Boolean(deleteConfirmItem)}
+        title="Move Achievement to Recycle Bin?"
+        itemName={deleteConfirmItem?.title || deleteConfirmItem?.eventTitle}
+        itemType="achievement record"
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeleteConfirmItem(null)}
+      />
     </MotionPage>
   );
 }

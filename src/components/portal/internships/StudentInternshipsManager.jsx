@@ -31,6 +31,7 @@ import {
   exportToPDF
 } from '../../../data/portalStore.js';
 import StudentInternshipWizardModal from './StudentInternshipWizardModal.jsx';
+import ConfirmDeleteDialog from '../common/ConfirmDeleteDialog.jsx';
 import { 
   MotionPage, 
   ModulePageHeader, 
@@ -50,6 +51,13 @@ export default function StudentInternshipsManager({ currentUser, onDataChange })
   const [reviewModalItem, setReviewModalItem] = useState(null);
   const [reviewAction, setReviewAction] = useState('VERIFY');
   const [reviewRemarks, setReviewRemarks] = useState('');
+  const [deleteConfirmItem, setDeleteConfirmItem] = useState(null);
+  const [toastMessage, setToastMessage] = useState(null);
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -85,20 +93,18 @@ export default function StudentInternshipsManager({ currentUser, onDataChange })
     return internships.filter(item => {
       const q = searchQuery.toLowerCase().trim();
       const matchSearch = !q ||
-        (item.internshipNumber && item.internshipNumber.toLowerCase().includes(q)) ||
+        (item.internshipRecordNumber && item.internshipRecordNumber.toLowerCase().includes(q)) ||
         (item.studentName && item.studentName.toLowerCase().includes(q)) ||
         (item.rollNumber && item.rollNumber.toLowerCase().includes(q)) ||
-        (item.organizationName && item.organizationName.toLowerCase().includes(q)) ||
-        (item.role && item.role.toLowerCase().includes(q));
+        (item.organization && item.organization.toLowerCase().includes(q)) ||
+        (item.domain && item.domain.toLowerCase().includes(q));
 
       const itemDept = item.department || '';
       const matchDept = selectedDept === 'ALL' || itemDept.toLowerCase().includes(selectedDept.toLowerCase());
       const matchAy = selectedAy === 'ALL' || item.academicYear === selectedAy;
       const matchMode = selectedMode === 'ALL' || item.mode === selectedMode;
       const matchType = selectedType === 'ALL' || item.internshipType === selectedType;
-      const matchStipend = selectedStipend === 'ALL' ||
-        (selectedStipend === 'PAID' && (item.hasStipend === 'Yes' || item.stipend === 'Yes')) ||
-        (selectedStipend === 'UNPAID' && (item.hasStipend !== 'Yes' && item.stipend !== 'Yes'));
+      const matchStipend = selectedStipend === 'ALL' || (selectedStipend === 'PAID' ? item.hasStipend === 'Yes' : item.hasStipend !== 'Yes');
       const matchStatus = selectedStatus === 'ALL' || item.internshipStatus === selectedStatus;
 
       return matchSearch && matchDept && matchAy && matchMode && matchType && matchStipend && matchStatus;
@@ -111,15 +117,24 @@ export default function StudentInternshipsManager({ currentUser, onDataChange })
   const handleExecuteReview = () => {
     if (!reviewModalItem) return;
     reviewInternship(reviewModalItem.id, reviewAction, reviewRemarks, currentUser);
+    const name = reviewModalItem.studentName || reviewModalItem.id;
     setReviewModalItem(null);
     setReviewRemarks('');
     refresh();
+    showToast(`Internship verification decision submitted for "${name}".`);
   };
 
   const handleDelete = (item) => {
-    if (window.confirm(`Are you sure you want to move internship "${item.studentName || item.internshipNumber}" to Recycle Bin?`)) {
-      softDeleteInternship(item.id, currentUser);
+    setDeleteConfirmItem(item);
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteConfirmItem) {
+      softDeleteInternship(deleteConfirmItem.id, currentUser);
+      const name = deleteConfirmItem.studentName || deleteConfirmItem.internshipNumber;
+      setDeleteConfirmItem(null);
       refresh();
+      showToast(`Internship for "${name}" moved to Recycle Bin.`);
     }
   };
 
@@ -137,7 +152,13 @@ export default function StudentInternshipsManager({ currentUser, onDataChange })
   };
 
   return (
-    <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.4rem' }}>
+    <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.4rem', position: 'relative' }}>
+      {toastMessage && (
+        <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#047857', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.84rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <CheckCircle2 size={16} />
+          <span>{toastMessage}</span>
+        </div>
+      )}
       {/* 1. Header */}
       <ModulePageHeader
         breadcrumbs={[
@@ -475,6 +496,15 @@ export default function StudentInternshipsManager({ currentUser, onDataChange })
           </div>
         </div>
       )}
+      {/* Confirm Delete Dialog */}
+      <ConfirmDeleteDialog
+        isOpen={Boolean(deleteConfirmItem)}
+        title="Move Internship to Recycle Bin?"
+        itemName={deleteConfirmItem?.studentName || deleteConfirmItem?.internshipNumber}
+        itemType="internship record"
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeleteConfirmItem(null)}
+      />
     </MotionPage>
   );
 }

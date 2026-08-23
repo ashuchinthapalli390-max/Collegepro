@@ -263,9 +263,17 @@ export default function NptelCertificationWizardModal({
   const handleBack = () => {
     setCurrentStep(prev => Math.max(1, prev - 1));
   };
+  const [submitError, setSubmitError] = useState('');
 
+  // Save Draft Handler
   const handleSaveDraft = () => {
+    if (!formData.courseName.trim()) {
+      setSubmitError('Course Name is required to save draft');
+      return;
+    }
+
     setIsSavingDraft(true);
+    setSubmitError('');
     try {
       const saved = saveNPTEL({
         ...formData,
@@ -280,17 +288,18 @@ export default function NptelCertificationWizardModal({
       }, 400);
     } catch (err) {
       setIsSavingDraft(false);
-      alert(err.message);
+      setSubmitError(err.message);
     }
   };
 
   const handleSubmit = () => {
     if (!validateStep(1) || !validateStep(2) || !validateStep(3) || !validateStep(4)) {
-      alert('Please fill all mandatory fields before submitting.');
+      setSubmitError('Please fill all mandatory fields across steps 1 through 4.');
       return;
     }
 
     setIsSubmitting(true);
+    setSubmitError('');
     try {
       saveNPTEL({
         ...formData,
@@ -304,7 +313,7 @@ export default function NptelCertificationWizardModal({
       }, 500);
     } catch (err) {
       setIsSubmitting(false);
-      alert(err.message);
+      setSubmitError(err.message);
     }
   };
 
@@ -420,6 +429,12 @@ export default function NptelCertificationWizardModal({
 
         {/* 3. Form Body */}
         <div style={{ padding: '1.5rem 1.75rem', overflowY: 'auto', flex: 1 }}>
+          {submitError && (
+            <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#DC2626', padding: '0.75rem 1rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <AlertCircle size={16} />
+              <span>{submitError}</span>
+            </div>
+          )}
           <AnimatePresence mode="wait">
             {/* ──────── STEP 1: HOLDER TYPE & SEARCH ──────── */}
             {currentStep === 1 && (

@@ -40,6 +40,7 @@ import {
   exportToPDF
 } from '../../../data/portalStore.js';
 import MouWizardModal from './MouWizardModal.jsx';
+import ConfirmDeleteDialog from '../common/ConfirmDeleteDialog.jsx';
 
 import { 
   MotionPage, 
@@ -62,13 +63,13 @@ export default function MousManager({ currentUser, onDataChange }) {
   const [reviewModalItem, setReviewModalItem] = useState(null);
   const [reviewAction, setReviewAction] = useState('APPROVE');
   const [reviewRemarks, setReviewRemarks] = useState('');
+  const [deleteConfirmItem, setDeleteConfirmItem] = useState(null);
+  const [toastMessage, setToastMessage] = useState(null);
 
-  // Filters
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedDept, setSelectedDept] = useState('ALL');
-  const [selectedPartnerType, setSelectedPartnerType] = useState('ALL');
-  const [selectedStatus, setSelectedStatus] = useState('ALL');
-  const [selectedWorkflowStatus, setSelectedWorkflowStatus] = useState('ALL');
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   const refresh = () => {
     setDataVersion(v => v + 1);
@@ -80,60 +81,64 @@ export default function MousManager({ currentUser, onDataChange }) {
     return getMoUs();
   }, [dataVersion]);
 
-  // KPIs
+  // Aggregate Stats
   const stats = useMemo(() => {
     const total = mous.length;
     const active = mous.filter(m => m.mouStatus === 'ACTIVE').length;
     const expiringSoon = mous.filter(m => m.mouStatus === 'EXPIRING_SOON').length;
     const expired = mous.filter(m => m.mouStatus === 'EXPIRED').length;
-    const industry = mous.filter(m => m.partnerType?.includes('Industry') || m.partnerType?.includes('Startup')).length;
-    const academic = mous.filter(m => m.partnerType?.includes('University') || m.partnerType?.includes('College') || m.partnerType?.includes('Research')).length;
-    
-    // Total Activities
-    let totalAct = 0;
-    mous.forEach(m => {
-      const act = getMoULinkedActivities(m.partnerOrganization || m.mouNumber);
-      totalAct += act.total;
-    });
-
-    return { total, active, expiringSoon, expired, industry, academic, totalAct };
+    const industry = mous.filter(m => m.collaboratorType === 'INDUSTRY').length;
+    const academic = mous.filter(m => m.collaboratorType === 'ACADEMIC_INSTITUTION').length;
+    const pendingReview = mous.filter(m => m.workflowStatus === 'SUBMITTED' || m.workflowStatus === 'UNDER_REVIEW').length;
+    return { total, active, expiringSoon, expired, industry, academic, pendingReview };
   }, [mous]);
 
-  // Filtered MoUs
-  const filteredMoUs = useMemo(() => {
+  // Filtered Records
+  const filteredMous = useMemo(() => {
     return mous.filter(item => {
       const q = searchQuery.toLowerCase().trim();
       const matchSearch = !q ||
-        (item.mouNumber && item.mouNumber.toLowerCase().includes(q)) ||
-        (item.partnerOrganization && item.partnerOrganization.toLowerCase().includes(q)) ||
-        (item.title && item.title.toLowerCase().includes(q)) ||
-        (item.primaryCoordinator && item.primaryCoordinator.toLowerCase().includes(q));
+        (item.mouRecordNumber && item.mouRecordNumber.toLowerCase().includes(q)) ||
+        (item.collaboratingAgency && item.collaboratingAgency.toLowerCase().includes(q)) ||
+        (item.industryName && item.industryName.toLowerCase().includes(q)) ||
+        (item.focusArea && item.focusArea.toLowerCase().includes(q)) ||
+        (item.purpose && item.purpose.toLowerCase().includes(q));
 
-      const matchDept = selectedDept === 'ALL' || (item.department || '').toLowerCase().includes(selectedDept.toLowerCase());
-      const matchType = selectedPartnerType === 'ALL' || item.partnerType === selectedPartnerType;
+      const itemDept = item.department || '';
+      const matchDept = selectedDept === 'ALL' || itemDept.toLowerCase().includes(selectedDept.toLowerCase());
+      const matchPartner = selectedPartnerType === 'ALL' || item.collaboratorType === selectedPartnerType;
       const matchStatus = selectedStatus === 'ALL' || item.mouStatus === selectedStatus;
       const matchWorkflow = selectedWorkflowStatus === 'ALL' || item.workflowStatus === selectedWorkflowStatus;
 
-      return matchSearch && matchDept && matchType && matchStatus && matchWorkflow;
+      return matchSearch && matchDept && matchPartner && matchStatus && matchWorkflow;
     });
   }, [mous, searchQuery, selectedDept, selectedPartnerType, selectedStatus, selectedWorkflowStatus]);
 
   // Permissions
-  const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD';
+  const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD' || currentUser?.role === 'FACULTY';
   const canReview = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD';
 
   const handleExecuteReview = () => {
     if (!reviewModalItem) return;
     reviewMoU(reviewModalItem.id, reviewAction, reviewRemarks, currentUser);
+    const num = reviewModalItem.mouRecordNumber || reviewModalItem.id;
     setReviewModalItem(null);
     setReviewRemarks('');
     refresh();
+    showToast(`MoU ${num} decision submitted.`);
   };
 
   const handleDelete = (id, org) => {
-    if (window.confirm(`Are you sure you want to move the MoU with "${org}" to Recycle Bin?`)) {
-      softDeleteMoU(id, currentUser);
+    setDeleteConfirmItem({ id, org });
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteConfirmItem) {
+      softDeleteMoU(deleteConfirmItem.id, currentUser);
+      const name = deleteConfirmItem.org;
+      setDeleteConfirmItem(null);
       refresh();
+      showToast(`MoU with "${name}" moved to Recycle Bin.`);
     }
   };
 
@@ -170,7 +175,13 @@ export default function MousManager({ currentUser, onDataChange }) {
   };
 
   return (
-    <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem' }}>
+    <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem', position: 'relative' }}>
+      {toastMessage && (
+        <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#047857', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.84rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <CheckCircle2 size={16} />
+          <span>{toastMessage}</span>
+        </div>
+      )}
       {/* 1. Standardized Animated Header & Action Cluster */}
       <ModulePageHeader
         breadcrumbs={[
@@ -706,6 +717,15 @@ export default function MousManager({ currentUser, onDataChange }) {
           </div>
         </div>
       )}
+      {/* Confirm Delete Dialog */}
+      <ConfirmDeleteDialog
+        isOpen={Boolean(deleteConfirmItem)}
+        title="Move MoU to Recycle Bin?"
+        itemName={deleteConfirmItem?.org}
+        itemType="MoU agreement"
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeleteConfirmItem(null)}
+      />
     </MotionPage>
   );
 }

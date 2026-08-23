@@ -36,6 +36,7 @@ import {
   exportToPDF
 } from '../../../data/portalStore.js';
 import MembershipWizardModal from './MembershipWizardModal.jsx';
+import ConfirmDeleteDialog from '../common/ConfirmDeleteDialog.jsx';
 import FacultyAvatar from '../../common/FacultyAvatar.jsx';
 import { 
   MotionPage, 
@@ -58,6 +59,13 @@ export default function MembershipsManager({ currentUser, onDataChange }) {
   const [reviewModalItem, setReviewModalItem] = useState(null);
   const [reviewAction, setReviewAction] = useState('APPROVE');
   const [reviewRemarks, setReviewRemarks] = useState('');
+  const [deleteConfirmItem, setDeleteConfirmItem] = useState(null);
+  const [toastMessage, setToastMessage] = useState(null);
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   // Filters State
   const [searchQuery, setSearchQuery] = useState('');
@@ -77,13 +85,13 @@ export default function MembershipsManager({ currentUser, onDataChange }) {
     return getMemberships();
   }, [dataVersion]);
 
-  // KPIs
+  // Aggregate Stats
   const stats = useMemo(() => {
     const total = memberships.length;
-    const active = memberships.filter(m => m.status === 'Active' || m.status === 'ACTIVE').length;
-    const life = memberships.filter(m => m.membershipType === 'Life' || m.membershipType === 'LIFE').length;
+    const active = memberships.filter(m => m.membershipStatus === 'ACTIVE').length;
+    const expiringSoon = memberships.filter(m => m.membershipStatus === 'EXPIRING_SOON').length;
+    const life = memberships.filter(m => m.membershipType === 'LIFE').length;
     const annual = memberships.filter(m => m.membershipType === 'Annual' || m.membershipType === 'ANNUAL').length;
-    const expiringSoon = memberships.filter(m => m.status === 'EXPIRING_SOON').length;
     const expired = memberships.filter(m => m.status === 'Expired' || m.status === 'EXPIRED').length;
     const pendingReview = memberships.filter(m => m.workflowStatus === 'SUBMITTED' || m.workflowStatus === 'UNDER_REVIEW').length;
 
@@ -104,7 +112,7 @@ export default function MembershipsManager({ currentUser, onDataChange }) {
       const matchDept = selectedDept === 'ALL' || itemDept.toLowerCase().includes(selectedDept.toLowerCase());
       const matchOrg = selectedOrg === 'ALL' || item.organizationName === selectedOrg || item.organizationAcronym === selectedOrg;
       const matchType = selectedType === 'ALL' || item.membershipType === selectedType;
-      const matchStatus = selectedStatus === 'ALL' || item.status === selectedStatus;
+      const matchStatus = selectedStatus === 'ALL' || item.membershipStatus === selectedStatus;
       const matchWorkflow = selectedWorkflowStatus === 'ALL' || item.workflowStatus === selectedWorkflowStatus;
 
       return matchSearch && matchDept && matchOrg && matchType && matchStatus && matchWorkflow;
@@ -118,15 +126,24 @@ export default function MembershipsManager({ currentUser, onDataChange }) {
   const handleExecuteReview = () => {
     if (!reviewModalItem) return;
     reviewMembership(reviewModalItem.id, reviewAction, reviewRemarks, currentUser);
+    const num = reviewModalItem.membershipNumber || reviewModalItem.id;
     setReviewModalItem(null);
     setReviewRemarks('');
     refresh();
+    showToast(`Membership ${num} decision submitted.`);
   };
 
   const handleDelete = (item) => {
-    if (window.confirm(`Are you sure you want to move membership "${item.membershipNumber}" to Recycle Bin?`)) {
-      softDeleteMembership(item.id, currentUser);
+    setDeleteConfirmItem(item);
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteConfirmItem) {
+      softDeleteMembership(deleteConfirmItem.id, currentUser);
+      const name = deleteConfirmItem.membershipNumber || deleteConfirmItem.id;
+      setDeleteConfirmItem(null);
       refresh();
+      showToast(`Membership "${name}" moved to Recycle Bin.`);
     }
   };
 
@@ -163,7 +180,13 @@ export default function MembershipsManager({ currentUser, onDataChange }) {
   };
 
   return (
-    <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem' }}>
+    <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem', position: 'relative' }}>
+      {toastMessage && (
+        <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#047857', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.84rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <CheckCircle2 size={16} />
+          <span>{toastMessage}</span>
+        </div>
+      )}
       {/* 1. Header & Actions */}
       <ModulePageHeader
         breadcrumbs={[
@@ -682,6 +705,15 @@ export default function MembershipsManager({ currentUser, onDataChange }) {
           </div>
         </div>
       )}
+      {/* Confirm Delete Dialog */}
+      <ConfirmDeleteDialog
+        isOpen={Boolean(deleteConfirmItem)}
+        title="Move Membership to Recycle Bin?"
+        itemName={deleteConfirmItem?.membershipNumber || deleteConfirmItem?.id}
+        itemType="membership"
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeleteConfirmItem(null)}
+      />
     </MotionPage>
   );
 }

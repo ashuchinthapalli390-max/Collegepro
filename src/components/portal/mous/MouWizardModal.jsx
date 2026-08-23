@@ -86,6 +86,7 @@ export default function MouWizardModal({
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [draftSavedToast, setDraftSavedToast] = useState(false);
   const [errors, setErrors] = useState({});
+  const [submitError, setSubmitError] = useState('');
 
   // Renewal Form State
   const [renewalForm, setRenewalForm] = useState({
@@ -208,7 +209,13 @@ export default function MouWizardModal({
   };
 
   const handleSaveDraft = () => {
+    if (!formData.partnerOrganization.trim()) {
+      setSubmitError('Industry / Partner Organization Name is required to save draft');
+      return;
+    }
+
     setIsSavingDraft(true);
+    setSubmitError('');
     try {
       const saved = saveMoU({
         ...formData,
@@ -223,17 +230,18 @@ export default function MouWizardModal({
       }, 400);
     } catch (err) {
       setIsSavingDraft(false);
-      alert(err.message);
+      setSubmitError(err.message);
     }
   };
 
   const handleSubmit = () => {
     if (!validateStep(1) || !validateStep(2) || !validateStep(3)) {
-      alert('Please fill all mandatory fields before submitting.');
+      setSubmitError('Please fill all mandatory fields before submitting.');
       return;
     }
 
     setIsSubmitting(true);
+    setSubmitError('');
     try {
       if (isRenewalMode && initialData?.id) {
         renewMoU(initialData.id, renewalForm, currentUser);
@@ -251,7 +259,7 @@ export default function MouWizardModal({
       }, 500);
     } catch (err) {
       setIsSubmitting(false);
-      alert(err.message);
+      setSubmitError(err.message);
     }
   };
 
@@ -367,6 +375,12 @@ export default function MouWizardModal({
 
         {/* 3. Form Body */}
         <div style={{ padding: '1.5rem 1.75rem', overflowY: 'auto', flex: 1 }}>
+          {submitError && (
+            <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#DC2626', padding: '0.75rem 1rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <AlertCircle size={16} />
+              <span>{submitError}</span>
+            </div>
+          )}
           <AnimatePresence mode="wait">
             {/* ──────── STEP 1: PARTNER ORGANIZATION ──────── */}
             {currentStep === 1 && (

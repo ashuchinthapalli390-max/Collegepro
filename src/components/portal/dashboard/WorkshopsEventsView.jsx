@@ -125,6 +125,15 @@ export default function WorkshopsEventsView({ onAddEvent }) {
     coordinator: ''
   });
 
+  const [toastMessage, setToastMessage] = useState(null);
+  const [formError, setFormError] = useState('');
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
   // Filtered Events
   const filteredEvents = events.filter(e => {
     const q = searchQuery.toLowerCase();
@@ -159,6 +168,7 @@ export default function WorkshopsEventsView({ onAddEvent }) {
 
   const handleOpenCreate = () => {
     setModalMode('create');
+    setFormError('');
     setFormData({
       title: '',
       type: 'Workshop',
@@ -178,10 +188,11 @@ export default function WorkshopsEventsView({ onAddEvent }) {
   const handleSaveEvent = (e) => {
     e.preventDefault();
     if (!formData.title.trim() || !formData.speaker.trim()) {
-      alert('Please fill in Event Title and Keynote Speaker details.');
+      setFormError('Please fill in Event Title and Keynote Speaker details.');
       return;
     }
 
+    setFormError('');
     if (modalMode === 'create') {
       const newEvent = {
         ...formData,
@@ -189,18 +200,24 @@ export default function WorkshopsEventsView({ onAddEvent }) {
         attendees: Number(formData.attendees) || 50
       };
       setEvents([newEvent, ...events]);
-      alert('Event registered successfully!');
+      showToast('Event registered successfully!');
     } else if (modalMode === 'edit' && activeEvent) {
       setEvents(events.map(ev => ev.id === activeEvent.id ? { ...ev, ...formData } : ev));
-      alert('Event updated successfully!');
+      showToast('Event updated successfully!');
     }
     setModalOpen(false);
   };
 
   const handleDeleteEvent = (id) => {
-    if (confirm('Are you sure you want to delete this event record?')) {
-      setEvents(events.filter(e => e.id !== id));
-      setSelectedEventIds(prev => prev.filter(item => item !== id));
+    setDeleteConfirmId(id);
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteConfirmId) {
+      setEvents(events.filter(e => e.id !== deleteConfirmId));
+      setSelectedEventIds(prev => prev.filter(item => item !== deleteConfirmId));
+      setDeleteConfirmId(null);
+      showToast('Event record removed successfully.');
     }
   };
 
@@ -212,10 +229,17 @@ export default function WorkshopsEventsView({ onAddEvent }) {
       status: 'Draft'
     };
     setEvents([duplicated, ...events]);
+    showToast('Event record duplicated.');
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.4rem', width: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.4rem', width: '100%', position: 'relative' }}>
+      {toastMessage && (
+        <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#047857', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.84rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <CheckCircle2 size={16} />
+          <span>{toastMessage}</span>
+        </div>
+      )}
       {/* 1. Module Page Header */}
       <div style={{
         display: 'flex',
@@ -354,7 +378,7 @@ export default function WorkshopsEventsView({ onAddEvent }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
             <button
               type="button"
-              onClick={() => alert('Exporting active dataset to Excel format...')}
+              onClick={() => showToast('Exporting active dataset to Excel format...')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -375,7 +399,7 @@ export default function WorkshopsEventsView({ onAddEvent }) {
 
             <button
               type="button"
-              onClick={() => alert('Generating formal PDF report dossier...')}
+              onClick={() => showToast('Generating formal PDF report dossier...')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -723,8 +747,13 @@ export default function WorkshopsEventsView({ onAddEvent }) {
             <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0F172A', margin: '0 0 1rem 0' }}>
               {modalMode === 'create' ? 'Add New Workshop / Event' : 'Edit Event Record'}
             </h2>
-
             <form onSubmit={handleSaveEvent} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              {formError && (
+                <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#DC2626', padding: '0.6rem 0.85rem', borderRadius: '6px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <AlertCircle size={14} />
+                  <span>{formError}</span>
+                </div>
+              )}
               <div>
                 <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '0.25rem' }}>
                   EVENT TITLE *
@@ -778,7 +807,7 @@ export default function WorkshopsEventsView({ onAddEvent }) {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Dr. P. Ramesh, Microsoft Research"
+                  placeholder="e.g. Dr. K. Satyanarayana, Senior Scientist"
                   value={formData.speaker}
                   onChange={(e) => setFormData({ ...formData, speaker: e.target.value })}
                   style={{ width: '100%', padding: '0.55rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.82rem', boxSizing: 'border-box' }}
@@ -838,6 +867,53 @@ export default function WorkshopsEventsView({ onAddEvent }) {
               </div>
             </form>
           </motion.div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmId && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(7, 15, 30, 0.85)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1.5rem',
+          zIndex: 7000
+        }}>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '16px',
+            padding: '1.8rem',
+            maxWidth: '400px',
+            textAlign: 'center',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.4)'
+          }}>
+            <AlertCircle size={36} style={{ color: '#DC2626', margin: '0 auto 0.6rem' }} />
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.4rem 0' }}>
+              Delete Event Record?
+            </h3>
+            <p style={{ fontSize: '0.84rem', color: '#64748B', marginBottom: '1.4rem', lineHeight: 1.5 }}>
+              Are you sure you want to remove this event record? This action cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmId(null)}
+                style={{ padding: '0.6rem 1.25rem', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#FFFFFF', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                style={{ padding: '0.6rem 1.4rem', borderRadius: '8px', border: 'none', background: '#DC2626', color: '#FFFFFF', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

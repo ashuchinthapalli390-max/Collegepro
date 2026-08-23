@@ -27,9 +27,15 @@ import {
 } from '../../../data/portalStore.js';
 
 export function NaacPortalManager({ currentUser }) {
+  const [toastMessage, setToastMessage] = useState(null);
   const pubs = getPublications();
   const patents = getPatents();
   const mous = getMoUs();
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   const criteria = [
     { id: 'C1', title: 'Criterion 1: Curricular Aspects', score: '3.85 / 4.00', status: 'SSR Ready', metrics: '1.1.1, 1.2.1, 1.3.2, 1.4.1' },
@@ -42,7 +48,13 @@ export function NaacPortalManager({ currentUser }) {
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem', width: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem', width: '100%', position: 'relative' }}>
+      {toastMessage && (
+        <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#047857', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.84rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <CheckCircle2 size={16} />
+          <span>{toastMessage}</span>
+        </div>
+      )}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.74rem', color: '#64748B', marginBottom: '0.25rem' }}>
@@ -50,14 +62,14 @@ export function NaacPortalManager({ currentUser }) {
             <ChevronRight size={12} />
             <span>Accreditation & Data</span>
             <ChevronRight size={12} />
-            <span style={{ color: '#0F172A', fontWeight: 700 }}>NAAC SSR Documentation</span>
+            <span style={{ color: '#0F172A', fontWeight: 700 }}>NAAC SSR Matrix</span>
           </div>
 
           <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.25rem 0', fontFamily: 'Cinzel, Georgia, serif' }}>
-            NAAC SSR Accreditation & Qualitative Metrics Hub
+            NAAC SSR Quality Assessment Matrix (Cycle 3 Preparation)
           </h1>
           <p style={{ fontSize: '0.82rem', color: '#64748B', margin: 0 }}>
-            Automated institutional Self Study Report (SSR) data aggregation across all 7 Criteria for NAAC A+ Cycle.
+            Live aggregation across all 7 criteria mapped directly to institutional repository data points.
           </p>
         </div>
 
@@ -86,7 +98,7 @@ export function NaacPortalManager({ currentUser }) {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #F1F5F9', paddingTop: '0.65rem' }}>
               <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#D4AF37' }}>CGPA: {c.score}</span>
-              <button type="button" onClick={() => alert(`Opening criteria data for ${c.id}`)} style={{ padding: '0.3rem 0.6rem', background: '#F1F5F9', border: '1px solid #CBD5E1', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>View Details</button>
+              <button type="button" onClick={() => showToast(`Opening quantitative metrics report for ${c.id}...`)} style={{ padding: '0.3rem 0.6rem', background: '#F1F5F9', border: '1px solid #CBD5E1', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>View Details</button>
             </div>
           </div>
         ))}
@@ -96,8 +108,21 @@ export function NaacPortalManager({ currentUser }) {
 }
 
 export function NbaTier1Manager({ currentUser }) {
+  const [toastMessage, setToastMessage] = useState(null);
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem', width: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem', width: '100%', position: 'relative' }}>
+      {toastMessage && (
+        <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#047857', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.84rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <CheckCircle2 size={16} />
+          <span>{toastMessage}</span>
+        </div>
+      )}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.74rem', color: '#64748B', marginBottom: '0.25rem' }}>
@@ -126,7 +151,7 @@ export function NbaTier1Manager({ currentUser }) {
             <div key={i} style={{ padding: '1rem', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
               <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.85rem' }}>{prog}</div>
               <div style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 700, margin: '0.25rem 0' }}>Status: Accredited Tier-1 (Valid till 2027)</div>
-              <button type="button" onClick={() => alert(`Downloading SAR documentation for ${prog}`)} style={{ marginTop: '0.5rem', width: '100%', padding: '0.4rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>Download Program SAR</button>
+              <button type="button" onClick={() => showToast(`Downloading SAR documentation dossier for ${prog}...`)} style={{ marginTop: '0.5rem', width: '100%', padding: '0.4rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>Download Program SAR</button>
             </div>
           ))}
         </div>
