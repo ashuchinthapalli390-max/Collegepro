@@ -26,17 +26,22 @@ export default function ExamCellAndContact({ onOpenPortal }) {
     course: 'B.Tech CSE',
     message: ''
   });
+  const [formSubmitted, setFormSubmitted] = useState(false);
+  const [formError, setFormError] = useState('');
 
   const examNotices = getExamNotifications();
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.name || !formData.phone) {
-      alert('Please enter your full name and contact phone number.');
+    if (!formData.name.trim() || !formData.phone.trim()) {
+      setFormError('Please enter your full name and contact phone number.');
       return;
     }
-    alert(`Thank you, ${formData.name}! Your admissions / general enquiry has been recorded with the NEC Central Office. Our counsellor will contact you shortly at ${formData.phone}.`);
-    setFormData({ name: '', email: '', phone: '', course: 'B.Tech CSE', message: '' });
+    setFormError('');
+    setFormSubmitted(true);
+    setTimeout(() => {
+      setFormData({ name: '', email: '', phone: '', course: 'B.Tech CSE', message: '' });
+    }, 4000);
   };
 
   return (
@@ -211,13 +216,15 @@ export default function ExamCellAndContact({ onOpenPortal }) {
                   Students can log in with their Roll Number and Date of Birth to check semester grade sheets, SGPA, CGPA, and revaluation progress.
                 </p>
                 <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap' }}>
-                  <button
-                    onClick={() => alert('Opening Autonomous Results Portal: https://results.nrtec.in')}
+                  <a
+                    href="https://results.nrtec.in"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="btn-primary"
-                    style={{ padding: '0.6rem 1.2rem', fontSize: '0.82rem' }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.6rem 1.2rem', fontSize: '0.82rem', textDecoration: 'none' }}
                   >
                     Check Results Online <ExternalLink size={13} />
-                  </button>
+                  </a>
                   <button
                     onClick={onOpenPortal}
                     className="btn-secondary"
@@ -313,7 +320,17 @@ export default function ExamCellAndContact({ onOpenPortal }) {
                 Submit your enquiry below to receive official branch seat availability, fee structure, and scholarship advice.
               </p>
 
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+                {formError && (
+                  <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#DC2626', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.84rem' }}>
+                    {formError}
+                  </div>
+                )}
+                {formSubmitted && (
+                  <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#047857', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.84rem' }}>
+                    ✓ Thank you! Your admissions / general enquiry has been recorded with the NEC Central Office. Our counsellor will contact you shortly.
+                  </div>
+                )}
                 <div className="form-group">
                   <label className="form-label">Full Name *</label>
                   <input

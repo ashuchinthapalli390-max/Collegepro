@@ -62,7 +62,8 @@ export const STORAGE_KEYS = {
   EMAIL_TEMPLATES: 'nec_portal_email_templates_v3',
   FACULTY_RESEARCH_PROFILES: 'nec_portal_faculty_research_profiles_v3',
   DATASET_VERSIONS: 'nec_portal_dataset_versions_v3',
-  METRIC_SNAPSHOTS: 'nec_portal_metric_snapshots_v3'
+  METRIC_SNAPSHOTS: 'nec_portal_metric_snapshots_v3',
+  STAFF_PROFILES: 'nec_portal_staff_profiles_v3'
 };
 
 // Automatic one-time cleanup of obsolete legacy demo caches
@@ -3908,5 +3909,80 @@ export function softDeleteBoSMeeting(meetingId, actorUser) {
   saveStore(STORAGE_KEYS.BOS, items);
   addAuditLog('DELETE', 'BoS Meetings', `Deleted BoS draft record ${existing.bosNumber}`, actorUser);
   return items.filter(i => !i.isDeleted);
+}
+
+// -------------------------------------------------------------
+// TECHNICAL CADRE & NON-TEACHING STAFF PROFILES STORE
+// -------------------------------------------------------------
+export function getStaffProfiles(includeDeleted = false) {
+  const items = loadStore(STORAGE_KEYS.STAFF_PROFILES, []);
+  if (!Array.isArray(items)) return [];
+  return items.filter(s => includeDeleted || !s.isDeleted);
+}
+
+export function saveStaffProfile(item, actorUser) {
+  const items = loadStore(STORAGE_KEYS.STAFF_PROFILES, []);
+  const index = items.findIndex(s => s.id === item.id);
+
+  if (index === -1) {
+    // Duplicate check on officialStaffId or officialEmail
+    if (item.officialStaffId && item.officialStaffId.trim()) {
+      const existingId = items.find(s => !s.isDeleted && s.officialStaffId?.toLowerCase() === item.officialStaffId.trim().toLowerCase());
+      if (existingId) {
+        throw new Error(`A staff profile with Employee ID "${item.officialStaffId}" already exists.`);
+      }
+    }
+
+    if (item.officialEmail && item.officialEmail.trim()) {
+      const existingEmail = items.find(s => !s.isDeleted && s.email?.toLowerCase() === item.officialEmail.trim().toLowerCase());
+      if (existingEmail) {
+        throw new Error(`A staff profile with Email "${item.officialEmail}" already exists.`);
+      }
+    }
+
+    const newStaff = {
+      ...item,
+      id: item.id || `STF-${String(Date.now()).slice(-4)}`,
+      name: item.fullName || item.name,
+      fullName: item.fullName || item.name,
+      createdAt: new Date().toISOString(),
+      createdBy: actorUser?.name || actorUser?.username || 'Staff Admin',
+      isDeleted: false
+    };
+
+    items.unshift(newStaff);
+    saveStore(STORAGE_KEYS.STAFF_PROFILES, items);
+    addAuditLog('CREATE', 'Staff Profiles', `Created staff record for ${newStaff.name} (${newStaff.designation})`, actorUser);
+    return { success: true, record: newStaff };
+  } else {
+    const updatedStaff = {
+      ...items[index],
+      ...item,
+      name: item.fullName || item.name || items[index].name,
+      fullName: item.fullName || item.name || items[index].name,
+      updatedAt: new Date().toISOString(),
+      updatedBy: actorUser?.name || actorUser?.username || 'Staff Admin'
+    };
+
+    items[index] = updatedStaff;
+    saveStore(STORAGE_KEYS.STAFF_PROFILES, items);
+    addAuditLog('UPDATE', 'Staff Profiles', `Updated staff record for ${updatedStaff.name}`, actorUser);
+    return { success: true, record: updatedStaff };
+  }
+}
+
+export function deleteStaffProfile(staffId, actorUser) {
+  const items = loadStore(STORAGE_KEYS.STAFF_PROFILES, []);
+  const index = items.findIndex(s => s.id === staffId);
+  if (index === -1) return { success: false, error: 'Staff record not found.' };
+
+  const target = items[index];
+  target.isDeleted = true;
+  target.deletedAt = new Date().toISOString();
+  target.deletedBy = actorUser?.name || 'Staff Admin';
+
+  saveStore(STORAGE_KEYS.STAFF_PROFILES, items);
+  addAuditLog('DELETE', 'Staff Profiles', `Deleted staff record for ${target.name}`, actorUser);
+  return { success: true };
 }
 

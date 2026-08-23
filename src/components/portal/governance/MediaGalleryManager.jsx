@@ -22,9 +22,16 @@ export default function MediaGalleryManager({ currentUser }) {
   const [search, setSearch] = useState('');
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState(null);
 
   const photos = getMediaByType('IMAGE');
   const videos = getMediaByType('VIDEO');
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   const filteredPhotos = photos.filter(p => {
     const q = search.toLowerCase();
@@ -46,6 +53,25 @@ export default function MediaGalleryManager({ currentUser }) {
 
   return (
     <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem', width: '100%' }}>
+      {toastMessage && (
+        <div style={{
+          position: 'fixed',
+          top: '24px',
+          right: '24px',
+          background: '#0B192C',
+          color: '#FFFFFF',
+          padding: '0.75rem 1.4rem',
+          borderRadius: '10px',
+          border: '1px solid #D4AF37',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+          zIndex: 7000,
+          fontSize: '0.86rem',
+          fontWeight: 600
+        }}>
+          {toastMessage}
+        </div>
+      )}
+
       {/* Module Header */}
       <ModulePageHeader
         breadcrumb={["Dashboard", "Events & Outreach", "Campus Media & Gallery"]}
@@ -55,7 +81,7 @@ export default function MediaGalleryManager({ currentUser }) {
         actions={
           <button
             type="button"
-            onClick={() => alert('New media item upload modal is ready for institutional administrator.')}
+            onClick={() => setUploadModalOpen(true)}
             style={{ 
               display: 'inline-flex', 
               alignItems: 'center', 
@@ -167,6 +193,64 @@ export default function MediaGalleryManager({ currentUser }) {
         currentIndex={lightboxIndex}
         onNavigate={(idx) => setLightboxIndex(idx)}
       />
+
+      {/* Upload Media Modal */}
+      {uploadModalOpen && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(7, 15, 30, 0.85)',
+          backdropFilter: 'blur(10px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 6000,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '16px',
+            maxWidth: '520px',
+            width: '100%',
+            overflow: 'hidden',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
+            border: '1px solid #E2E8F0'
+          }}>
+            <div style={{ padding: '1.2rem 1.5rem', background: '#0B192C', color: '#FFFFFF', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, color: '#FFFFFF' }}>Upload Institutional Media Asset</h3>
+              <button onClick={() => setUploadModalOpen(false)} style={{ background: 'transparent', border: 'none', color: '#FFFFFF', cursor: 'pointer' }}><X size={18} /></button>
+            </div>
+
+            <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ border: '2px dashed #CBD5E1', borderRadius: '12px', padding: '2rem 1rem', textAlign: 'center', background: '#F8FAFC' }}>
+                <UploadCloud size={36} style={{ color: '#D4AF37', margin: '0 auto 0.6rem' }} />
+                <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.9rem', marginBottom: '0.2rem' }}>Choose verified photo or video file</div>
+                <div style={{ color: '#64748B', fontSize: '0.76rem' }}>Supported formats: WebP, JPEG, PNG, MP4 (Max 25MB)</div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.6rem', marginTop: '0.5rem', borderTop: '1px solid #E2E8F0', paddingTop: '1rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setUploadModalOpen(false)}
+                  style={{ padding: '0.55rem 1.1rem', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#FFFFFF', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUploadModalOpen(false);
+                    showToast('Media asset queued for institutional verification.');
+                  }}
+                  style={{ padding: '0.55rem 1.3rem', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #F1C40F 0%, #D4AF37 100%)', color: '#070F1E', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer' }}
+                >
+                  Confirm Upload
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </MotionPage>
   );
 }
