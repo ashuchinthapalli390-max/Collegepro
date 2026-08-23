@@ -27,9 +27,14 @@ import PortalDashboard from './components/portal/PortalDashboard.jsx';
 // Global Search Palette & Error Boundaries
 import GlobalSearchModal from './components/common/GlobalSearchModal.jsx';
 import PublicSectionErrorBoundary from './components/common/PublicSectionErrorBoundary.jsx';
-import { resetUiPreferences } from './lib/storage/preferenceStorage.js';
+import ModuleErrorBoundary from './components/common/ModuleErrorBoundary.jsx';
 
-class ErrorBoundary extends React.Component {
+/**
+ * Root Fatal Error Boundary
+ * Confined strictly to catastrophic root shell crashes.
+ * Never mentions modules or display preferences.
+ */
+class RootFatalErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -40,24 +45,17 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('AppErrorBoundary caught:', error, errorInfo);
+    console.error('[FATAL_ROOT_ERROR]', error, errorInfo);
   }
 
-  componentDidUpdate(prevProps) {
-    // Automatically reset error state on navigation
-    if (prevProps.resetKey !== this.props.resetKey && this.state.hasError) {
-      this.setState({ hasError: false, error: null });
-    }
-  }
-
-  // Safe UI cache reset (Never wipes auth cookies, tokens or server session!)
-  handleResetStorage = () => {
-    resetUiPreferences();
+  handleReload = () => {
     this.setState({ hasError: false, error: null });
+    window.location.reload();
   };
 
-  handleTryAgain = () => {
+  handleGoHome = () => {
     this.setState({ hasError: false, error: null });
+    window.location.href = '/';
   };
 
   render() {
@@ -67,23 +65,23 @@ class ErrorBoundary extends React.Component {
           <h2 style={{ fontSize: '1.8rem', color: '#D4AF37', marginBottom: '0.8rem', fontFamily: 'Cinzel, serif' }}>
             Narasaraopeta Engineering College
           </h2>
-          <p style={{ color: '#94A3B8', maxWidth: '540px', marginBottom: '1.5rem', fontSize: '0.92rem', lineHeight: 1.6 }}>
-            A temporary display issue occurred while rendering this module. You can try reloading the view or resetting cached display preferences.
+          <p style={{ color: '#94A3B8', maxWidth: '480px', marginBottom: '1.5rem', fontSize: '0.92rem', lineHeight: 1.6 }}>
+            An unexpected error occurred while loading the application.
           </p>
           <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
             <button
-              onClick={this.handleTryAgain}
+              onClick={this.handleReload}
               className="btn-primary"
               style={{ padding: '0.65rem 1.5rem', borderRadius: '8px', cursor: 'pointer' }}
             >
-              Try Again
+              Reload View
             </button>
             <button
-              onClick={this.handleResetStorage}
+              onClick={this.handleGoHome}
               className="btn-secondary"
               style={{ padding: '0.65rem 1.5rem', borderRadius: '8px', cursor: 'pointer' }}
             >
-              Reset Display Preferences
+              Go to Homepage
             </button>
           </div>
         </div>
@@ -93,8 +91,75 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+/**
+ * Isolated Authentication Error Boundary
+ * Prevents any sign-in errors from destroying the public site or page shell.
+ */
+class AuthErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('[AUTH_MODAL_ERROR]', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(7, 15, 30, 0.92)',
+          backdropFilter: 'blur(12px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '1.5rem'
+        }}>
+          <div style={{ background: '#FFFFFF', borderRadius: '16px', padding: '2rem', maxWidth: '420px', textAlign: 'center', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
+            <h3 style={{ color: '#0F172A', fontWeight: 800, margin: '0 0 0.5rem 0', fontSize: '1.15rem' }}>Unable to Load Sign-In Window</h3>
+            <p style={{ color: '#64748B', fontSize: '0.84rem', marginBottom: '1.2rem', lineHeight: 1.5 }}>
+              A localized error occurred while rendering the sign-in modal. Please try again.
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+              <button
+                onClick={() => this.setState({ hasError: false })}
+                className="btn-primary"
+                style={{ padding: '0.55rem 1.25rem', borderRadius: '8px', cursor: 'pointer' }}
+              >
+                Try Again
+              </button>
+              {this.props.onClose && (
+                <button
+                  onClick={this.props.onClose}
+                  className="btn-secondary"
+                  style={{ padding: '0.55rem 1.25rem', borderRadius: '8px', cursor: 'pointer' }}
+                >
+                  Close
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function App() {
-  return <MainApp />;
+  return (
+    <RootFatalErrorBoundary>
+      <MainApp />
+    </RootFatalErrorBoundary>
+  );
 }
 
 function MainApp() {
@@ -264,77 +329,44 @@ function MainApp() {
   // 3. Authenticated Secure Portal View Mode (Survives Refresh & Public Navigation!)
   if (viewMode === 'portal' && authState === 'authenticated' && currentUser) {
     return (
-      <ErrorBoundary resetKey="portal-dashboard">
-        <PortalDashboard
-          currentUser={currentUser}
-          onLogout={handleLogout}
-          onNavigatePublic={handleGoToPublicWebsite}
-        />
-      </ErrorBoundary>
+      <PortalDashboard
+        currentUser={currentUser}
+        onLogout={handleLogout}
+        onNavigatePublic={handleGoToPublicWebsite}
+      />
     );
   }
 
   // 4. Public Institutional Website (Accessible to both Guest and Authenticated visitors)
   return (
-    <ErrorBoundary resetKey={`public-${activeTab}`}>
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#FFFFFF' }}>
-        {/* Dynamic Header with Session-Aware Portal Indicator */}
-        <Header
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          onOpenPortal={handleOpenPortal}
-          onSelectDepartment={handleSelectDepartment}
-          onOpenGlobalSearch={() => setSearchModalOpen(true)}
-          isAuthenticated={authState === 'authenticated'}
-          currentUser={currentUser}
-        />
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#FFFFFF' }}>
+      {/* Dynamic Header with Session-Aware Portal Indicator */}
+      <Header
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        onOpenPortal={handleOpenPortal}
+        onSelectDepartment={handleSelectDepartment}
+        onOpenGlobalSearch={() => setSearchModalOpen(true)}
+        isAuthenticated={authState === 'authenticated'}
+        currentUser={currentUser}
+      />
 
-        {/* Main Public Body Switching by activeTab */}
-        <main style={{ flex: 1 }}>
-          {activeTab === 'home' && (
-            <>
-              <PublicSectionErrorBoundary sectionName="Hero">
-                <Hero onExploreCampus={() => setActiveTab('campus')} onOpenPortal={handleOpenPortal} />
-              </PublicSectionErrorBoundary>
+      {/* Main Public Body Switching by activeTab */}
+      <main style={{ flex: 1 }}>
+        {activeTab === 'home' && (
+          <>
+            <PublicSectionErrorBoundary sectionName="Hero">
+              <Hero onExploreCampus={() => setActiveTab('campus')} onOpenPortal={handleOpenPortal} />
+            </PublicSectionErrorBoundary>
 
-              <PublicSectionErrorBoundary sectionName="StatsCounter">
-                <StatsCounter />
-              </PublicSectionErrorBoundary>
+            <PublicSectionErrorBoundary sectionName="StatsCounter">
+              <StatsCounter />
+            </PublicSectionErrorBoundary>
 
-              <PublicSectionErrorBoundary sectionName="LeadershipSection">
-                <LeadershipSection />
-              </PublicSectionErrorBoundary>
+            <PublicSectionErrorBoundary sectionName="LeadershipSection">
+              <LeadershipSection />
+            </PublicSectionErrorBoundary>
 
-              <PublicSectionErrorBoundary sectionName="DepartmentsHub">
-                <DepartmentsHub 
-                  selectedDepartment={selectedDepartment} 
-                  onSelectDepartment={handleSelectDepartment}
-                  onSelectFaculty={handleSelectFaculty}
-                />
-              </PublicSectionErrorBoundary>
-
-              <PublicSectionErrorBoundary sectionName="VirtualTour">
-                <VirtualTour />
-              </PublicSectionErrorBoundary>
-
-              <PublicSectionErrorBoundary sectionName="ExamCellAndContact">
-                <ExamCellAndContact />
-              </PublicSectionErrorBoundary>
-            </>
-          )}
-
-          {activeTab === 'about' && (
-            <>
-              <PublicSectionErrorBoundary sectionName="LeadershipSection">
-                <LeadershipSection />
-              </PublicSectionErrorBoundary>
-              <PublicSectionErrorBoundary sectionName="GovernanceSection">
-                <GovernanceSection />
-              </PublicSectionErrorBoundary>
-            </>
-          )}
-
-          {activeTab === 'departments' && (
             <PublicSectionErrorBoundary sectionName="DepartmentsHub">
               <DepartmentsHub 
                 selectedDepartment={selectedDepartment} 
@@ -342,65 +374,96 @@ function MainApp() {
                 onSelectFaculty={handleSelectFaculty}
               />
             </PublicSectionErrorBoundary>
-          )}
 
-          {activeTab === 'faculty' && (
-            <PublicSectionErrorBoundary sectionName="FacultyDirectory">
-              <FacultyDirectory 
-                selectedFacultyFromParent={selectedFaculty}
-                onClearSelectedFaculty={() => setSelectedFaculty(null)}
-              />
-            </PublicSectionErrorBoundary>
-          )}
-
-          {activeTab === 'campus' && (
             <PublicSectionErrorBoundary sectionName="VirtualTour">
               <VirtualTour />
             </PublicSectionErrorBoundary>
-          )}
 
-          {activeTab === 'governance' && (
-            <PublicSectionErrorBoundary sectionName="GovernanceSection">
-              <GovernanceSection />
-            </PublicSectionErrorBoundary>
-          )}
-
-          {['madam', 'student-life', 'placements', 'bos'].includes(activeTab) && (
-            <PublicSectionErrorBoundary sectionName="MadamShowcase">
-              <MadamShowcase onSelectFaculty={handleSelectFaculty} />
-            </PublicSectionErrorBoundary>
-          )}
-
-          {activeTab === 'contact' && (
             <PublicSectionErrorBoundary sectionName="ExamCellAndContact">
               <ExamCellAndContact />
             </PublicSectionErrorBoundary>
-          )}
-        </main>
+          </>
+        )}
 
-        {/* Authentication Modal with 2-Step OTP Verification */}
-        {authModalOpen && (
+        {activeTab === 'about' && (
+          <>
+            <PublicSectionErrorBoundary sectionName="LeadershipSection">
+              <LeadershipSection />
+            </PublicSectionErrorBoundary>
+            <PublicSectionErrorBoundary sectionName="GovernanceSection">
+              <GovernanceSection />
+            </PublicSectionErrorBoundary>
+          </>
+        )}
+
+        {activeTab === 'departments' && (
+          <PublicSectionErrorBoundary sectionName="DepartmentsHub">
+            <DepartmentsHub 
+              selectedDepartment={selectedDepartment} 
+              onSelectDepartment={handleSelectDepartment}
+              onSelectFaculty={handleSelectFaculty}
+            />
+          </PublicSectionErrorBoundary>
+        )}
+
+        {activeTab === 'faculty' && (
+          <PublicSectionErrorBoundary sectionName="FacultyDirectory">
+            <FacultyDirectory 
+              selectedFacultyFromParent={selectedFaculty}
+              onClearSelectedFaculty={() => setSelectedFaculty(null)}
+            />
+          </PublicSectionErrorBoundary>
+        )}
+
+        {activeTab === 'campus' && (
+          <PublicSectionErrorBoundary sectionName="VirtualTour">
+            <VirtualTour />
+          </PublicSectionErrorBoundary>
+        )}
+
+        {activeTab === 'governance' && (
+          <PublicSectionErrorBoundary sectionName="GovernanceSection">
+            <GovernanceSection />
+          </PublicSectionErrorBoundary>
+        )}
+
+        {['madam', 'student-life', 'placements', 'bos'].includes(activeTab) && (
+          <PublicSectionErrorBoundary sectionName="MadamShowcase">
+            <MadamShowcase onSelectFaculty={handleSelectFaculty} />
+          </PublicSectionErrorBoundary>
+        )}
+
+        {activeTab === 'contact' && (
+          <PublicSectionErrorBoundary sectionName="ExamCellAndContact">
+            <ExamCellAndContact />
+          </PublicSectionErrorBoundary>
+        )}
+      </main>
+
+      {/* Authentication Modal with 2-Step OTP Verification */}
+      {authModalOpen && (
+        <AuthErrorBoundary onClose={() => setAuthModalOpen(false)}>
           <PortalAuth
             onClose={() => setAuthModalOpen(false)}
             onLoginSuccess={handleLoginSuccess}
           />
-        )}
+        </AuthErrorBoundary>
+      )}
 
-        {/* Global Instant Search Palette (Ctrl + K) */}
-        <GlobalSearchModal
-          isOpen={searchModalOpen}
-          onClose={() => setSearchModalOpen(false)}
-          onSelectFaculty={(fac) => {
-            setSelectedFaculty(fac);
-            setActiveTab('faculty');
-          }}
-          onSelectDepartment={(dept) => {
-            setSelectedDepartment(dept);
-            setActiveTab('departments');
-          }}
-          onNavigateTab={(tab) => setActiveTab(tab)}
-        />
-      </div>
-    </ErrorBoundary>
+      {/* Global Instant Search Palette (Ctrl + K) */}
+      <GlobalSearchModal
+        isOpen={searchModalOpen}
+        onClose={() => setSearchModalOpen(false)}
+        onSelectFaculty={(fac) => {
+          setSelectedFaculty(fac);
+          setActiveTab('faculty');
+        }}
+        onSelectDepartment={(dept) => {
+          setSelectedDepartment(dept);
+          setActiveTab('departments');
+        }}
+        onNavigateTab={(tab) => setActiveTab(tab)}
+      />
+    </div>
   );
 }
