@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { 
   Users, 
   Building, 
@@ -17,29 +17,29 @@ import { staggerContainer, staggerChild } from '../../lib/motion/variants.js';
 
 export default function StatsCounter() {
   const [stats, setStats] = useState({
-    faculty: FACULTY_DATA.length,
-    departments: DEPARTMENTS.length,
-    publications: 0,
-    patents: 0,
-    mous: 0,
+    faculty: (FACULTY_DATA || []).length,
+    departments: (DEPARTMENTS || []).length,
+    publications: (getPublications() || []).length,
+    patents: (getPatents() || []).length,
+    mous: (getMoUs() || []).length,
     acres: 40
   });
 
   useEffect(() => {
     try {
-      const livePubs = getPublications().length;
-      const livePatents = getPatents().length;
-      const liveMoUs = getMoUs().length;
+      const livePubs = (getPublications() || []).length;
+      const livePatents = (getPatents() || []).length;
+      const liveMoUs = (getMoUs() || []).length;
       setStats({
-        faculty: FACULTY_DATA.length,
-        departments: DEPARTMENTS.length,
+        faculty: (FACULTY_DATA || []).length,
+        departments: (DEPARTMENTS || []).length,
         publications: livePubs,
         patents: livePatents,
         mous: liveMoUs,
         acres: 40
       });
     } catch (e) {
-      console.error(e);
+      console.warn('StatsCounter live sync notice:', e);
     }
   }, []);
 

@@ -354,8 +354,17 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
         unreadAlertsCount={3}
       />
 
-      {/* 2. Main Workspace Layout (Floating Sidebar + Content Canvas) */}
-      <div style={{ display: 'flex', flex: 1, width: '100%', position: 'relative', overflow: 'hidden' }}>
+      {/* 2. Main Workspace Layout (Floating Sidebar + Content Canvas with Shared Breathing Gap) */}
+      <div style={{
+        display: 'flex',
+        flex: 1,
+        width: '100%',
+        position: 'relative',
+        boxSizing: 'border-box',
+        padding: 'var(--portal-shell-y, 18px) var(--portal-shell-x, 14px)',
+        gap: 'var(--portal-sidebar-main-gap, 18px)',
+        minHeight: 'calc(100vh - 65px)'
+      }}>
         {/* Floating Animated Navigation Sidebar */}
         <FloatingSidebar
           activeModule={activeModule}
@@ -372,10 +381,11 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
         {/* Dynamic Content Canvas */}
         <main style={{
           flex: 1,
-          padding: '1.25rem 1.5rem 2rem 0',
-          overflowY: 'auto',
           minWidth: 0,
-          boxSizing: 'border-box'
+          padding: 0,
+          boxSizing: 'border-box',
+          display: 'flex',
+          flexDirection: 'column'
         }}>
           {/* Actionable Notifications Banner */}
           {activeModule !== 'overview' && (

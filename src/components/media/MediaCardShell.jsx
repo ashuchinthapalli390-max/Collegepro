@@ -1,5 +1,5 @@
-import React from 'react';
-import { motion } from 'motion/react';
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { useSafeMotion } from '../../lib/motion/reducedMotion.js';
 
 /**

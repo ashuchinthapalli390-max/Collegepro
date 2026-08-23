@@ -1,18 +1,43 @@
-import { useReducedMotion } from 'framer-motion';
+import { useReducedMotion as useFramerReducedMotion } from 'framer-motion';
 
 /**
- * Hook or helper to safely resolve animation variants when reduced motion is preferred
+ * Universal Safe Motion Hook
+ * Supports both:
+ * 1) Destructuring: const { shouldReduceMotion, safeVariant } = useSafeMotion();
+ * 2) Direct variant wrapping: const resolvedVariants = useSafeMotion(variants);
  */
 export function useSafeMotion(variants, fallback = { opacity: 1, y: 0, x: 0, scale: 1 }) {
-  const shouldReduce = useReducedMotion();
-  if (shouldReduce) {
-    return {
-      hidden: fallback,
-      visible: fallback,
-      exit: fallback
-    };
+  const shouldReduce = useFramerReducedMotion() || false;
+
+  // If called directly with a variant object
+  if (variants && typeof variants === 'object') {
+    if (shouldReduce) {
+      return {
+        hidden: fallback,
+        visible: fallback,
+        show: fallback,
+        exit: fallback
+      };
+    }
+    return variants;
   }
-  return variants;
+
+  // If called as a parameterless hook for destructuring
+  return {
+    shouldReduceMotion: shouldReduce,
+    safeVariant: (v) => {
+      if (!v) return fallback;
+      if (shouldReduce) {
+        return {
+          hidden: fallback,
+          visible: fallback,
+          show: fallback,
+          exit: fallback
+        };
+      }
+      return v;
+    }
+  };
 }
 
 export const safeTransition = (shouldReduce, standardTransition) => {
@@ -21,3 +46,5 @@ export const safeTransition = (shouldReduce, standardTransition) => {
   }
   return standardTransition;
 };
+
+export { useFramerReducedMotion as useReducedMotion };

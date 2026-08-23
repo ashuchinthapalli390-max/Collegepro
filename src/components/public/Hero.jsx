@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { 
   Compass, 
   Layers, 
@@ -7,11 +7,18 @@ import {
   GraduationCap
 } from 'lucide-react';
 import { useSafeMotion } from '../../lib/motion/reducedMotion.js';
-import { fadeUp, staggerContainer, staggerChild } from '../../lib/motion/variants.js';
+import { staggerContainer, staggerChild } from '../../lib/motion/variants.js';
 
-export default function Hero({ onExploreClick, onGoToResearch, onGoToDepartments }) {
+export default function Hero({ 
+  onExploreClick, 
+  onExploreCampus, 
+  onGoToResearch, 
+  onGoToDepartments,
+  onOpenPortal 
+}) {
   const { safeVariant } = useSafeMotion();
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+  const [videoError, setVideoError] = useState(false);
   const videoRef = useRef(null);
 
   const heroVideoClips = [
@@ -20,6 +27,21 @@ export default function Hero({ onExploreClick, onGoToResearch, onGoToDepartments
     "/assets/NEC Videos/Blocks view.mp4",
     "/assets/NEC Videos/Main block inside view.mp4"
   ];
+
+  const handleExplore = onExploreClick || onExploreCampus || (() => {
+    const el = document.getElementById('campus-tour');
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  });
+
+  const handleDepartments = onGoToDepartments || (() => {
+    const el = document.getElementById('departments-hub');
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  });
+
+  const handleResearch = onGoToResearch || (() => {
+    const el = document.getElementById('research-hub');
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  });
 
   // Rotate video clips seamlessly without exposing text or controls
   useEffect(() => {
@@ -49,29 +71,32 @@ export default function Hero({ onExploreClick, onGoToResearch, onGoToDepartments
         width: '100%'
       }}
     >
-      {/* Seamless Looping Cinematic Background Video */}
-      <video
-        ref={videoRef}
-        key={heroVideoClips[currentVideoIndex]}
-        autoPlay
-        muted
-        loop={false}
-        playsInline
-        poster="/assets/NEC Buildings/College main building.jpg"
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          zIndex: 1,
-          opacity: 0.65,
-          filter: 'brightness(0.72) contrast(1.08)',
-          pointerEvents: 'none'
-        }}
-        src={heroVideoClips[currentVideoIndex]}
-      />
+      {/* Seamless Looping Cinematic Background Video or Poster Fallback */}
+      {!videoError && (
+        <video
+          ref={videoRef}
+          key={heroVideoClips[currentVideoIndex]}
+          autoPlay
+          muted
+          loop={false}
+          playsInline
+          poster="/assets/NEC Buildings/College main building.jpg"
+          onError={() => setVideoError(true)}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            zIndex: 1,
+            opacity: 0.65,
+            filter: 'brightness(0.72) contrast(1.08)',
+            pointerEvents: 'none'
+          }}
+          src={heroVideoClips[currentVideoIndex]}
+        />
+      )}
 
       {/* Cinematic Ambient Overlays */}
       <div 
@@ -106,12 +131,12 @@ export default function Hero({ onExploreClick, onGoToResearch, onGoToDepartments
       <div className="container" style={{ position: 'relative', zIndex: 10, paddingTop: '3.5rem', paddingBottom: '3.5rem', width: '100%' }}>
         <motion.div 
           style={{ maxWidth: '850px' }}
-          variants={staggerContainer}
+          variants={safeVariant(staggerContainer)}
           initial="hidden"
           animate="show"
         >
           {/* Eyebrow Accreditation Tag */}
-          <motion.div variants={staggerChild} style={{ marginBottom: '1.2rem' }}>
+          <motion.div variants={safeVariant(staggerChild)} style={{ marginBottom: '1.2rem' }}>
             <span style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -133,7 +158,7 @@ export default function Hero({ onExploreClick, onGoToResearch, onGoToDepartments
 
           {/* Main Institution Title with Responsive clamp() */}
           <motion.h1 
-            variants={staggerChild}
+            variants={safeVariant(staggerChild)}
             style={{
               fontFamily: 'Cinzel, serif',
               fontSize: 'clamp(2.2rem, 5.2vw, 3.8rem)',
@@ -156,7 +181,7 @@ export default function Hero({ onExploreClick, onGoToResearch, onGoToDepartments
 
           {/* Concise Institutional Subtitle */}
           <motion.p 
-            variants={staggerChild}
+            variants={safeVariant(staggerChild)}
             style={{
               fontSize: 'clamp(0.98rem, 1.8vw, 1.2rem)',
               color: '#E2E8F0',
@@ -171,11 +196,11 @@ export default function Hero({ onExploreClick, onGoToResearch, onGoToDepartments
           </motion.p>
 
           {/* Clean Action Buttons */}
-          <motion.div variants={staggerChild} style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <motion.div variants={safeVariant(staggerChild)} style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
             <motion.button 
               whileHover={{ scale: 1.03, y: -1 }}
               whileTap={{ scale: 0.97 }}
-              onClick={onExploreClick}
+              onClick={handleExplore}
               className="btn-primary"
               style={{ padding: '0.8rem 1.8rem', fontSize: '0.96rem' }}
             >
@@ -185,7 +210,7 @@ export default function Hero({ onExploreClick, onGoToResearch, onGoToDepartments
             <motion.button 
               whileHover={{ scale: 1.03, y: -1 }}
               whileTap={{ scale: 0.97 }}
-              onClick={onGoToDepartments}
+              onClick={handleDepartments}
               className="btn-secondary"
               style={{ padding: '0.8rem 1.8rem', fontSize: '0.96rem' }}
             >
@@ -195,7 +220,7 @@ export default function Hero({ onExploreClick, onGoToResearch, onGoToDepartments
             <motion.button 
               whileHover={{ scale: 1.03, y: -1 }}
               whileTap={{ scale: 0.97 }}
-              onClick={onGoToResearch}
+              onClick={handleResearch}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',

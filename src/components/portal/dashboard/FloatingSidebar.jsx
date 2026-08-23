@@ -103,7 +103,7 @@ export default function FloatingSidebar({
     return null;
   }).filter(Boolean);
 
-  const sidebarWidth = isMobileDrawer ? '290px' : (sidebarExpanded ? '280px' : '78px');
+  const sidebarWidth = isMobileDrawer ? '290px' : (sidebarExpanded ? '310px' : '82px');
 
   return (
     <>
@@ -116,7 +116,7 @@ export default function FloatingSidebar({
             inset: 0,
             background: 'rgba(7, 15, 30, 0.75)',
             backdropFilter: 'blur(6px)',
-            zIndex: 998
+            zIndex: 1050
           }}
         />
       )}
@@ -128,20 +128,20 @@ export default function FloatingSidebar({
         transition={{ duration: 0.25, ease: [0.25, 1, 0.5, 1] }}
         style={{
           position: isMobileDrawer ? 'fixed' : 'sticky',
-          top: isMobileDrawer ? 0 : '1rem',
-          left: isMobileDrawer ? 0 : '1rem',
-          bottom: isMobileDrawer ? 0 : '1rem',
-          height: isMobileDrawer ? '100vh' : 'calc(100vh - 2rem)',
+          top: isMobileDrawer ? 0 : 'calc(65px + var(--portal-shell-y, 18px))',
+          left: isMobileDrawer ? 0 : 'auto',
+          bottom: isMobileDrawer ? 0 : 'auto',
+          height: isMobileDrawer ? '100vh' : 'calc(100vh - 65px - (2 * var(--portal-shell-y, 18px)))',
           background: 'linear-gradient(180deg, #070F1E 0%, #0B192C 60%, #081220 100%)',
           borderRadius: isMobileDrawer ? '0 20px 20px 0' : '20px',
           border: '1px solid rgba(212, 175, 55, 0.22)',
-          boxShadow: '0 20px 45px rgba(0, 0, 0, 0.45), 0 0 25px rgba(212, 175, 55, 0.1)',
+          boxShadow: '0 12px 35px rgba(0, 0, 0, 0.35), 0 0 15px rgba(212, 175, 55, 0.08)',
           display: 'flex',
           flexDirection: 'column',
-          zIndex: 999,
+          zIndex: isMobileDrawer ? 1100 : 90,
           overflow: 'hidden',
           flexShrink: 0,
-          marginRight: isMobileDrawer ? 0 : '1rem'
+          margin: 0
         }}
       >
         {/* Header Block with Search */}

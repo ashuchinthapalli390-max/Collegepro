@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { Image as ImageIcon, AlertCircle } from 'lucide-react';
 import { useSafeMotion } from '../../lib/motion/reducedMotion.js';
 

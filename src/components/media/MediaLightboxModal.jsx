@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronLeft, ChevronRight, Download, Maximize2 } from 'lucide-react';
 import NECImage from './NECImage.jsx';
 import NECVideo from './NECVideo.jsx';

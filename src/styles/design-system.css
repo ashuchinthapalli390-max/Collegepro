@@ -43,6 +43,13 @@
   /* Typography */
   --font-heading: 'Outfit', sans-serif;
   --font-body: 'Inter', sans-serif;
+
+  /* Portal Shell Layout Geometry Tokens */
+  --portal-shell-x: 14px;
+  --portal-shell-y: 18px;
+  --portal-sidebar-expanded: 310px;
+  --portal-sidebar-collapsed: 82px;
+  --portal-sidebar-main-gap: 18px;
   --font-serif: 'Cinzel', serif;
 
   /* Shadows & Elevation */

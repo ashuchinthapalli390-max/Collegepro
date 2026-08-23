@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { Play, Pause, AlertCircle, RefreshCw, Film } from 'lucide-react';
 import { useSafeMotion } from '../../lib/motion/reducedMotion.js';
 
