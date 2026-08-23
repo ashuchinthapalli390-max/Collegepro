@@ -6,6 +6,7 @@ import { USER_ROLES } from './data/portalStore.js';
 import { firebaseAuth } from './lib/firebase/client.ts';
 import { signOut } from 'firebase/auth';
 import { BRANDING_LOGOS } from './data/masterData.js';
+import { safeAuthFetch } from './lib/auth/authFetch.js';
 
 // Public Website Components
 import Header from './components/public/Header.jsx';
@@ -117,15 +118,13 @@ function MainApp() {
 
     async function checkServerSession() {
       try {
-        const res = await fetch('/api/auth/me', {
+        const { ok, data } = await safeAuthFetch('/api/auth/me', {
           method: 'GET',
-          credentials: 'same-origin',
-          headers: { 'Accept': 'application/json' }
+          credentials: 'same-origin'
         });
 
-        if (res.ok) {
-          const data = await res.json();
-          if (isMounted && data.authenticated && data.user) {
+        if (ok && data?.authenticated && data?.user) {
+          if (isMounted) {
             setCurrentUser(data.user);
             setViewMode('portal');
             setAuthState('authenticated');
@@ -161,15 +160,12 @@ function MainApp() {
 
     // Authoritative check against server session cookie
     try {
-      const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.authenticated && data.user) {
-          setCurrentUser(data.user);
-          setAuthState('authenticated');
-          setViewMode('portal');
-          return;
-        }
+      const { ok, data } = await safeAuthFetch('/api/auth/me', { credentials: 'same-origin' });
+      if (ok && data?.authenticated && data?.user) {
+        setCurrentUser(data.user);
+        setAuthState('authenticated');
+        setViewMode('portal');
+        return;
       }
     } catch (e) {
       console.warn('Live session check fallback:', e);
@@ -187,12 +183,12 @@ function MainApp() {
   // Explicit User Logout (Revokes server session cookie)
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/logout', {
+      await safeAuthFetch('/api/auth/logout', {
         method: 'POST',
         credentials: 'same-origin'
       });
     } catch (err) {
-      console.error('Server logout error:', err);
+      console.warn('Server logout error:', err);
     }
 
     try {

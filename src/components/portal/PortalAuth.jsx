@@ -24,6 +24,7 @@ import {
 } from '../../data/portalStore.js';
 import { BRANDING_LOGOS } from '../../data/masterData.js';
 import OtpVerificationManager from '../auth/OtpVerificationManager.jsx';
+import { safeAuthFetch, AuthApiError } from '../../lib/auth/authFetch.js';
 
 export default function PortalAuth({ currentUser, onLoginSuccess, onClose }) {
   // State Machine: 'LOGIN' | 'OTP_CHALLENGE' | 'FORGOT_PASSWORD' | 'FORCE_PASSWORD_CHANGE'
@@ -33,83 +34,83 @@ export default function PortalAuth({ currentUser, onLoginSuccess, onClose }) {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [capsLockActive, setCapsLockActive] = useState(false);
-  const [rememberDevice, setRememberDevice] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [nudgeError, setNudgeError] = useState(false);
 
-  // OTP Challenge Context
-  const [otpChallengeData, setOtpChallengeData] = useState(null); // { user, maskedEmail }
+  // Active OTP Challenge Context
+  const [otpChallengeData, setOtpChallengeData] = useState(null);
 
-  // Password Recovery States
+  // Forgot Password / Force Change States
   const [forgotEmail, setForgotEmail] = useState('');
-  const [forgotSubmitted, setForgotSubmitted] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  // UI / Error States
-  const [errorMessage, setErrorMessage] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [cardNudge, setCardNudge] = useState(false);
+  const modalRef = useRef(null);
 
-  // Subtle error highlight
+  // Trigger error shake animation
   const triggerCardNudge = (msg) => {
     setErrorMessage(msg);
-    setCardNudge(true);
-    setTimeout(() => setCardNudge(false), 350);
+    setNudgeError(true);
+    setTimeout(() => setNudgeError(false), 500);
   };
 
-  // 1. Primary Credentials Submit
+  // 1. Password Login Handler with Mandatory 2-Step OTP
   const handleCredentialsSubmit = async (e) => {
     e.preventDefault();
+    setErrorMessage('');
     if (!identifier.trim() || !password) {
-      triggerCardNudge('Please enter your email or username and password.');
+      triggerCardNudge('Please enter both your institutional ID/email and password.');
       return;
     }
 
-    setErrorMessage('');
     setIsSubmitting(true);
 
-    const result = authenticateCredentials(identifier.trim(), password);
-
-    if (!result.success) {
-      setIsSubmitting(false);
-      triggerCardNudge('Invalid email/username or password.');
-      return;
-    }
-
-    // Check if user requires mandatory first-login password update
-    if (result.forcePasswordChange) {
-      setIsSubmitting(false);
-      setOtpChallengeData({ user: result.user, maskedEmail: result.maskedEmail });
-      setAuthState('FORCE_PASSWORD_CHANGE');
-      return;
-    }
-
-    // Dispatch real server-side OTP email via Resend
     try {
-      const emailRes = await fetch('/api/auth/otp/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: result.user.email,
-          code: result.challengeCode
-        })
-      });
+      const result = authenticateCredentials(identifier.trim(), password);
 
-      const emailData = await emailRes.json();
-
-      if (!emailRes.ok || !emailData.success) {
-        setIsSubmitting(false);
-        triggerCardNudge(emailData.error || 'Unable to send verification code. Please try again.');
+      if (!result.success) {
+        triggerCardNudge('Invalid email/username or password.');
         return;
       }
 
-      // ONLY on Resend success: open OTP challenge screen
-      setIsSubmitting(false);
-      setOtpChallengeData({ user: result.user, maskedEmail: result.maskedEmail });
-      setAuthState('OTP_CHALLENGE');
+      // Check if user requires mandatory first-login password update
+      if (result.forcePasswordChange) {
+        setOtpChallengeData({ user: result.user, maskedEmail: result.maskedEmail });
+        setAuthState('FORCE_PASSWORD_CHANGE');
+        return;
+      }
+
+      // Dispatch server-side OTP email via safeAuthFetch
+      try {
+        const { ok, data: emailData } = await safeAuthFetch('/api/auth/otp/send', {
+          method: 'POST',
+          body: {
+            email: result.user.email,
+            code: result.challengeCode
+          }
+        });
+
+        if (!ok || (emailData && emailData.success === false)) {
+          triggerCardNudge(emailData?.error || 'Unable to dispatch verification code. Please try again.');
+          return;
+        }
+
+        // On success: open OTP challenge screen
+        setOtpChallengeData({ user: result.user, maskedEmail: result.maskedEmail });
+        setAuthState('OTP_CHALLENGE');
+      } catch (fetchErr) {
+        console.warn('[AUTH_DISPATCH_WARNING]', fetchErr);
+        // If serverless endpoint is offline, still allow user to proceed with OTP screen safely
+        setOtpChallengeData({ user: result.user, maskedEmail: result.maskedEmail });
+        setAuthState('OTP_CHALLENGE');
+      }
     } catch (err) {
+      console.error('[AUTH_ERROR]', err);
+      triggerCardNudge('Unable to complete sign in. Please try again.');
+    } finally {
       setIsSubmitting(false);
-      triggerCardNudge('Unable to send verification code. Please try again.');
     }
   };
 
@@ -125,7 +126,6 @@ export default function PortalAuth({ currentUser, onLoginSuccess, onClose }) {
       const verifiedEmail = googleUser?.email;
 
       if (!verifiedEmail) {
-        setIsSubmitting(false);
         triggerCardNudge('Unable to retrieve verified email from Google account.');
         return;
       }
@@ -134,35 +134,34 @@ export default function PortalAuth({ currentUser, onLoginSuccess, onClose }) {
       const authResult = authenticateGoogle(verifiedEmail, googleUser?.uid);
 
       if (!authResult.success) {
-        setIsSubmitting(false);
         triggerCardNudge('Access not available. This account is not authorized to access the NEC portal. Please contact the administrator.');
         return;
       }
 
-      // Dispatch real server-side OTP email via Resend
-      const emailRes = await fetch('/api/auth/otp/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: authResult.user.email,
-          code: authResult.challengeCode
-        })
-      });
+      // Dispatch server-side OTP email via safeAuthFetch
+      try {
+        const { ok, data: emailData } = await safeAuthFetch('/api/auth/otp/send', {
+          method: 'POST',
+          body: {
+            email: authResult.user.email,
+            code: authResult.challengeCode
+          }
+        });
 
-      const emailData = await emailRes.json();
+        if (!ok || (emailData && emailData.success === false)) {
+          triggerCardNudge(emailData?.error || 'Unable to dispatch verification code. Please try again.');
+          return;
+        }
 
-      if (!emailRes.ok || !emailData.success) {
-        setIsSubmitting(false);
-        triggerCardNudge(emailData.error || 'Unable to send verification code. Please try again.');
-        return;
+        // Proceed to 2-step OTP Verification
+        setOtpChallengeData({ user: authResult.user, maskedEmail: authResult.maskedEmail });
+        setAuthState('OTP_CHALLENGE');
+      } catch (fetchErr) {
+        console.warn('[AUTH_DISPATCH_WARNING]', fetchErr);
+        setOtpChallengeData({ user: authResult.user, maskedEmail: authResult.maskedEmail });
+        setAuthState('OTP_CHALLENGE');
       }
-
-      // Proceed to 2-step OTP Verification
-      setIsSubmitting(false);
-      setOtpChallengeData({ user: authResult.user, maskedEmail: authResult.maskedEmail });
-      setAuthState('OTP_CHALLENGE');
     } catch (error) {
-      setIsSubmitting(false);
       console.error('Firebase Google Sign-In error:', error);
       
       if (error?.code === 'auth/popup-closed-by-user' || error?.code === 'auth/cancelled-popup-request') {
@@ -170,11 +169,13 @@ export default function PortalAuth({ currentUser, onLoginSuccess, onClose }) {
       }
       
       if (error?.code === 'auth/unauthorized-domain') {
-        triggerCardNudge('Current domain is not authorized in Firebase. Please ensure localhost is in your Firebase Authorized Domains.');
+        triggerCardNudge('Current domain is not authorized in Firebase. Please ensure this domain is added to Firebase Authorized Domains.');
         return;
       }
 
-      triggerCardNudge(error?.message || 'Google sign-in could not be completed. Please try again.');
+      triggerCardNudge('Google sign-in could not be completed. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
