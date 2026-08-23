@@ -75,7 +75,7 @@ export default function StatsCounter() {
             A Legacy of Excellence in Numbers
           </h2>
           <p style={{ color: '#94A3B8', maxWidth: '650px', margin: '0 auto', fontSize: '1rem' }}>
-            Live metrics calculated directly from our verified institutional database, research repositories, and placement records.
+            Verified institutional metrics calculated directly from our active master records, autonomous departments, and campus infrastructure.
           </p>
         </motion.div>
 

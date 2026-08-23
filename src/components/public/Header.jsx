@@ -243,24 +243,6 @@ export default function Header({
               Faculty (418)
             </button>
 
-            {/* Mega Menu 4: Research */}
-            <div onMouseEnter={() => setActiveMegaMenu('research')}>
-              <button
-                onClick={() => { setActiveTab('research'); closeMegaMenu(); }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.2rem',
-                  padding: '0.45rem 0.65rem',
-                  fontSize: '0.84rem',
-                  fontWeight: 600,
-                  color: activeTab === 'research' ? '#F1C40F' : '#E2E8F0'
-                }}
-              >
-                Research & Patents <ChevronDown size={13} />
-              </button>
-            </div>
-
             {/* Mega Menu 5: Students */}
             <div onMouseEnter={() => setActiveMegaMenu('students')}>
               <button
@@ -435,33 +417,6 @@ export default function Header({
                 </div>
               )}
 
-              {/* Research Mega Menu */}
-              {activeMegaMenu === 'research' && (
-                <div className="grid-3" style={{ gap: '1.5rem' }}>
-                  <div 
-                    onClick={() => { setActiveTab('research'); closeMegaMenu(); }} 
-                    style={{ padding: '0.8rem', borderRadius: '8px', cursor: 'pointer', background: 'rgba(255,255,255,0.03)' }}
-                  >
-                    <div style={{ color: '#F1C40F', fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.2rem' }}>SCI & Scopus Publications</div>
-                    <div style={{ color: '#94A3B8', fontSize: '0.78rem' }}>125+ peer-reviewed scholarly works with direct DOI links and researcher profiles.</div>
-                  </div>
-                  <div 
-                    onClick={() => { setActiveTab('research'); closeMegaMenu(); }} 
-                    style={{ padding: '0.8rem', borderRadius: '8px', cursor: 'pointer', background: 'rgba(255,255,255,0.03)' }}
-                  >
-                    <div style={{ color: '#F1C40F', fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.2rem' }}>Patents & IPR Innovation</div>
-                    <div style={{ color: '#94A3B8', fontSize: '0.78rem' }}>35+ Indian & International patents filed, published, and granted across engineering streams.</div>
-                  </div>
-                  <div 
-                    onClick={() => { setActiveTab('research'); closeMegaMenu(); }} 
-                    style={{ padding: '0.8rem', borderRadius: '8px', cursor: 'pointer', background: 'rgba(255,255,255,0.03)' }}
-                  >
-                    <div style={{ color: '#F1C40F', fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.2rem' }}>AICTE IDEA Lab & MoUs</div>
-                    <div style={{ color: '#94A3B8', fontSize: '0.78rem' }}>Rapid prototyping facilities, CNC, 3D printing, and 45+ active enterprise collaborations.</div>
-                  </div>
-                </div>
-              )}
-
               {/* Students Mega Menu */}
               {activeMegaMenu === 'students' && (
                 <div className="grid-3" style={{ gap: '1.5rem' }}>
@@ -534,7 +489,6 @@ export default function Header({
               { id: 'about', label: 'About NEC & Management' },
               { id: 'departments', label: '13 Departments Portals' },
               { id: 'faculty', label: 'Faculty Directory (418 Scholars)' },
-              { id: 'research', label: 'Research & Patents Hub' },
               { id: 'bos', label: 'Board of Studies (BoS)' },
               { id: 'student-life', label: 'Student Achievements & Life' },
               { id: 'placements', label: 'Campus Placements' },

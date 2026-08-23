@@ -237,17 +237,21 @@ export default function GlobalSearchModal({
             </div>
           )}
 
-          {/* 3. Publications & Patents */}
+          {/* 3. Publications & Faculty Research */}
           {matchingPubs.length > 0 && (
             <div style={{ marginBottom: '1rem' }}>
               <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#059669', textTransform: 'uppercase', marginBottom: '0.5rem', paddingLeft: '0.5rem' }}>
-                Research Publications
+                Scholarly Publications & Authors
               </div>
               {matchingPubs.map(p => (
                 <div
                   key={p.id}
                   onClick={() => {
-                    onNavigateTab('research');
+                    const match = FACULTY_DATA.find(f => p.firstAuthor && f.name.toLowerCase().includes(p.firstAuthor.toLowerCase()));
+                    if (match) {
+                      onSelectFaculty(match);
+                    }
+                    onNavigateTab('faculty');
                     onClose();
                   }}
                   style={{

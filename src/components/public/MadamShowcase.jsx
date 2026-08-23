@@ -25,8 +25,6 @@ import {
   getEvents, 
   getMemberships, 
   getNPTEL, 
-  getPlacementStats, 
-  getPlacementRecords,
   getBoSMeetings
 } from '../../data/portalStore.js';
 import { routeVariants } from '../../lib/motion/variants.js';
@@ -43,8 +41,6 @@ export default function MadamShowcase({ onOpenPortal }) {
   const events = getEvents();
   const memberships = getMemberships();
   const nptelList = getNPTEL();
-  const placementStats = getPlacementStats();
-  const placementRecords = getPlacementRecords();
 
   const moduleTabs = [
     { id: 'achievements', label: `Student Achievements (${achievements.length})`, icon: Trophy },
@@ -55,8 +51,7 @@ export default function MadamShowcase({ onOpenPortal }) {
     { id: 'faculty-ach', label: `Faculty Achievements (${facultyAch.length})`, icon: Award },
     { id: 'events', label: `Workshops & Events (${events.length})`, icon: Users },
     { id: 'memberships', label: `Professional Memberships (${memberships.length})`, icon: CheckCircle2 },
-    { id: 'nptel', label: `NPTEL / MOOCs (${nptelList.length})`, icon: GraduationCap },
-    { id: 'placements', label: `Placement Records`, icon: TrendingUp }
+    { id: 'nptel', label: `NPTEL / MOOCs (${nptelList.length})`, icon: GraduationCap }
   ];
 
   return (
@@ -465,62 +460,6 @@ export default function MadamShowcase({ onOpenPortal }) {
               ))}
             </div>
           )
-        )}
-
-        {/* 8. Placements */}
-        {activeModuleTab === 'placements' && (
-          <div>
-            <div className="grid-4" style={{ gap: '1rem', marginBottom: '2.5rem' }}>
-              <div style={{ background: '#0B192C', color: '#FFF', padding: '1.5rem', borderRadius: '14px', textAlign: 'center' }}>
-                <div style={{ fontSize: '2rem', fontWeight: 800, color: '#F1C40F' }}>44.0 LPA</div>
-                <div style={{ fontSize: '0.85rem', color: '#94A3B8' }}>Highest Package (Amazon)</div>
-              </div>
-              <div style={{ background: '#0B192C', color: '#FFF', padding: '1.5rem', borderRadius: '14px', textAlign: 'center' }}>
-                <div style={{ fontSize: '2rem', fontWeight: 800, color: '#60A5FA' }}>6.2 LPA</div>
-                <div style={{ fontSize: '0.85rem', color: '#94A3B8' }}>Average Package</div>
-              </div>
-              <div style={{ background: '#0B192C', color: '#FFF', padding: '1.5rem', borderRadius: '14px', textAlign: 'center' }}>
-                <div style={{ fontSize: '2rem', fontWeight: 800, color: '#34D399' }}>1200+</div>
-                <div style={{ fontSize: '0.85rem', color: '#94A3B8' }}>Total Job Offers</div>
-              </div>
-              <div style={{ background: '#0B192C', color: '#FFF', padding: '1.5rem', borderRadius: '14px', textAlign: 'center' }}>
-                <div style={{ fontSize: '2rem', fontWeight: 800, color: '#F472B6' }}>120+</div>
-                <div style={{ fontSize: '0.85rem', color: '#94A3B8' }}>Recruiting Companies</div>
-              </div>
-            </div>
-
-            <div style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
-              <div style={{ padding: '1.2rem 1.5rem', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', fontWeight: 700, color: '#0B192C' }}>
-                Department-Wise Placement Statistics (Academic Year 2024-25)
-              </div>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
-                  <thead>
-                    <tr style={{ background: '#0B192C', color: '#FFFFFF' }}>
-                      <th style={{ padding: '0.9rem' }}>Department</th>
-                      <th style={{ padding: '0.9rem' }}>Eligible Students</th>
-                      <th style={{ padding: '0.9rem' }}>Placed Students</th>
-                      <th style={{ padding: '0.9rem' }}>Highest Package</th>
-                      <th style={{ padding: '0.9rem' }}>Average Package</th>
-                      <th style={{ padding: '0.9rem' }}>Offers Made</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {placementStats.map((stat, idx) => (
-                      <tr key={idx} style={{ borderBottom: '1px solid #E2E8F0', background: idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC' }}>
-                        <td style={{ padding: '0.9rem', fontWeight: 700, color: '#0B192C' }}>{stat.department}</td>
-                        <td style={{ padding: '0.9rem' }}>{stat.eligible}</td>
-                        <td style={{ padding: '0.9rem', fontWeight: 600, color: '#059669' }}>{stat.placed} ({Math.round((stat.placed/stat.eligible)*100)}%)</td>
-                        <td style={{ padding: '0.9rem', fontWeight: 700, color: '#B38600' }}>{stat.highestPackage}</td>
-                        <td style={{ padding: '0.9rem' }}>{stat.avgPackage}</td>
-                        <td style={{ padding: '0.9rem', fontWeight: 700 }}>{stat.offers}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
         )}
       </motion.div>
     </AnimatePresence>

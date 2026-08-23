@@ -2,9 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Compass, 
-  Layers, 
-  FlaskConical,
-  GraduationCap
+  Layers
 } from 'lucide-react';
 import { useSafeMotion } from '../../lib/motion/reducedMotion.js';
 import { staggerContainer, staggerChild } from '../../lib/motion/variants.js';
@@ -12,7 +10,6 @@ import { staggerContainer, staggerChild } from '../../lib/motion/variants.js';
 export default function Hero({ 
   onExploreClick, 
   onExploreCampus, 
-  onGoToResearch, 
   onGoToDepartments,
   onOpenPortal 
 }) {
@@ -35,11 +32,6 @@ export default function Hero({
 
   const handleDepartments = onGoToDepartments || (() => {
     const el = document.getElementById('departments-hub');
-    if (el) el.scrollIntoView({ behavior: 'smooth' });
-  });
-
-  const handleResearch = onGoToResearch || (() => {
-    const el = document.getElementById('research-hub');
     if (el) el.scrollIntoView({ behavior: 'smooth' });
   });
 
@@ -191,8 +183,7 @@ export default function Hero({
               textShadow: '0 2px 10px rgba(0,0,0,0.5)'
             }}
           >
-            Engineering • Research • Innovation. Nurturing multidisciplinary research in AICTE IDEA Labs, 
-            cutting-edge patents, and global leadership across 13 departments.
+            Engineering • Research • Innovation. Nurturing multidisciplinary excellence across 13 engineering and management departments with state-of-the-art laboratories and global career leadership.
           </motion.p>
 
           {/* Clean Action Buttons */}
@@ -215,29 +206,6 @@ export default function Hero({
               style={{ padding: '0.8rem 1.8rem', fontSize: '0.96rem' }}
             >
               <Layers size={18} /> Explore Departments
-            </motion.button>
-
-            <motion.button 
-              whileHover={{ scale: 1.03, y: -1 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={handleResearch}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                color: '#D4AF37',
-                fontWeight: 700,
-                fontSize: '0.95rem',
-                padding: '0.8rem 1rem',
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                transition: 'color 0.2s ease'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.color = '#F1C40F'}
-              onMouseLeave={(e) => e.currentTarget.style.color = '#D4AF37'}
-            >
-              <FlaskConical size={17} /> Research & Innovation →
             </motion.button>
           </motion.div>
         </motion.div>

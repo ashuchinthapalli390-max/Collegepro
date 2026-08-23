@@ -15,7 +15,6 @@ import LeadershipSection from './components/public/LeadershipSection.jsx';
 import GovernanceSection from './components/public/GovernanceSection.jsx';
 import DepartmentsHub from './components/public/DepartmentsHub.jsx';
 import FacultyDirectory from './components/public/FacultyDirectory.jsx';
-import ResearchHub from './components/public/ResearchHub.jsx';
 import VirtualTour from './components/public/VirtualTour.jsx';
 import MadamShowcase from './components/public/MadamShowcase.jsx';
 import ExamCellAndContact from './components/public/ExamCellAndContact.jsx';
@@ -322,10 +321,6 @@ function MainApp() {
                 />
               </PublicSectionErrorBoundary>
 
-              <PublicSectionErrorBoundary sectionName="ResearchHub">
-                <ResearchHub onSelectFaculty={handleSelectFaculty} />
-              </PublicSectionErrorBoundary>
-
               <PublicSectionErrorBoundary sectionName="VirtualTour">
                 <VirtualTour />
               </PublicSectionErrorBoundary>
@@ -366,12 +361,6 @@ function MainApp() {
             </PublicSectionErrorBoundary>
           )}
 
-          {activeTab === 'research' && (
-            <PublicSectionErrorBoundary sectionName="ResearchHub">
-              <ResearchHub onSelectFaculty={handleSelectFaculty} />
-            </PublicSectionErrorBoundary>
-          )}
-
           {activeTab === 'campus' && (
             <PublicSectionErrorBoundary sectionName="VirtualTour">
               <VirtualTour />
@@ -384,7 +373,7 @@ function MainApp() {
             </PublicSectionErrorBoundary>
           )}
 
-          {activeTab === 'madam' && (
+          {['madam', 'student-life', 'placements', 'bos'].includes(activeTab) && (
             <PublicSectionErrorBoundary sectionName="MadamShowcase">
               <MadamShowcase onSelectFaculty={handleSelectFaculty} />
             </PublicSectionErrorBoundary>
