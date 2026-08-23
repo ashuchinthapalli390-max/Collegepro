@@ -184,6 +184,13 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
   const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN';
   const isAdminOrSuper = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN';
 
+  const [dashboardToast, setDashboardToast] = useState(null);
+
+  const showDashboardToast = (msg) => {
+    setDashboardToast(msg);
+    setTimeout(() => setDashboardToast(null), 3500);
+  };
+
   // Helper to extract active category & module labels for breadcrumbs
   const getModuleMeta = (modId) => {
     for (const cat of NAVIGATION_CATEGORIES) {
@@ -201,11 +208,11 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
   const handleSaveUser = (e) => {
     e.preventDefault();
     if (!userForm.name || !userForm.email) {
-      alert('Please enter full name and institutional email.');
+      showDashboardToast('Please enter full name and institutional email.');
       return;
     }
     saveUser(userForm, currentUser);
-    alert(`Account provisioned successfully for ${userForm.name} (${userForm.role})! Notification sent.`);
+    showDashboardToast(`Account provisioned successfully for ${userForm.name} (${userForm.role})! Notification sent.`);
     setUserModalOpen(false);
     setUserForm({
       name: '', email: '', username: '', role: 'FACULTY', dept: 'CSE', facultyId: '',
@@ -218,9 +225,10 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
   const handleToggleUserStatus = (userId) => {
     try {
       toggleUserStatus(userId, currentUser);
+      showDashboardToast('User account status updated.');
       refreshData();
     } catch (err) {
-      alert(err.message);
+      showDashboardToast(err.message);
     }
   };
 
@@ -228,7 +236,7 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
   const handleForceReset = (userId) => {
     const res = forcePasswordReset(userId, currentUser);
     if (res.success) {
-      alert(res.message);
+      showDashboardToast(res.message);
       refreshData();
     }
   };
@@ -236,7 +244,7 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
   // Handle Bulk CSV Parse
   const handleParseCSV = () => {
     if (!csvText.trim()) {
-      alert('Please paste CSV rows into the text area.');
+      showDashboardToast('Please paste CSV rows into the text area.');
       return;
     }
     const result = parseAndValidateUsersCSV(csvText);
@@ -246,11 +254,11 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
   // Handle Bulk CSV Execution
   const handleExecuteImport = () => {
     if (!csvParsedResult || !csvParsedResult.validRows || csvParsedResult.validRows.length === 0) {
-      alert('No valid user accounts to import.');
+      showDashboardToast('No valid user accounts to import.');
       return;
     }
     const result = executeBulkUserImport(csvParsedResult.validRows, currentUser);
-    alert(`Successfully imported and provisioned ${result.importedCount} user accounts.`);
+    showDashboardToast(`Successfully imported and provisioned ${result.importedCount} user accounts.`);
     setBulkImportModalOpen(false);
     setCsvText('');
     setCsvParsedResult(null);
@@ -290,7 +298,7 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
   const handleSavePhoto = () => {
     if (!selectedFacultyForPhoto || !newPhotoPreview) return;
     updateFacultyPhoto(selectedFacultyForPhoto.id, newPhotoPreview, currentUser);
-    alert(`Verified photo updated for ${selectedFacultyForPhoto.name}.`);
+    showDashboardToast(`Verified photo updated for ${selectedFacultyForPhoto.name}.`);
     setPhotoModalOpen(false);
     setNewPhotoPreview(null);
     refreshData();
@@ -299,7 +307,7 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
   const handleRemovePhoto = () => {
     if (!selectedFacultyForPhoto) return;
     removeFacultyPhoto(selectedFacultyForPhoto.id, currentUser);
-    alert(`Photo removed for ${selectedFacultyForPhoto.name}. Profile reverted to neutral "No Photo" placeholder.`);
+    showDashboardToast(`Photo removed for ${selectedFacultyForPhoto.name}. Profile reverted to neutral placeholder.`);
     setPhotoModalOpen(false);
     setNewPhotoPreview(null);
     refreshData();
@@ -330,7 +338,25 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
   });
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F1F5F9', display: 'flex', flexDirection: 'column', width: '100%' }}>
+    <div style={{ minHeight: '100vh', background: '#F1F5F9', display: 'flex', flexDirection: 'column', width: '100%', position: 'relative' }}>
+      {dashboardToast && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '24px',
+          background: '#0B192C',
+          color: '#FFFFFF',
+          padding: '0.75rem 1.4rem',
+          borderRadius: '10px',
+          border: '1px solid #D4AF37',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+          zIndex: 9999,
+          fontSize: '0.86rem',
+          fontWeight: 600
+        }}>
+          {dashboardToast}
+        </div>
+      )}
       {/* 1. Production Top Header (Role Switcher Removed!) */}
       <TopHeader
         currentUser={currentUser}

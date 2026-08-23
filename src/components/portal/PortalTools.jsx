@@ -29,6 +29,7 @@ import {
 /* 1. RECYCLE BIN (Soft Delete & Restore Engine) */
 export function RecycleBin({ currentUser, onRestoreSuccess }) {
   const [search, setSearch] = useState('');
+  const [restoreToast, setRestoreToast] = useState(null);
   const binItems = getRecycleBin();
 
   const filtered = binItems.filter(item => {
@@ -38,12 +39,19 @@ export function RecycleBin({ currentUser, onRestoreSuccess }) {
 
   const handleRestore = (item) => {
     restoreFromRecycleBin(item.id, item.module, currentUser);
-    alert(`Successfully restored "${item.title || item.name || item.id}" back to ${item.module.toUpperCase()}!`);
+    setRestoreToast(`Successfully restored "${item.title || item.name || item.id}" back to ${item.module.toUpperCase()}!`);
+    setTimeout(() => setRestoreToast(null), 3500);
     if (onRestoreSuccess) onRestoreSuccess();
   };
 
   return (
-    <div style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '1.5rem', boxShadow: 'var(--shadow-sm)' }}>
+    <div style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '1.5rem', boxShadow: 'var(--shadow-sm)', position: 'relative' }}>
+      {restoreToast && (
+        <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#047857', padding: '0.75rem 1rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.84rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <CheckCircle2 size={16} />
+          <span>{restoreToast}</span>
+        </div>
+      )}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem', borderBottom: '1px solid #F1F5F9', paddingBottom: '0.8rem' }}>
         <div>
           <h3 style={{ fontSize: '1.2rem', color: '#0B192C', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
