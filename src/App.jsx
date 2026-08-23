@@ -305,10 +305,6 @@ function MainApp() {
                 <StatsCounter />
               </PublicSectionErrorBoundary>
 
-              <PublicSectionErrorBoundary sectionName="MadamShowcase">
-                <MadamShowcase onSelectFaculty={handleSelectFaculty} />
-              </PublicSectionErrorBoundary>
-
               <PublicSectionErrorBoundary sectionName="LeadershipSection">
                 <LeadershipSection />
               </PublicSectionErrorBoundary>
