@@ -1,0 +1,746 @@
+import React, { useState, useMemo } from 'react';
+import { 
+  Code2, 
+  Plus, 
+  Search, 
+  Filter, 
+  Download, 
+  Eye, 
+  Edit3, 
+  CheckCircle2, 
+  Clock, 
+  AlertTriangle, 
+  ShieldCheck, 
+  FileText, 
+  Building2, 
+  Trash2, 
+  ChevronRight, 
+  ExternalLink, 
+  Sparkles, 
+  Printer, 
+  Calendar, 
+  Users, 
+  Check, 
+  X,
+  Globe,
+  GitBranch,
+  Award,
+  Layers,
+  Zap,
+  BookOpen
+} from 'lucide-react';
+import { DEPARTMENTS, FACULTY_DATA } from '../../../data/masterData.js';
+import { 
+  getStudentProjects, 
+  reviewStudentProject, 
+  softDeleteStudentProject,
+  exportToCSV,
+  exportToExcel,
+  exportToPDF
+} from '../../../data/portalStore.js';
+import StudentProjectWizardModal from './StudentProjectWizardModal.jsx';
+
+export default function StudentProjectsManager({ currentUser, onDataChange }) {
+  const [dataVersion, setDataVersion] = useState(0);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+  const [dossierModalItem, setDossierModalItem] = useState(null);
+  const [dossierActiveTab, setDossierActiveTab] = useState('overview');
+  const [reviewModalItem, setReviewModalItem] = useState(null);
+  const [reviewAction, setReviewAction] = useState('APPROVE');
+  const [reviewRemarks, setReviewRemarks] = useState('');
+
+  // Filters
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedDept, setSelectedDept] = useState(currentUser?.role === 'HOD' ? (currentUser.dept || 'ALL') : 'ALL');
+  const [selectedType, setSelectedType] = useState('ALL');
+  const [selectedStatus, setSelectedStatus] = useState('ALL');
+  const [selectedWorkflowStatus, setSelectedWorkflowStatus] = useState('ALL');
+
+  const refresh = () => {
+    setDataVersion(v => v + 1);
+    if (onDataChange) onDataChange();
+  };
+
+  // Live Records
+  const projects = useMemo(() => {
+    return getStudentProjects();
+  }, [dataVersion]);
+
+  // KPIs
+  const stats = useMemo(() => {
+    const total = projects.length;
+    const mini = projects.filter(p => p.projectType === 'Mini Project').length;
+    const major = projects.filter(p => p.projectType === 'Major Project').length;
+    const capstone = projects.filter(p => p.projectType === 'Capstone Project').length;
+    const inProgress = projects.filter(p => p.projectStatus === 'IN_PROGRESS' || p.projectStatus === 'Ongoing').length;
+    const completed = projects.filter(p => p.projectStatus === 'COMPLETED' || p.projectStatus === 'Completed').length;
+    const industry = projects.filter(p => p.industryAssociation?.isIndustryAssociated || p.isIndustryProject === 'Yes').length;
+    const pendingReview = projects.filter(p => p.workflowStatus === 'SUBMITTED' || p.workflowStatus === 'UNDER_REVIEW').length;
+
+    return { total, mini, major, capstone, inProgress, completed, industry, pendingReview };
+  }, [projects]);
+
+  // Filtered Projects
+  const filteredProjects = useMemo(() => {
+    return projects.filter(item => {
+      const q = searchQuery.toLowerCase().trim();
+      const matchSearch = !q ||
+        (item.projectNumber && item.projectNumber.toLowerCase().includes(q)) ||
+        (item.projectTitle && item.projectTitle.toLowerCase().includes(q)) ||
+        (item.guide?.name && item.guide.name.toLowerCase().includes(q)) ||
+        (item.teamMembers && item.teamMembers.some(m => m.name.toLowerCase().includes(q) || m.rollNumber.toLowerCase().includes(q)));
+
+      const itemDept = item.department || '';
+      const matchDept = selectedDept === 'ALL' || itemDept.toLowerCase().includes(selectedDept.toLowerCase());
+      const matchType = selectedType === 'ALL' || item.projectType === selectedType;
+      const matchStatus = selectedStatus === 'ALL' || item.projectStatus === selectedStatus;
+      const matchWorkflow = selectedWorkflowStatus === 'ALL' || item.workflowStatus === selectedWorkflowStatus;
+
+      return matchSearch && matchDept && matchType && matchStatus && matchWorkflow;
+    });
+  }, [projects, searchQuery, selectedDept, selectedType, selectedStatus, selectedWorkflowStatus]);
+
+  // Permissions
+  const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD' || currentUser?.role === 'FACULTY';
+  const canReview = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD';
+
+  const handleExecuteReview = () => {
+    if (!reviewModalItem) return;
+    reviewStudentProject(reviewModalItem.id, reviewAction, reviewRemarks, currentUser);
+    setReviewModalItem(null);
+    setReviewRemarks('');
+    refresh();
+  };
+
+  const handleDelete = (item) => {
+    if (confirm(`Are you sure you want to soft-delete project ${item.projectNumber || item.id}: ${item.projectTitle}?`)) {
+      softDeleteStudentProject(item.id, currentUser);
+      refresh();
+    }
+  };
+
+  const getWorkflowBadge = (status) => {
+    switch (status) {
+      case 'APPROVED':
+        return { bg: '#ECFDF5', text: '#047857', border: '#A7F3D0', icon: CheckCircle2, label: 'APPROVED' };
+      case 'SUBMITTED':
+      case 'UNDER_REVIEW':
+        return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', icon: Clock, label: 'UNDER REVIEW' };
+      case 'NEEDS_REVISION':
+        return { bg: '#FEF2F2', text: '#DC2626', border: '#FECACA', icon: AlertTriangle, label: 'REVISION REQ.' };
+      case 'ARCHIVED':
+        return { bg: '#F1F5F9', text: '#475569', border: '#CBD5E1', icon: Clock, label: 'ARCHIVED' };
+      case 'DRAFT':
+      default:
+        return { bg: '#FEFCE8', text: '#A16207', border: '#FEF08A', icon: Edit3, label: 'DRAFT' };
+    }
+  };
+
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case 'COMPLETED':
+      case 'Completed':
+        return { bg: '#ECFDF5', text: '#065F46', border: '#A7F3D0', label: 'COMPLETED' };
+      case 'IN_PROGRESS':
+      case 'Ongoing':
+        return { bg: '#EFF6FF', text: '#1E40AF', border: '#BFDBFE', label: 'IN PROGRESS' };
+      case 'UNDER_REVIEW':
+        return { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A', label: 'UNDER REVIEW' };
+      default:
+        return { bg: '#F1F5F9', text: '#475569', border: '#CBD5E1', label: 'IN PROGRESS' };
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem', width: '100%' }}>
+      {/* 1. Header & Actions */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.74rem', color: '#64748B', marginBottom: '0.25rem' }}>
+            <span>Dashboard</span>
+            <ChevronRight size={12} />
+            <span>Student Development</span>
+            <ChevronRight size={12} />
+            <span style={{ color: '#0F172A', fontWeight: 700 }}>Student Projects</span>
+          </div>
+
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.25rem 0', fontFamily: 'Cinzel, Georgia, serif' }}>
+            Student Projects
+          </h1>
+          <p style={{ fontSize: '0.82rem', color: '#64748B', margin: 0 }}>
+            Manage mini, major, and capstone project lifecycles, guide mappings, milestone reviews, and research output linkages.
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => exportToCSV('projects')}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}
+          >
+            <Download size={14} /> CSV
+          </button>
+          <button
+            type="button"
+            onClick={() => exportToExcel('projects')}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#10B981', cursor: 'pointer' }}
+          >
+            <FileText size={14} /> Excel
+          </button>
+          <button
+            type="button"
+            onClick={() => exportToPDF('projects')}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#DC2626', cursor: 'pointer' }}
+          >
+            <Printer size={14} /> PDF
+          </button>
+
+          {canCreate && (
+            <button
+              type="button"
+              onClick={() => { setEditingItem(null); setWizardOpen(true); }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                background: 'linear-gradient(135deg, #F1C40F 0%, #D4AF37 100%)',
+                color: '#070F1E',
+                padding: '0.55rem 1.05rem',
+                borderRadius: '8px',
+                fontWeight: 800,
+                fontSize: '0.8rem',
+                border: 'none',
+                cursor: 'pointer',
+                boxShadow: '0 2px 10px rgba(212, 175, 55, 0.35)'
+              }}
+              className="hover:scale-105 transition-transform"
+            >
+              <Plus size={15} /> Register Project
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 2. KPI Summary Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(135px, 1fr))', gap: '0.85rem' }}>
+        {[
+          { label: 'Total Projects', value: stats.total, color: '#0F172A', icon: Code2, bg: '#F8FAFC' },
+          { label: 'Major Projects', value: stats.major, color: '#2563EB', icon: Layers, bg: '#EFF6FF' },
+          { label: 'Mini Projects', value: stats.mini, color: '#0D9488', icon: Zap, bg: '#F0FDFA' },
+          { label: 'Capstone Projects', value: stats.capstone, color: '#7C3AED', icon: Award, bg: '#F5F3FF' },
+          { label: 'In Progress', value: stats.inProgress, color: '#D97706', icon: Clock, bg: '#FEFCE8' },
+          { label: 'Completed', value: stats.completed, color: '#059669', icon: CheckCircle2, bg: '#ECFDF5' },
+          { label: 'Industry Associated', value: stats.industry, color: '#0284C7', icon: Building2, bg: '#F0F9FF' },
+          { label: 'Pending Review', value: stats.pendingReview, color: '#9333EA', icon: Sparkles, bg: '#FDF4FF' }
+        ].map((k, i) => {
+          const Icon = k.icon;
+          return (
+            <div key={i} style={{ background: k.bg, padding: '1rem', borderRadius: '12px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>{k.label}</span>
+                <Icon size={16} style={{ color: k.color }} />
+              </div>
+              <div style={{ fontSize: '1.45rem', fontWeight: 800, color: k.color, fontFamily: 'Cinzel, serif' }}>{k.value}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 3. Search & Multi-Filter Toolbar */}
+      <div style={{ background: '#FFFFFF', padding: '1rem 1.25rem', borderRadius: '14px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ flex: 1, minWidth: '240px', position: 'relative' }}>
+            <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
+            <input
+              type="text"
+              placeholder="Search by project title, ID, student roll no, guide name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ width: '100%', padding: '0.5rem 0.75rem 0.5rem 2.25rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.8rem', outline: 'none', color: '#0F172A', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            <select
+              value={selectedDept}
+              disabled={currentUser?.role === 'HOD'}
+              onChange={(e) => setSelectedDept(e.target.value)}
+              style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', background: '#FFFFFF', color: '#0F172A', fontWeight: 600 }}
+            >
+              <option value="ALL">All Departments</option>
+              {DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.code}</option>)}
+            </select>
+
+            <select
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value)}
+              style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', background: '#FFFFFF', color: '#0F172A', fontWeight: 600 }}
+            >
+              <option value="ALL">All Project Types</option>
+              <option value="Major Project">Major Project</option>
+              <option value="Mini Project">Mini Project</option>
+              <option value="Capstone Project">Capstone Project</option>
+              <option value="Research Project">Research Project</option>
+              <option value="Industry Project">Industry Project</option>
+            </select>
+
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', background: '#FFFFFF', color: '#0F172A', fontWeight: 600 }}
+            >
+              <option value="ALL">Status: All</option>
+              <option value="IN_PROGRESS">In Progress</option>
+              <option value="COMPLETED">Completed</option>
+            </select>
+
+            <select
+              value={selectedWorkflowStatus}
+              onChange={(e) => setSelectedWorkflowStatus(e.target.value)}
+              style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', background: '#FFFFFF', color: '#0F172A', fontWeight: 600 }}
+            >
+              <option value="ALL">Approval: All</option>
+              <option value="APPROVED">Approved</option>
+              <option value="UNDER_REVIEW">Under Review</option>
+              <option value="SUBMITTED">Submitted</option>
+              <option value="DRAFT">Draft</option>
+            </select>
+
+            {(searchQuery || selectedDept !== 'ALL' || selectedType !== 'ALL' || selectedStatus !== 'ALL' || selectedWorkflowStatus !== 'ALL') && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  if (currentUser?.role !== 'HOD') setSelectedDept('ALL');
+                  setSelectedType('ALL');
+                  setSelectedStatus('ALL');
+                  setSelectedWorkflowStatus('ALL');
+                }}
+                style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#F8FAFC', color: '#64748B', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Reset
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Projects Data Table */}
+      <div style={{ background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <thead>
+              <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                <th style={{ padding: '0.85rem 1rem' }}>Project ID & Title</th>
+                <th style={{ padding: '0.85rem 1rem' }}>Type & Domain</th>
+                <th style={{ padding: '0.85rem 1rem' }}>Team Leader & Members</th>
+                <th style={{ padding: '0.85rem 1rem' }}>Faculty Guide</th>
+                <th style={{ padding: '0.85rem 1rem' }}>Milestones</th>
+                <th style={{ padding: '0.85rem 1rem' }}>Status</th>
+                <th style={{ padding: '0.85rem 1rem' }}>Approval</th>
+                <th style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredProjects.length === 0 ? (
+                <tr>
+                  <td colSpan={8} style={{ padding: '3.5rem 1rem', textAlign: 'center', color: '#94A3B8', fontSize: '0.85rem' }}>
+                    No student project records found matching current filters.
+                  </td>
+                </tr>
+              ) : (
+                filteredProjects.map((item, idx) => {
+                  const wfBadge = getWorkflowBadge(item.workflowStatus);
+                  const stBadge = getStatusBadge(item.projectStatus);
+                  const WfIcon = wfBadge.icon;
+                  const completedReviews = item.reviews?.filter(r => r.status === 'COMPLETED').length || 0;
+                  const totalReviews = item.reviews?.length || 4;
+
+                  return (
+                    <tr key={item.id || idx} style={{ borderBottom: '1px solid #F1F5F9' }} className="hover:bg-slate-50">
+                      <td style={{ padding: '0.85rem 1rem', maxWidth: '280px' }}>
+                        <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.84rem', lineHeight: '1.25' }}>
+                          {item.projectTitle}
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: '#D4AF37', fontWeight: 700, marginTop: '0.15rem' }}>
+                          {item.projectNumber} • Dept: {item.department} ({item.batch})
+                        </div>
+                      </td>
+
+                      <td style={{ padding: '0.85rem 1rem' }}>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#334155', background: '#F1F5F9', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
+                          {item.projectType}
+                        </span>
+                        <div style={{ fontSize: '0.7rem', color: '#64748B', marginTop: '0.2rem' }}>
+                          {item.domain || item.domains?.[0] || 'General'}
+                        </div>
+                      </td>
+
+                      <td style={{ padding: '0.85rem 1rem' }}>
+                        <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0F172A' }}>
+                          {item.teamMembers?.[0]?.name} <span style={{ color: '#D4AF37', fontSize: '0.7rem' }}>({item.teamMembers?.[0]?.rollNumber})</span>
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: '#64748B' }}>
+                          +{item.teamMembers?.length - 1} other team member(s)
+                        </div>
+                      </td>
+
+                      <td style={{ padding: '0.85rem 1rem' }}>
+                        <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0F172A' }}>
+                          {item.guide?.name}
+                        </div>
+                        {item.industryAssociation?.organization && (
+                          <div style={{ fontSize: '0.7rem', color: '#0284C7' }}>
+                            Industry: {item.industryAssociation.organization}
+                          </div>
+                        )}
+                      </td>
+
+                      <td style={{ padding: '0.85rem 1rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <span style={{ fontSize: '0.74rem', fontWeight: 800, color: completedReviews === totalReviews ? '#059669' : '#D97706' }}>
+                            {completedReviews}/{totalReviews} Completed
+                          </span>
+                        </div>
+                      </td>
+
+                      <td style={{ padding: '0.85rem 1rem' }}>
+                        <span style={{
+                          fontSize: '0.68rem',
+                          fontWeight: 800,
+                          background: stBadge.bg,
+                          color: stBadge.text,
+                          border: `1px solid ${stBadge.border}`,
+                          padding: '0.15rem 0.5rem',
+                          borderRadius: '9999px',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {stBadge.label}
+                        </span>
+                      </td>
+
+                      <td style={{ padding: '0.85rem 1rem' }}>
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                          background: wfBadge.bg,
+                          color: wfBadge.text,
+                          border: `1px solid ${wfBadge.border}`,
+                          padding: '0.15rem 0.5rem',
+                          borderRadius: '9999px',
+                          fontSize: '0.68rem',
+                          fontWeight: 800,
+                          whiteSpace: 'nowrap'
+                        }}>
+                          <WfIcon size={11} /> {wfBadge.label}
+                        </span>
+                      </td>
+
+                      <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.35rem' }}>
+                          <button
+                            type="button"
+                            onClick={() => { setDossierModalItem(item); setDossierActiveTab('overview'); }}
+                            title="View Project Dossier"
+                            style={{ padding: '0.35rem', background: '#F1F5F9', border: '1px solid #CBD5E1', borderRadius: '6px', color: '#334155', cursor: 'pointer' }}
+                          >
+                            <Eye size={13} />
+                          </button>
+
+                          {canReview && (
+                            <button
+                              type="button"
+                              onClick={() => { setReviewModalItem(item); setReviewAction('APPROVE'); }}
+                              title="Review / Approve Project"
+                              style={{ padding: '0.35rem 0.55rem', background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '6px', color: '#059669', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}
+                            >
+                              Review
+                            </button>
+                          )}
+
+                          {canCreate && (
+                            <button
+                              type="button"
+                              onClick={() => { setEditingItem(item); setWizardOpen(true); }}
+                              title="Edit Record"
+                              style={{ padding: '0.35rem', background: '#FEFCE8', border: '1px solid #FEF08A', borderRadius: '6px', color: '#A16207', cursor: 'pointer' }}
+                            >
+                              <Edit3 size={13} />
+                            </button>
+                          )}
+
+                          {canReview && (
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(item)}
+                              title="Delete / Archive"
+                              style={{ padding: '0.35rem', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '6px', color: '#DC2626', cursor: 'pointer' }}
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* 5. Project Wizard Modal */}
+      {wizardOpen && (
+        <StudentProjectWizardModal
+          isOpen={wizardOpen}
+          onClose={() => { setWizardOpen(false); setEditingItem(null); }}
+          initialData={editingItem}
+          currentUser={currentUser}
+          onSaved={() => refresh()}
+        />
+      )}
+
+      {/* 6. Multi-Tab Dossier Modal */}
+      {dossierModalItem && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(7, 15, 30, 0.85)',
+          backdropFilter: 'blur(6px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1200,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '16px',
+            maxWidth: '860px',
+            width: '100%',
+            maxHeight: '92vh',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.35)',
+            border: '1px solid #D4AF37',
+            overflow: 'hidden'
+          }}>
+            <div style={{ background: 'linear-gradient(135deg, #070F1E 0%, #0B192C 100%)', padding: '1.25rem 1.5rem', color: '#FFFFFF', borderBottom: '2px solid #D4AF37', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <span style={{ fontSize: '0.72rem', color: '#D4AF37', fontWeight: 800, textTransform: 'uppercase' }}>
+                  {dossierModalItem.projectNumber} • {dossierModalItem.projectType}
+                </span>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: '0.2rem 0 0', color: '#FFFFFF', fontFamily: 'Cinzel, serif' }}>
+                  {dossierModalItem.projectTitle}
+                </h3>
+              </div>
+              <button type="button" onClick={() => setDossierModalItem(null)} style={{ background: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Dossier Tabs */}
+            <div style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', padding: '0.5rem 1.5rem', display: 'flex', gap: '0.5rem', overflowX: 'auto' }}>
+              {[
+                { id: 'overview', label: 'Problem & Overview' },
+                { id: 'team', label: `Team Members (${dossierModalItem.teamMembers?.length || 0})` },
+                { id: 'reviews', label: 'Milestone Reviews' },
+                { id: 'tech', label: 'Tech Stack & Links' },
+                { id: 'outcomes', label: 'Research Outcomes' },
+                { id: 'evidence', label: `Documents (${dossierModalItem.documents?.length || 0})` }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setDossierActiveTab(tab.id)}
+                  style={{
+                    padding: '0.4rem 0.85rem',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: dossierActiveTab === tab.id ? '#070F1E' : 'transparent',
+                    color: dossierActiveTab === tab.id ? '#F1C40F' : '#64748B',
+                    fontSize: '0.76rem',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Dossier Canvas */}
+            <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1 }}>
+              {dossierActiveTab === 'overview' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', background: '#F8FAFC', padding: '1rem', borderRadius: '10px' }}>
+                    <div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748B' }}>Primary Guide</div>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0F172A' }}>{dossierModalItem.guide?.name}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748B' }}>Department & Batch</div>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#059669' }}>{dossierModalItem.department} ({dossierModalItem.batch})</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748B' }}>Project Status</div>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#2563EB' }}>{dossierModalItem.projectStatus}</div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0F172A', marginBottom: '0.25rem', textTransform: 'uppercase' }}>Problem Statement</h4>
+                    <p style={{ fontSize: '0.82rem', color: '#475569', margin: 0 }}>{dossierModalItem.problemStatement}</p>
+                  </div>
+                </div>
+              )}
+
+              {dossierActiveTab === 'team' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {dossierModalItem.teamMembers?.map((m, idx) => (
+                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                      <div>
+                        <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.84rem' }}>
+                          {m.name} {m.isLeader && <span style={{ color: '#D4AF37', fontSize: '0.72rem' }}>(Leader)</span>}
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                          Roll: {m.rollNumber} • {m.department}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: '#0284C7' }}>{m.email}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {dossierActiveTab === 'reviews' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {dossierModalItem.reviews?.map((r, i) => (
+                    <div key={i} style={{ padding: '0.85rem', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <strong style={{ fontSize: '0.82rem', color: '#0F172A' }}>{r.reviewName}</strong>
+                        <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#059669' }}>{r.marksAwarded} / {r.maxMarks} Marks</span>
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '0.2rem' }}>
+                        Date: {r.reviewDate} • Panel: {r.panelMembers} • Status: {r.status}
+                      </div>
+                      {r.feedback && <div style={{ fontSize: '0.75rem', color: '#334155', marginTop: '0.35rem', background: '#FFFFFF', padding: '0.45rem', borderRadius: '4px' }}>Feedback: {r.feedback}</div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {dossierActiveTab === 'tech' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div>
+                    <h4 style={{ fontSize: '0.76rem', fontWeight: 800, color: '#0F172A', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Tech Stack</h4>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                      {dossierModalItem.technologies?.map(t => (
+                        <span key={t} style={{ padding: '0.3rem 0.7rem', background: '#EFF6FF', color: '#1D4ED8', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 700 }}>
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+                    {dossierModalItem.links?.githubUrl && (
+                      <a href={dossierModalItem.links.githubUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.65rem', background: '#F8FAFC', borderRadius: '8px', color: '#0F172A', textDecoration: 'none', fontSize: '0.78rem', fontWeight: 700 }}>
+                        <GitBranch size={15} /> GitHub Repository
+                      </a>
+                    )}
+                    {dossierModalItem.links?.liveDemoUrl && (
+                      <a href={dossierModalItem.links.liveDemoUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.65rem', background: '#F8FAFC', borderRadius: '8px', color: '#059669', textDecoration: 'none', fontSize: '0.78rem', fontWeight: 700 }}>
+                        <Globe size={15} /> Live Project Demo
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {dossierActiveTab === 'outcomes' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div style={{ padding: '1rem', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                    <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.84rem' }}>Research Publication Output</div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '0.2rem' }}>
+                      {dossierModalItem.researchOutcomes?.linkedPublicationId ? `Linked Record: ${dossierModalItem.researchOutcomes.linkedPublicationId}` : 'No publication linked yet.'}
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '1rem', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                    <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.84rem' }}>Patent Filing Output</div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '0.2rem' }}>
+                      {dossierModalItem.researchOutcomes?.linkedPatentId ? `Linked Record: ${dossierModalItem.researchOutcomes.linkedPatentId}` : 'No patent linked yet.'}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {dossierActiveTab === 'evidence' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                  {dossierModalItem.documents?.length === 0 ? (
+                    <div style={{ padding: '2rem', textAlign: 'center', color: '#94A3B8', fontSize: '0.82rem' }}>No project documents attached.</div>
+                  ) : (
+                    dossierModalItem.documents?.map(doc => (
+                      <div key={doc.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.65rem 0.9rem', background: '#F1F5F9', borderRadius: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                          <FileText size={16} style={{ color: '#D4AF37' }} />
+                          <div>
+                            <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.8rem' }}>{doc.name}</div>
+                            <div style={{ fontSize: '0.7rem', color: '#64748B' }}>{doc.type} ({doc.size})</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div style={{ padding: '1rem 1.5rem', background: '#F8FAFC', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => setDossierModalItem(null)} style={{ padding: '0.5rem 1rem', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#FFFFFF', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 7. Review Decision Modal */}
+      {reviewModalItem && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(7, 15, 30, 0.8)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1300, padding: '1rem' }}>
+          <div style={{ background: '#FFFFFF', borderRadius: '16px', maxWidth: '500px', width: '100%', border: '1px solid #D4AF37', overflow: 'hidden' }}>
+            <div style={{ background: '#070F1E', padding: '1rem 1.25rem', color: '#FFFFFF', borderBottom: '2px solid #D4AF37' }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0, color: '#FFFFFF' }}>Review & Approve Project</h3>
+              <div style={{ fontSize: '0.75rem', color: '#D4AF37' }}>{reviewModalItem.projectTitle}</div>
+            </div>
+
+            <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '0.35rem' }}>DECISION *</label>
+                <select value={reviewAction} onChange={(e) => setReviewAction(e.target.value)} style={{ width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.8rem' }}>
+                  <option value="APPROVE">Approve Project</option>
+                  <option value="COMPLETE">Mark Project Completed & Evaluated</option>
+                  <option value="UNDER_REVIEW">Mark Under Evaluation</option>
+                  <option value="REQUEST_REVISION">Request Revision from Team</option>
+                  <option value="ARCHIVE">Archive Record</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '0.35rem' }}>EVALUATION REMARKS</label>
+                <textarea rows={3} placeholder="Add panel evaluation remarks..." value={reviewRemarks} onChange={(e) => setReviewRemarks(e.target.value)} style={{ width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.8rem', boxSizing: 'border-box' }} />
+              </div>
+            </div>
+
+            <div style={{ padding: '0.85rem 1.25rem', background: '#F8FAFC', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+              <button type="button" onClick={() => setReviewModalItem(null)} style={{ padding: '0.45rem 0.85rem', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#FFFFFF', fontSize: '0.78rem', cursor: 'pointer' }}>Cancel</button>
+              <button type="button" onClick={handleExecuteReview} style={{ padding: '0.45rem 1.15rem', borderRadius: '6px', border: 'none', background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', color: '#FFFFFF', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer' }}>Submit Decision</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

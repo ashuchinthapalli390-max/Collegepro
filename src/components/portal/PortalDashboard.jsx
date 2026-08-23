@@ -96,6 +96,10 @@ import AcademicEventsManager from './events/AcademicEventsManager.jsx';
 import PatentsManager from './patents/PatentsManager.jsx';
 import PublicationsManager from './publications/PublicationsManager.jsx';
 import FacultyResearchSyncModal from './publications/FacultyResearchSyncModal.jsx';
+import MembershipsManager from './memberships/MembershipsManager.jsx';
+import MousManager from './mous/MousManager.jsx';
+import StudentProjectsManager from './projects/StudentProjectsManager.jsx';
+import NptelCertificationsManager from './nptel/NptelCertificationsManager.jsx';
 
 export default function PortalDashboard({ currentUser, onNavigatePublic, onLogout, onExitPortal }) {
   const [activeModule, setActiveModule] = useState('overview');
@@ -683,7 +687,47 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
           )}
 
           {/* ────────────────────────────────────────────────────────── */}
-          {/* VIEW 12: RECYCLE BIN & AUDIT LOGS */}
+          {/* VIEW 12: FACULTY MEMBERSHIPS & PROFESSIONAL BODIES */}
+          {/* ────────────────────────────────────────────────────────── */}
+          {(activeModule === 'faculty-memberships' || activeModule === 'memberships') && (
+            <MembershipsManager
+              currentUser={currentUser}
+              onDataChange={refreshData}
+            />
+          )}
+
+          {/* ────────────────────────────────────────────────────────── */}
+          {/* VIEW 13: INDUSTRY MoUs & PARTNERSHIPS */}
+          {/* ────────────────────────────────────────────────────────── */}
+          {(activeModule === 'mous-collaborations' || activeModule === 'mous' || activeModule === 'collaborations') && (
+            <MousManager
+              currentUser={currentUser}
+              onDataChange={refreshData}
+            />
+          )}
+
+          {/* ────────────────────────────────────────────────────────── */}
+          {/* VIEW 14: STUDENT PROJECTS & CAPSTONE */}
+          {/* ────────────────────────────────────────────────────────── */}
+          {(activeModule === 'student-projects' || activeModule === 'projects' || activeModule === 'capstone-projects') && (
+            <StudentProjectsManager
+              currentUser={currentUser}
+              onDataChange={refreshData}
+            />
+          )}
+
+          {/* ────────────────────────────────────────────────────────── */}
+          {/* VIEW 15: NPTEL & MOOC ONLINE CERTIFICATIONS */}
+          {/* ────────────────────────────────────────────────────────── */}
+          {(activeModule === 'nptel-certifications' || activeModule === 'nptel' || activeModule === 'moocs') && (
+            <NptelCertificationsManager
+              currentUser={currentUser}
+              onDataChange={refreshData}
+            />
+          )}
+
+          {/* ────────────────────────────────────────────────────────── */}
+          {/* VIEW 16: RECYCLE BIN & AUDIT LOGS */}
           {/* ────────────────────────────────────────────────────────── */}
           {activeModule === 'recycle-bin' && (
             <RecycleBin currentUser={currentUser} onRestored={refreshData} />
@@ -694,7 +738,7 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
           )}
 
           {/* ────────────────────────────────────────────────────────── */}
-          {/* VIEW 13: GENERAL CRUD MODULES */}
+          {/* VIEW 17: GENERAL CRUD MODULES */}
           {/* ────────────────────────────────────────────────────────── */}
           {![
             'overview',
@@ -721,6 +765,17 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
             'patents',
             'ipr-patents',
             'sync-publications',
+            'faculty-memberships',
+            'memberships',
+            'mous-collaborations',
+            'mous',
+            'collaborations',
+            'student-projects',
+            'projects',
+            'capstone-projects',
+            'nptel-certifications',
+            'nptel',
+            'moocs',
             'recycle-bin',
             'audit-logs'
           ].includes(activeModule) && (

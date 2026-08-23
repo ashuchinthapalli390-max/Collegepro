@@ -59,7 +59,15 @@ export default function MadamModulesCRUD({ activeModule, currentUser, onDataChan
     'research-papers',
     'patents',
     'ipr-patents',
-    'sync-publications'
+    'sync-publications',
+    'faculty-memberships',
+    'memberships',
+    'mous-collaborations',
+    'mous',
+    'student-projects',
+    'projects',
+    'nptel-certifications',
+    'nptel'
   ].includes(activeModule)) {
     return null;
   }

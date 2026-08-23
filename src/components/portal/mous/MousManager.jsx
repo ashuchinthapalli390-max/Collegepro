@@ -1,0 +1,759 @@
+import React, { useState, useMemo } from 'react';
+import { 
+  Handshake, 
+  Plus, 
+  Search, 
+  Filter, 
+  Download, 
+  Eye, 
+  Edit3, 
+  CheckCircle2, 
+  Clock, 
+  AlertTriangle, 
+  ShieldCheck, 
+  FileText, 
+  Building2, 
+  Trash2, 
+  ChevronRight, 
+  ExternalLink, 
+  Sparkles, 
+  Printer, 
+  Calendar, 
+  Users, 
+  Check, 
+  X,
+  Globe,
+  Layers,
+  MapPin,
+  RefreshCw,
+  Zap,
+  Activity
+} from 'lucide-react';
+import { DEPARTMENTS, FACULTY_DATA } from '../../../data/masterData.js';
+import { 
+  getMoUs, 
+  reviewMoU, 
+  softDeleteMoU,
+  getMoULinkedActivities,
+  exportToCSV,
+  exportToExcel,
+  exportToPDF
+} from '../../../data/portalStore.js';
+import MouWizardModal from './MouWizardModal.jsx';
+
+export default function MousManager({ currentUser, onDataChange }) {
+  const [dataVersion, setDataVersion] = useState(0);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+  const [dossierModalItem, setDossierModalItem] = useState(null);
+  const [dossierActiveTab, setDossierActiveTab] = useState('overview');
+  const [reviewModalItem, setReviewModalItem] = useState(null);
+  const [reviewAction, setReviewAction] = useState('APPROVE');
+  const [reviewRemarks, setReviewRemarks] = useState('');
+
+  // Filters
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedDept, setSelectedDept] = useState('ALL');
+  const [selectedPartnerType, setSelectedPartnerType] = useState('ALL');
+  const [selectedStatus, setSelectedStatus] = useState('ALL');
+  const [selectedWorkflowStatus, setSelectedWorkflowStatus] = useState('ALL');
+
+  const refresh = () => {
+    setDataVersion(v => v + 1);
+    if (onDataChange) onDataChange();
+  };
+
+  // Live Records
+  const mous = useMemo(() => {
+    return getMoUs();
+  }, [dataVersion]);
+
+  // KPIs
+  const stats = useMemo(() => {
+    const total = mous.length;
+    const active = mous.filter(m => m.mouStatus === 'ACTIVE').length;
+    const expiringSoon = mous.filter(m => m.mouStatus === 'EXPIRING_SOON').length;
+    const expired = mous.filter(m => m.mouStatus === 'EXPIRED').length;
+    const industry = mous.filter(m => m.partnerType?.includes('Industry') || m.partnerType?.includes('Startup')).length;
+    const academic = mous.filter(m => m.partnerType?.includes('University') || m.partnerType?.includes('College') || m.partnerType?.includes('Research')).length;
+    
+    // Total Activities
+    let totalAct = 0;
+    mous.forEach(m => {
+      const act = getMoULinkedActivities(m.partnerOrganization || m.mouNumber);
+      totalAct += act.total;
+    });
+
+    return { total, active, expiringSoon, expired, industry, academic, totalAct };
+  }, [mous]);
+
+  // Filtered MoUs
+  const filteredMoUs = useMemo(() => {
+    return mous.filter(item => {
+      const q = searchQuery.toLowerCase().trim();
+      const matchSearch = !q ||
+        (item.mouNumber && item.mouNumber.toLowerCase().includes(q)) ||
+        (item.partnerOrganization && item.partnerOrganization.toLowerCase().includes(q)) ||
+        (item.title && item.title.toLowerCase().includes(q)) ||
+        (item.primaryCoordinator && item.primaryCoordinator.toLowerCase().includes(q));
+
+      const matchDept = selectedDept === 'ALL' || item.department.toLowerCase().includes(selectedDept.toLowerCase());
+      const matchType = selectedPartnerType === 'ALL' || item.partnerType === selectedPartnerType;
+      const matchStatus = selectedStatus === 'ALL' || item.mouStatus === selectedStatus;
+      const matchWorkflow = selectedWorkflowStatus === 'ALL' || item.workflowStatus === selectedWorkflowStatus;
+
+      return matchSearch && matchDept && matchType && matchStatus && matchWorkflow;
+    });
+  }, [mous, searchQuery, selectedDept, selectedPartnerType, selectedStatus, selectedWorkflowStatus]);
+
+  // Permissions
+  const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD';
+  const canReview = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD';
+
+  const handleExecuteReview = () => {
+    if (!reviewModalItem) return;
+    reviewMoU(reviewModalItem.id, reviewAction, reviewRemarks, currentUser);
+    setReviewModalItem(null);
+    setReviewRemarks('');
+    refresh();
+  };
+
+  const handleDelete = (item) => {
+    if (confirm(`Are you sure you want to soft-delete MoU ${item.mouNumber || item.id} with ${item.partnerOrganization}?`)) {
+      softDeleteMoU(item.id, currentUser);
+      refresh();
+    }
+  };
+
+  const getWorkflowBadge = (status) => {
+    switch (status) {
+      case 'APPROVED':
+        return { bg: '#ECFDF5', text: '#047857', border: '#A7F3D0', icon: CheckCircle2, label: 'APPROVED' };
+      case 'SUBMITTED':
+      case 'UNDER_REVIEW':
+        return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', icon: Clock, label: 'UNDER REVIEW' };
+      case 'NEEDS_REVISION':
+        return { bg: '#FEF2F2', text: '#DC2626', border: '#FECACA', icon: AlertTriangle, label: 'REVISION REQ.' };
+      case 'ARCHIVED':
+        return { bg: '#F1F5F9', text: '#475569', border: '#CBD5E1', icon: Clock, label: 'ARCHIVED' };
+      case 'DRAFT':
+      default:
+        return { bg: '#FEFCE8', text: '#A16207', border: '#FEF08A', icon: Edit3, label: 'DRAFT' };
+    }
+  };
+
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case 'ACTIVE':
+        return { bg: '#ECFDF5', text: '#065F46', border: '#A7F3D0', label: 'ACTIVE' };
+      case 'EXPIRING_SOON':
+        return { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A', label: 'EXPIRING SOON' };
+      case 'EXPIRED':
+        return { bg: '#FEF2F2', text: '#DC2626', border: '#FECACA', label: 'EXPIRED' };
+      case 'TERMINATED':
+        return { bg: '#F1F5F9', text: '#475569', border: '#CBD5E1', label: 'TERMINATED' };
+      default:
+        return { bg: '#F1F5F9', text: '#475569', border: '#CBD5E1', label: 'ACTIVE' };
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem', width: '100%' }}>
+      {/* 1. Header & Actions */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.74rem', color: '#64748B', marginBottom: '0.25rem' }}>
+            <span>Dashboard</span>
+            <ChevronRight size={12} />
+            <span>Events & Outreach</span>
+            <ChevronRight size={12} />
+            <span style={{ color: '#0F172A', fontWeight: 700 }}>Industry MoUs & Partnerships</span>
+          </div>
+
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.25rem 0', fontFamily: 'Cinzel, Georgia, serif' }}>
+            Industry MoUs & Collaborations
+          </h1>
+          <p style={{ fontSize: '0.82rem', color: '#64748B', margin: 0 }}>
+            Manage institutional bilateral agreements, industry tie-ups, validity tracking, and linked activities.
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => exportToCSV('mous')}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}
+          >
+            <Download size={14} /> CSV
+          </button>
+          <button
+            type="button"
+            onClick={() => exportToExcel('mous')}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#10B981', cursor: 'pointer' }}
+          >
+            <FileText size={14} /> Excel
+          </button>
+          <button
+            type="button"
+            onClick={() => exportToPDF('mous')}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#DC2626', cursor: 'pointer' }}
+          >
+            <Printer size={14} /> PDF
+          </button>
+
+          {canCreate && (
+            <button
+              type="button"
+              onClick={() => { setEditingItem(null); setWizardOpen(true); }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                background: 'linear-gradient(135deg, #F1C40F 0%, #D4AF37 100%)',
+                color: '#070F1E',
+                padding: '0.55rem 1.05rem',
+                borderRadius: '8px',
+                fontWeight: 800,
+                fontSize: '0.8rem',
+                border: 'none',
+                cursor: 'pointer',
+                boxShadow: '0 2px 10px rgba(212, 175, 55, 0.35)'
+              }}
+              className="hover:scale-105 transition-transform"
+            >
+              <Plus size={15} /> Establish MoU
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 2. Expiry Warning Banner if Any Expiring Soon */}
+      {stats.expiringSoon > 0 && (
+        <div style={{
+          padding: '0.85rem 1.25rem',
+          background: '#FEF3C7',
+          border: '1px solid #FDE68A',
+          borderRadius: '12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          color: '#92400E'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <AlertTriangle size={18} style={{ color: '#D97706' }} />
+            <div>
+              <strong style={{ fontSize: '0.84rem' }}>{stats.expiringSoon} MoU Agreement(s) expiring within 60 days.</strong>
+              <div style={{ fontSize: '0.74rem' }}>Initiate bilateral renewal extensions or archive concluded partnerships for NAAC audit compliance.</div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSelectedStatus('EXPIRING_SOON')}
+            style={{ padding: '0.35rem 0.75rem', background: '#D97706', color: '#FFFFFF', border: 'none', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 800, cursor: 'pointer' }}
+          >
+            Filter Expiring
+          </button>
+        </div>
+      )}
+
+      {/* 3. KPI Summary Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.85rem' }}>
+        {[
+          { label: 'Total MoUs', value: stats.total, color: '#0F172A', icon: Handshake, bg: '#F8FAFC' },
+          { label: 'Active Partnerships', value: stats.active, color: '#059669', icon: CheckCircle2, bg: '#ECFDF5' },
+          { label: 'Expiring Soon (≤60d)', value: stats.expiringSoon, color: '#D97706', icon: Clock, bg: '#FEFCE8' },
+          { label: 'Expired / Concluded', value: stats.expired, color: '#DC2626', icon: AlertTriangle, bg: '#FEF2F2' },
+          { label: 'Industry Partners', value: stats.industry, color: '#2563EB', icon: Building2, bg: '#EFF6FF' },
+          { label: 'Academic Partners', value: stats.academic, color: '#7C3AED', icon: Globe, bg: '#F5F3FF' },
+          { label: 'Activities Conducted', value: stats.totalAct, color: '#0D9488', icon: Activity, bg: '#F0FDFA' }
+        ].map((k, i) => {
+          const Icon = k.icon;
+          return (
+            <div key={i} style={{ background: k.bg, padding: '1rem', borderRadius: '12px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>{k.label}</span>
+                <Icon size={16} style={{ color: k.color }} />
+              </div>
+              <div style={{ fontSize: '1.45rem', fontWeight: 800, color: k.color, fontFamily: 'Cinzel, serif' }}>{k.value}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 4. Search & Multi-Filter Toolbar */}
+      <div style={{ background: '#FFFFFF', padding: '1rem 1.25rem', borderRadius: '14px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ flex: 1, minWidth: '240px', position: 'relative' }}>
+            <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
+            <input
+              type="text"
+              placeholder="Search by partner organization, MoU number, title, coordinator..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ width: '100%', padding: '0.5rem 0.75rem 0.5rem 2.25rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.8rem', outline: 'none', color: '#0F172A', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            <select
+              value={selectedPartnerType}
+              onChange={(e) => setSelectedPartnerType(e.target.value)}
+              style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', background: '#FFFFFF', color: '#0F172A', fontWeight: 600 }}
+            >
+              <option value="ALL">All Partner Types</option>
+              <option value="Industry">Industry</option>
+              <option value="University">University</option>
+              <option value="College">College</option>
+              <option value="Research Institute">Research Institute</option>
+              <option value="Startup">Startup</option>
+            </select>
+
+            <select
+              value={selectedDept}
+              onChange={(e) => setSelectedDept(e.target.value)}
+              style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', background: '#FFFFFF', color: '#0F172A', fontWeight: 600 }}
+            >
+              <option value="ALL">All Departments</option>
+              <option value="Institution">Institution-Level</option>
+              {DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.code}</option>)}
+            </select>
+
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', background: '#FFFFFF', color: '#0F172A', fontWeight: 600 }}
+            >
+              <option value="ALL">Status: All</option>
+              <option value="ACTIVE">Active</option>
+              <option value="EXPIRING_SOON">Expiring Soon</option>
+              <option value="EXPIRED">Expired</option>
+            </select>
+
+            <select
+              value={selectedWorkflowStatus}
+              onChange={(e) => setSelectedWorkflowStatus(e.target.value)}
+              style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', background: '#FFFFFF', color: '#0F172A', fontWeight: 600 }}
+            >
+              <option value="ALL">Approval: All</option>
+              <option value="APPROVED">Approved</option>
+              <option value="UNDER_REVIEW">Under Review</option>
+              <option value="SUBMITTED">Submitted</option>
+              <option value="DRAFT">Draft</option>
+            </select>
+
+            {(searchQuery || selectedDept !== 'ALL' || selectedPartnerType !== 'ALL' || selectedStatus !== 'ALL' || selectedWorkflowStatus !== 'ALL') && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedDept('ALL');
+                  setSelectedPartnerType('ALL');
+                  setSelectedStatus('ALL');
+                  setSelectedWorkflowStatus('ALL');
+                }}
+                style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#F8FAFC', color: '#64748B', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Reset
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 5. MoUs Data Table */}
+      <div style={{ background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <thead>
+              <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                <th style={{ padding: '0.85rem 1rem' }}>Partner Organization</th>
+                <th style={{ padding: '0.85rem 1rem' }}>Agreement Title</th>
+                <th style={{ padding: '0.85rem 1rem' }}>Partner Type</th>
+                <th style={{ padding: '0.85rem 1rem' }}>Coordinators</th>
+                <th style={{ padding: '0.85rem 1rem' }}>Validity Period</th>
+                <th style={{ padding: '0.85rem 1rem' }}>Activities</th>
+                <th style={{ padding: '0.85rem 1rem' }}>Status</th>
+                <th style={{ padding: '0.85rem 1rem' }}>Approval</th>
+                <th style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredMoUs.length === 0 ? (
+                <tr>
+                  <td colSpan={9} style={{ padding: '3.5rem 1rem', textAlign: 'center', color: '#94A3B8', fontSize: '0.85rem' }}>
+                    No MoU records found matching current filters.
+                  </td>
+                </tr>
+              ) : (
+                filteredMoUs.map((item, idx) => {
+                  const wfBadge = getWorkflowBadge(item.workflowStatus);
+                  const stBadge = getStatusBadge(item.mouStatus);
+                  const WfIcon = wfBadge.icon;
+                  const activities = getMoULinkedActivities(item.partnerOrganization || item.mouNumber);
+
+                  return (
+                    <tr key={item.id || idx} style={{ borderBottom: '1px solid #F1F5F9' }} className="hover:bg-slate-50">
+                      <td style={{ padding: '0.85rem 1rem', maxWidth: '240px' }}>
+                        <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.84rem' }}>
+                          {item.partnerOrganization}
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: '#D4AF37', fontWeight: 700 }}>
+                          {item.mouNumber}
+                        </div>
+                      </td>
+
+                      <td style={{ padding: '0.85rem 1rem', maxWidth: '220px' }}>
+                        <div style={{ fontSize: '0.8rem', color: '#334155', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {item.title}
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: '#64748B' }}>
+                          Dept: {item.department}
+                        </div>
+                      </td>
+
+                      <td style={{ padding: '0.85rem 1rem' }}>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#334155', background: '#F1F5F9', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
+                          {item.partnerType}
+                        </span>
+                      </td>
+
+                      <td style={{ padding: '0.85rem 1rem' }}>
+                        <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>
+                          {item.primaryCoordinator}
+                        </div>
+                        {item.partnerContactPerson && (
+                          <div style={{ fontSize: '0.7rem', color: '#64748B' }}>
+                            Partner: {item.partnerContactPerson}
+                          </div>
+                        )}
+                      </td>
+
+                      <td style={{ padding: '0.85rem 1rem' }}>
+                        <div style={{ fontSize: '0.78rem', color: '#0F172A', fontWeight: 700 }}>
+                          Until: {item.expiryDate || 'Ongoing'}
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: '#64748B' }}>
+                          Signed: {item.signedDate} ({item.validityType})
+                        </div>
+                      </td>
+
+                      <td style={{ padding: '0.85rem 1rem' }}>
+                        <button
+                          type="button"
+                          onClick={() => { setDossierModalItem(item); setDossierActiveTab('activities'); }}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.3rem',
+                            padding: '0.2rem 0.6rem',
+                            borderRadius: '9999px',
+                            background: activities.total > 0 ? '#ECFDF5' : '#F1F5F9',
+                            color: activities.total > 0 ? '#047857' : '#64748B',
+                            border: `1px solid ${activities.total > 0 ? '#A7F3D0' : '#CBD5E1'}`,
+                            fontSize: '0.72rem',
+                            fontWeight: 800,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <Zap size={11} /> {activities.total} Activities
+                        </button>
+                      </td>
+
+                      <td style={{ padding: '0.85rem 1rem' }}>
+                        <span style={{
+                          fontSize: '0.68rem',
+                          fontWeight: 800,
+                          background: stBadge.bg,
+                          color: stBadge.text,
+                          border: `1px solid ${stBadge.border}`,
+                          padding: '0.15rem 0.5rem',
+                          borderRadius: '9999px',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {stBadge.label}
+                        </span>
+                      </td>
+
+                      <td style={{ padding: '0.85rem 1rem' }}>
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                          background: wfBadge.bg,
+                          color: wfBadge.text,
+                          border: `1px solid ${wfBadge.border}`,
+                          padding: '0.15rem 0.5rem',
+                          borderRadius: '9999px',
+                          fontSize: '0.68rem',
+                          fontWeight: 800,
+                          whiteSpace: 'nowrap'
+                        }}>
+                          <WfIcon size={11} /> {wfBadge.label}
+                        </span>
+                      </td>
+
+                      <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.35rem' }}>
+                          <button
+                            type="button"
+                            onClick={() => { setDossierModalItem(item); setDossierActiveTab('overview'); }}
+                            title="View MoU Dossier"
+                            style={{ padding: '0.35rem', background: '#F1F5F9', border: '1px solid #CBD5E1', borderRadius: '6px', color: '#334155', cursor: 'pointer' }}
+                          >
+                            <Eye size={13} />
+                          </button>
+
+                          {canReview && (
+                            <button
+                              type="button"
+                              onClick={() => { setReviewModalItem(item); setReviewAction('APPROVE'); }}
+                              title="Review / Approve MoU"
+                              style={{ padding: '0.35rem 0.55rem', background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '6px', color: '#059669', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}
+                            >
+                              Review
+                            </button>
+                          )}
+
+                          {canCreate && (
+                            <button
+                              type="button"
+                              onClick={() => { setEditingItem(item); setWizardOpen(true); }}
+                              title="Edit Record"
+                              style={{ padding: '0.35rem', background: '#FEFCE8', border: '1px solid #FEF08A', borderRadius: '6px', color: '#A16207', cursor: 'pointer' }}
+                            >
+                              <Edit3 size={13} />
+                            </button>
+                          )}
+
+                          {canReview && (
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(item)}
+                              title="Delete / Archive"
+                              style={{ padding: '0.35rem', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '6px', color: '#DC2626', cursor: 'pointer' }}
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* 6. MoU Wizard Modal */}
+      {wizardOpen && (
+        <MouWizardModal
+          isOpen={wizardOpen}
+          onClose={() => { setWizardOpen(false); setEditingItem(null); }}
+          initialData={editingItem}
+          currentUser={currentUser}
+          onSaved={() => refresh()}
+        />
+      )}
+
+      {/* 7. Multi-Tab Dossier Modal */}
+      {dossierModalItem && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(7, 15, 30, 0.85)',
+          backdropFilter: 'blur(6px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1200,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '16px',
+            maxWidth: '840px',
+            width: '100%',
+            maxHeight: '92vh',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.35)',
+            border: '1px solid #D4AF37',
+            overflow: 'hidden'
+          }}>
+            <div style={{ background: 'linear-gradient(135deg, #070F1E 0%, #0B192C 100%)', padding: '1.25rem 1.5rem', color: '#FFFFFF', borderBottom: '2px solid #D4AF37', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <span style={{ fontSize: '0.72rem', color: '#D4AF37', fontWeight: 800, textTransform: 'uppercase' }}>
+                  {dossierModalItem.mouNumber} • {dossierModalItem.partnerType}
+                </span>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: '0.2rem 0 0', color: '#FFFFFF', fontFamily: 'Cinzel, serif' }}>
+                  {dossierModalItem.partnerOrganization}
+                </h3>
+              </div>
+              <button type="button" onClick={() => setDossierModalItem(null)} style={{ background: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Dossier Tabs */}
+            <div style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', padding: '0.5rem 1.5rem', display: 'flex', gap: '0.5rem', overflowX: 'auto' }}>
+              {[
+                { id: 'overview', label: 'Agreement Overview' },
+                { id: 'scopes', label: `Scopes (${dossierModalItem.scopes?.length || 0})` },
+                { id: 'activities', label: 'Linked Activities' },
+                { id: 'evidence', label: `Documents (${dossierModalItem.documents?.length || 0})` }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setDossierActiveTab(tab.id)}
+                  style={{
+                    padding: '0.4rem 0.85rem',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: dossierActiveTab === tab.id ? '#070F1E' : 'transparent',
+                    color: dossierActiveTab === tab.id ? '#F1C40F' : '#64748B',
+                    fontSize: '0.76rem',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Dossier Canvas */}
+            <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1 }}>
+              {dossierActiveTab === 'overview' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', background: '#F8FAFC', padding: '1rem', borderRadius: '10px' }}>
+                    <div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748B' }}>Agreement Title</div>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0F172A' }}>{dossierModalItem.title}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748B' }}>Primary Coordinator</div>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#059669' }}>{dossierModalItem.primaryCoordinator}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748B' }}>Signed & Effective Date</div>
+                      <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>{dossierModalItem.signedDate} (Effective: {dossierModalItem.effectiveDate})</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748B' }}>Validity & Expiry</div>
+                      <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>{dossierModalItem.validityType} (Expires: {dossierModalItem.expiryDate})</div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0F172A', marginBottom: '0.25rem', textTransform: 'uppercase' }}>Purpose & Objectives</h4>
+                    <p style={{ fontSize: '0.82rem', color: '#475569', margin: 0 }}>{dossierModalItem.purpose}</p>
+                  </div>
+                </div>
+              )}
+
+              {dossierActiveTab === 'scopes' && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  {dossierModalItem.scopes?.map(s => (
+                    <span key={s} style={{ padding: '0.45rem 0.9rem', background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', borderRadius: '9999px', fontSize: '0.78rem', fontWeight: 700 }}>
+                      ✓ {s}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {dossierActiveTab === 'activities' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                  {(() => {
+                    const act = getMoULinkedActivities(dossierModalItem.partnerOrganization || dossierModalItem.mouNumber);
+                    return (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
+                        <div style={{ padding: '1rem', background: '#F8FAFC', borderRadius: '8px', textAlign: 'center', border: '1px solid #E2E8F0' }}>
+                          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0F172A' }}>{act.internships}</div>
+                          <div style={{ fontSize: '0.72rem', color: '#64748B' }}>Internships</div>
+                        </div>
+                        <div style={{ padding: '1rem', background: '#F8FAFC', borderRadius: '8px', textAlign: 'center', border: '1px solid #E2E8F0' }}>
+                          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#059669' }}>{act.workshops}</div>
+                          <div style={{ fontSize: '0.72rem', color: '#64748B' }}>Workshops/Events</div>
+                        </div>
+                        <div style={{ padding: '1rem', background: '#F8FAFC', borderRadius: '8px', textAlign: 'center', border: '1px solid #E2E8F0' }}>
+                          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#2563EB' }}>{act.fdps}</div>
+                          <div style={{ fontSize: '0.72rem', color: '#64748B' }}>FDPs Organized</div>
+                        </div>
+                        <div style={{ padding: '1rem', background: '#F8FAFC', borderRadius: '8px', textAlign: 'center', border: '1px solid #E2E8F0' }}>
+                          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#7C3AED' }}>{act.projects}</div>
+                          <div style={{ fontSize: '0.72rem', color: '#64748B' }}>Industry Projects</div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {dossierActiveTab === 'evidence' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                  {dossierModalItem.documents?.length === 0 ? (
+                    <div style={{ padding: '2rem', textAlign: 'center', color: '#94A3B8', fontSize: '0.82rem' }}>No agreement documents attached.</div>
+                  ) : (
+                    dossierModalItem.documents?.map(doc => (
+                      <div key={doc.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.65rem 0.9rem', background: '#F1F5F9', borderRadius: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                          <FileText size={16} style={{ color: '#D4AF37' }} />
+                          <div>
+                            <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.8rem' }}>{doc.name}</div>
+                            <div style={{ fontSize: '0.7rem', color: '#64748B' }}>{doc.type} ({doc.size})</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div style={{ padding: '1rem 1.5rem', background: '#F8FAFC', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => setDossierModalItem(null)} style={{ padding: '0.5rem 1rem', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#FFFFFF', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 8. Review Decision Modal */}
+      {reviewModalItem && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(7, 15, 30, 0.8)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1300, padding: '1rem' }}>
+          <div style={{ background: '#FFFFFF', borderRadius: '16px', maxWidth: '500px', width: '100%', border: '1px solid #D4AF37', overflow: 'hidden' }}>
+            <div style={{ background: '#070F1E', padding: '1rem 1.25rem', color: '#FFFFFF', borderBottom: '2px solid #D4AF37' }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0, color: '#FFFFFF' }}>Review & Approve MoU</h3>
+              <div style={{ fontSize: '0.75rem', color: '#D4AF37' }}>{reviewModalItem.partnerOrganization}</div>
+            </div>
+
+            <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '0.35rem' }}>DECISION *</label>
+                <select value={reviewAction} onChange={(e) => setReviewAction(e.target.value)} style={{ width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.8rem' }}>
+                  <option value="APPROVE">Approve & Ratify Bilateral MoU</option>
+                  <option value="UNDER_REVIEW">Mark Under Legal/Institutional Review</option>
+                  <option value="REQUEST_REVISION">Request Revision from Department</option>
+                  <option value="TERMINATE">Terminate / Conclude Agreement</option>
+                  <option value="ARCHIVE">Archive Record</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '0.35rem' }}>OFFICIAL REMARKS</label>
+                <textarea rows={3} placeholder="Add official ratification remarks..." value={reviewRemarks} onChange={(e) => setReviewRemarks(e.target.value)} style={{ width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.8rem', boxSizing: 'border-box' }} />
+              </div>
+            </div>
+
+            <div style={{ padding: '0.85rem 1.25rem', background: '#F8FAFC', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+              <button type="button" onClick={() => setReviewModalItem(null)} style={{ padding: '0.45rem 0.85rem', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#FFFFFF', fontSize: '0.78rem', cursor: 'pointer' }}>Cancel</button>
+              <button type="button" onClick={handleExecuteReview} style={{ padding: '0.45rem 1.15rem', borderRadius: '6px', border: 'none', background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', color: '#FFFFFF', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer' }}>Submit Decision</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

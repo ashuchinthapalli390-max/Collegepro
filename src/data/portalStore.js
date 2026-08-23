@@ -1799,33 +1799,212 @@ export function softDeleteInternship(id, user) {
   return Array.isArray(items) ? items.filter(i => !i.isDeleted) : [];
 }
 
-// -------------------------------------------------------------
-// 6. Student Projects
-// -------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────
+// 6. STUDENT PROJECTS (Full Lifecycle & Review Milestones)
+// ─────────────────────────────────────────────────────────────
+
+export function normalizeStudentProjectRecord(raw, idx = 0) {
+  if (!raw) return null;
+  const dept = raw.department || 'CSE';
+  const ay = raw.academicYear || '2025-26';
+  const yearSuffix = (ay.split('-')[0] || '2026').trim();
+  const autoNum = raw.projectNumber || `PRJ-${dept}-${yearSuffix}-${String(idx + 1).padStart(4, '0')}`;
+
+  const team = Array.isArray(raw.teamMembers) ? raw.teamMembers : [
+    {
+      rollNumber: raw.studentRollNo || raw.rollNumber || '22471A0589',
+      name: raw.studentName || raw.teamLeader || 'Team Leader',
+      department: dept,
+      year: raw.year || 'III Year',
+      semester: raw.semester || 'II Sem',
+      email: raw.email || '',
+      isLeader: true
+    }
+  ];
+
+  const guide = raw.guide || {
+    facultyId: raw.guideId || '',
+    name: raw.guideName || raw.facultyGuide || 'Assigned Faculty Guide',
+    department: dept,
+    designation: 'Faculty Guide',
+    email: ''
+  };
+
+  const reviews = Array.isArray(raw.reviews) && raw.reviews.length > 0 ? raw.reviews : [
+    { reviewName: 'Proposal / Synopsis Review', reviewDate: raw.startDate || `${yearSuffix}-08-15`, panelMembers: 'Project Review Committee', marksAwarded: 18, maxMarks: 20, feedback: 'Problem statement and scope approved.', status: 'COMPLETED' },
+    { reviewName: 'Review 1 (Design & Architecture)', reviewDate: `${yearSuffix}-10-20`, panelMembers: 'Internal Committee', marksAwarded: 22, maxMarks: 25, feedback: 'Architecture validated; begin implementation.', status: 'COMPLETED' },
+    { reviewName: 'Review 2 (Implementation & Testing)', reviewDate: `${yearSuffix}-12-10`, panelMembers: 'Internal Committee', marksAwarded: 20, maxMarks: 25, feedback: 'Core modules tested with benchmark dataset.', status: raw.projectStatus === 'Completed' ? 'COMPLETED' : 'IN_PROGRESS' },
+    { reviewName: 'Final Viva & Demo', reviewDate: raw.expectedCompletion || `${parseInt(yearSuffix, 10) + 1}-03-25`, panelMembers: 'External & Internal Panel', marksAwarded: 27, maxMarks: 30, feedback: 'Excellent demonstration and documentation.', status: raw.projectStatus === 'Completed' ? 'COMPLETED' : 'PENDING' }
+  ];
+
+  const documents = Array.isArray(raw.documents) ? raw.documents : [
+    ...(raw.projectReportPdf ? [{ id: 'DOC-1', name: raw.projectReportPdf, type: 'Project Report PDF', size: '3.2 MB', url: '#' }] : []),
+    ...(raw.synopsisPdf ? [{ id: 'DOC-2', name: raw.synopsisPdf, type: 'Synopsis & Architecture', size: '850 KB', url: '#' }] : [])
+  ];
+
+  return {
+    ...raw,
+    id: raw.id || `prj_${Date.now()}_${idx}`,
+    projectNumber: autoNum,
+    projectTitle: raw.projectTitle || raw.title || 'Untitled Student Project',
+    projectType: raw.projectType || 'Major Project',
+    department: dept,
+    batch: raw.batch || '2022-2026',
+    academicYear: ay,
+    year: raw.year || 'IV Year',
+    semester: raw.semester || 'II Sem',
+    domain: raw.domain || 'Artificial Intelligence / ML',
+    domains: Array.isArray(raw.domains) ? raw.domains : [raw.domain || 'Artificial Intelligence / ML'],
+    problemStatement: raw.problemStatement || 'Development of smart computational platform.',
+    description: raw.description || raw.abstract || '',
+    objectives: raw.objectives || '',
+    expectedOutcome: raw.expectedOutcome || '',
+    startDate: raw.startDate || `${yearSuffix}-07-15`,
+    expectedCompletion: raw.expectedCompletion || `${parseInt(yearSuffix, 10) + 1}-04-10`,
+    teamMembers: team,
+    guide: guide,
+    coGuide: raw.coGuide || null,
+    industryAssociation: raw.industryAssociation || {
+      isIndustryAssociated: raw.isIndustryProject === 'Yes',
+      organization: raw.associatedCompany || '',
+      industryMentor: raw.industryMentor || '',
+      isMouAssociated: !!raw.associatedMoU,
+      associatedMoU: raw.associatedMoU || ''
+    },
+    technologies: Array.isArray(raw.technologies) ? raw.technologies : (
+      raw.techStack ? raw.techStack.split(',').map(s => s.trim()) : ['Python', 'React', 'TensorFlow']
+    ),
+    reviews: reviews,
+    documents: documents,
+    links: raw.links || {
+      githubUrl: raw.githubUrl || '',
+      liveDemoUrl: raw.liveDemoUrl || '',
+      videoUrl: raw.videoUrl || ''
+    },
+    researchOutcomes: raw.researchOutcomes || {
+      publicationGenerated: !!raw.linkedPublicationId,
+      linkedPublicationId: raw.linkedPublicationId || null,
+      patentFiled: !!raw.linkedPatentId,
+      linkedPatentId: raw.linkedPatentId || null
+    },
+    projectStatus: raw.projectStatus || (raw.status === 'Completed' ? 'COMPLETED' : 'IN_PROGRESS'),
+    workflowStatus: raw.workflowStatus || (raw.status === 'Completed' || raw.status === 'Approved' ? 'APPROVED' : 'UNDER_REVIEW'),
+    publicVisibility: raw.publicVisibility || 'INTERNAL_ONLY',
+    reviewHistory: Array.isArray(raw.reviewHistory) ? raw.reviewHistory : []
+  };
+}
+
 export function getStudentProjects(includeDeleted = false) {
   const items = loadStore(STORAGE_KEYS.PROJECTS, INITIAL_PROJECTS);
-  return includeDeleted ? items : (Array.isArray(items) ? items.filter(i => !i.isDeleted) : []);
+  const activeList = Array.isArray(items) ? items.filter(i => includeDeleted || !i.isDeleted) : [];
+  return activeList.map((item, idx) => normalizeStudentProjectRecord(item, idx));
 }
 
 export function saveStudentProject(item, user) {
   const items = loadStore(STORAGE_KEYS.PROJECTS, INITIAL_PROJECTS);
+  const deptCode = item.department || 'CSE';
+  const ay = item.academicYear || '2025-26';
+  const yearSuffix = (ay.split('-')[0] || '2026').trim();
+  const nextSeq = String(items.length + 1).padStart(4, '0');
+  const autoNum = item.projectNumber || `PRJ-${deptCode}-${yearSuffix}-${nextSeq}`;
+
   const index = Array.isArray(items) ? items.findIndex(i => i.id === item.id) : -1;
   if (index >= 0) {
-    items[index] = { ...items[index], ...item, updatedAt: new Date().toISOString(), updatedBy: user?.name };
-    addAuditLog('UPDATE', 'Projects', `Updated project: ${item.projectTitle}`, user);
+    items[index] = {
+      ...items[index],
+      ...item,
+      updatedAt: new Date().toISOString(),
+      updatedBy: user?.name || 'System'
+    };
+    addAuditLog('UPDATE_PROJECT', 'Student Projects', `Updated project ${autoNum}: ${item.projectTitle || item.title}`, user);
+    saveStore(STORAGE_KEYS.PROJECTS, items);
+    return normalizeStudentProjectRecord(items[index]);
   } else {
+    const defaultWorkflowStatus = item.workflowStatus || (user?.role === 'SUPER_ADMIN' || user?.role === 'HOD' ? 'APPROVED' : 'SUBMITTED');
     const newItem = {
       ...item,
-      id: item.id || 'PRJ-' + Date.now(),
+      id: item.id || `prj_${Date.now()}`,
+      projectNumber: autoNum,
+      projectStatus: item.projectStatus || 'IN_PROGRESS',
+      workflowStatus: defaultWorkflowStatus,
       createdAt: new Date().toISOString(),
-      createdBy: user?.name,
-      isDeleted: false
+      createdBy: user?.name || 'System',
+      isDeleted: false,
+      reviewHistory: [
+        {
+          action: 'CREATED',
+          status: defaultWorkflowStatus,
+          timestamp: new Date().toISOString(),
+          by: user?.name || 'Faculty / Team',
+          remarks: 'Project registered in institutional portal'
+        }
+      ]
     };
-    if (Array.isArray(items)) items.unshift(newItem);
-    addAuditLog('CREATE', 'Projects', `Added project: ${item.projectTitle}`, user);
+    items.unshift(newItem);
+    addAuditLog('CREATE_PROJECT', 'Student Projects', `Created project ${autoNum}: ${newItem.projectTitle}`, user);
+    saveStore(STORAGE_KEYS.PROJECTS, items);
+    return normalizeStudentProjectRecord(newItem);
   }
-  saveStore(STORAGE_KEYS.PROJECTS, items);
+}
+
+export function updateProjectReview(id, reviewIndex, updatedReviewData, user) {
+  const items = loadStore(STORAGE_KEYS.PROJECTS, INITIAL_PROJECTS);
+  const index = Array.isArray(items) ? items.findIndex(i => i.id === id) : -1;
+  if (index >= 0) {
+    const item = items[index];
+    if (!item.reviews) item.reviews = [];
+    item.reviews[reviewIndex] = { ...item.reviews[reviewIndex], ...updatedReviewData };
+    item.updatedAt = new Date().toISOString();
+    item.updatedBy = user?.name;
+    addAuditLog('PROJECT_REVIEW_UPDATED', 'Student Projects', `Updated ${item.reviews[reviewIndex]?.reviewName} for ${item.projectNumber || id}`, user);
+    saveStore(STORAGE_KEYS.PROJECTS, items);
+    return normalizeStudentProjectRecord(items[index]);
+  }
+  return null;
+}
+
+export function reviewStudentProject(id, action, remarks, reviewerUser) {
+  const items = loadStore(STORAGE_KEYS.PROJECTS, INITIAL_PROJECTS);
+  const index = Array.isArray(items) ? items.findIndex(i => i.id === id) : -1;
+  if (index >= 0) {
+    let targetStatus = 'APPROVED';
+    if (action === 'REQUEST_REVISION') targetStatus = 'NEEDS_REVISION';
+    else if (action === 'UNDER_REVIEW') targetStatus = 'UNDER_REVIEW';
+    else if (action === 'COMPLETE') {
+      items[index].projectStatus = 'COMPLETED';
+      targetStatus = 'APPROVED';
+    } else if (action === 'ARCHIVE') targetStatus = 'ARCHIVED';
+
+    items[index].workflowStatus = targetStatus;
+    items[index].verifiedAt = new Date().toISOString();
+    items[index].verifiedBy = reviewerUser?.name || 'Reviewer';
+    if (!items[index].reviewHistory) items[index].reviewHistory = [];
+    items[index].reviewHistory.push({
+      action: action,
+      status: targetStatus,
+      timestamp: new Date().toISOString(),
+      by: reviewerUser?.name || 'Reviewer',
+      remarks: remarks || `Project status updated to ${targetStatus}`
+    });
+
+    saveStore(STORAGE_KEYS.PROJECTS, items);
+    addAuditLog('REVIEW_PROJECT', 'Student Projects', `Reviewed project ${items[index].projectNumber || id}: ${action} (Status: ${targetStatus})`, reviewerUser);
+    return items.map((it, idx) => normalizeStudentProjectRecord(it, idx));
+  }
   return items;
+}
+
+export function softDeleteStudentProject(id, user) {
+  const items = loadStore(STORAGE_KEYS.PROJECTS, INITIAL_PROJECTS);
+  const index = Array.isArray(items) ? items.findIndex(i => i.id === id) : -1;
+  if (index >= 0) {
+    items[index].isDeleted = true;
+    items[index].deletedAt = new Date().toISOString();
+    items[index].deletedBy = user?.name;
+    saveStore(STORAGE_KEYS.PROJECTS, items);
+    addAuditLog('DELETE_PROJECT', 'Student Projects', `Soft-deleted project ID: ${id}`, user);
+  }
+  return items.filter(i => !i.isDeleted).map((it, idx) => normalizeStudentProjectRecord(it, idx));
 }
 
 // -------------------------------------------------------------
@@ -2303,102 +2482,636 @@ export function softDeleteAcademicEvent(id, user) {
   return Array.isArray(items) ? items.filter(i => !i.isDeleted) : [];
 }
 
-// 10. Faculty Memberships
+// ─────────────────────────────────────────────────────────────
+// 10. FACULTY MEMBERSHIPS & PROFESSIONAL BODIES REPOSITORY
+// ─────────────────────────────────────────────────────────────
+
+export function calculateMembershipStatus(membershipType, endDate) {
+  if (membershipType === 'Life Membership' || membershipType === 'Fellow' || membershipType === 'LIFETIME') {
+    return { status: 'LIFETIME', diffDays: 9999, label: 'Life Membership' };
+  }
+  if (!endDate) {
+    return { status: 'ACTIVE', diffDays: 365, label: 'Active' };
+  }
+  const exp = new Date(endDate);
+  if (isNaN(exp.getTime())) {
+    return { status: 'ACTIVE', diffDays: 365, label: 'Active' };
+  }
+  const now = new Date();
+  const diffDays = Math.ceil((exp - now) / (1000 * 60 * 60 * 24));
+  if (diffDays < 0) {
+    return { status: 'EXPIRED', diffDays, label: `Expired ${Math.abs(diffDays)} days ago` };
+  }
+  if (diffDays <= 90) {
+    return { status: 'EXPIRING_SOON', diffDays, label: `Expires in ${diffDays} days` };
+  }
+  return { status: 'ACTIVE', diffDays, label: 'Active' };
+}
+
+export function normalizeMembershipRecord(raw, idx = 0) {
+  if (!raw) return null;
+  const dept = raw.department || 'CSE';
+  const ay = raw.academicYear || '2025-26';
+  const yearSuffix = (ay.split('-')[0] || '2026').trim();
+  const autoNum = raw.membershipRecordNumber || `MEM-${dept}-${yearSuffix}-${String(idx + 1).padStart(4, '0')}`;
+
+  const membershipType = raw.membershipType || (raw.validity === 'Life' || raw.membershipStatus === 'Life' ? 'Life Membership' : 'Annual Membership');
+  const org = raw.organization || raw.professionalBody || 'IEEE';
+  const validStatus = calculateMembershipStatus(membershipType, raw.endDate || raw.validUntil);
+
+  const documents = Array.isArray(raw.documents) ? raw.documents : [
+    ...(raw.certificatePdf ? [{ id: 'DOC-1', name: raw.certificatePdf, type: 'Membership Certificate', size: '1.2 MB', url: '#' }] : [])
+  ];
+
+  return {
+    ...raw,
+    id: raw.id || `mem_${Date.now()}_${idx}`,
+    membershipRecordNumber: autoNum,
+    facultyId: raw.facultyId || '',
+    facultyName: raw.facultyName || raw.name || 'Faculty Member',
+    department: dept,
+    designation: raw.designation || 'Faculty',
+    email: raw.email || '',
+    organization: org,
+    organizationName: raw.organizationName || (org === 'Other' ? raw.customOrgName : org),
+    organizationWebsite: raw.organizationWebsite || '',
+    membershipType: membershipType,
+    membershipCategory: raw.membershipCategory || 'Professional',
+    membershipNumber: raw.membershipNumber || raw.membershipId || '',
+    startDate: raw.startDate || raw.validFrom || `${yearSuffix}-06-01`,
+    endDate: membershipType === 'Life Membership' ? null : (raw.endDate || raw.validUntil || `${parseInt(yearSuffix, 10) + 1}-05-31`),
+    memberSince: raw.memberSince || raw.startDate || yearSuffix,
+    academicYear: ay,
+    verificationUrl: raw.verificationUrl || raw.url || '',
+    remarks: raw.remarks || '',
+    membershipStatus: raw.membershipStatus || validStatus.status,
+    workflowStatus: raw.workflowStatus || (raw.status === 'Approved' || raw.verificationStatus === 'Verified' ? 'APPROVED' : 'UNDER_REVIEW'),
+    documents: documents,
+    renewals: Array.isArray(raw.renewals) ? raw.renewals : [],
+    reviewHistory: Array.isArray(raw.reviewHistory) ? raw.reviewHistory : [],
+    publicVisibility: raw.publicVisibility || 'PUBLIC_SAFE'
+  };
+}
+
 export function getMemberships(includeDeleted = false) {
   const items = loadStore(STORAGE_KEYS.MEMBERSHIPS, INITIAL_MEMBERSHIPS);
-  return includeDeleted ? items : (Array.isArray(items) ? items.filter(i => !i.isDeleted) : []);
+  const activeList = Array.isArray(items) ? items.filter(i => includeDeleted || !i.isDeleted) : [];
+  return activeList.map((item, idx) => normalizeMembershipRecord(item, idx));
 }
 
 export function saveMembership(item, user) {
   const items = loadStore(STORAGE_KEYS.MEMBERSHIPS, INITIAL_MEMBERSHIPS);
+  const deptCode = item.department || user?.dept || 'CSE';
+  const ay = item.academicYear || '2025-26';
+  const yearSuffix = (ay.split('-')[0] || '2026').trim();
+  const nextSeq = String(items.length + 1).padStart(4, '0');
+  const autoNum = item.membershipRecordNumber || `MEM-${deptCode}-${yearSuffix}-${nextSeq}`;
+
   const index = Array.isArray(items) ? items.findIndex(i => i.id === item.id) : -1;
+
+  // Duplicate Check on Membership Number per Org
+  const memNo = (item.membershipNumber || '').trim();
+  if (memNo && index === -1) {
+    const existing = items.find(m => !m.isDeleted && m.organization === item.organization && (m.membershipNumber || '').trim() === memNo);
+    if (existing) {
+      throw new Error(`A membership record with number "${memNo}" for ${item.organization} already exists (${existing.membershipRecordNumber || existing.id}).`);
+    }
+  }
+
+  const validStatus = calculateMembershipStatus(item.membershipType, item.endDate);
+  const membershipStatus = validStatus.status;
+
   if (index >= 0) {
-    items[index] = { ...items[index], ...item, updatedAt: new Date().toISOString(), updatedBy: user?.name };
-    addAuditLog('UPDATE', 'Memberships', `Updated membership: ${item.organization}`, user);
+    items[index] = {
+      ...items[index],
+      ...item,
+      membershipStatus: membershipStatus,
+      updatedAt: new Date().toISOString(),
+      updatedBy: user?.name || 'System'
+    };
+    addAuditLog('UPDATE_MEMBERSHIP', 'Memberships', `Updated membership ${autoNum} for ${item.facultyName} (${item.organization})`, user);
+    saveStore(STORAGE_KEYS.MEMBERSHIPS, items);
+    return normalizeMembershipRecord(items[index]);
   } else {
+    const defaultWorkflowStatus = item.workflowStatus || (user?.role === 'SUPER_ADMIN' || user?.role === 'HOD' ? 'APPROVED' : 'SUBMITTED');
     const newItem = {
       ...item,
-      id: item.id || 'MEM-' + Date.now(),
+      id: item.id || `mem_${Date.now()}`,
+      membershipRecordNumber: autoNum,
+      membershipStatus: membershipStatus,
+      workflowStatus: defaultWorkflowStatus,
       createdAt: new Date().toISOString(),
-      createdBy: user?.name,
-      isDeleted: false
+      createdBy: user?.name || 'System',
+      isDeleted: false,
+      reviewHistory: [
+        {
+          action: 'CREATED',
+          status: defaultWorkflowStatus,
+          timestamp: new Date().toISOString(),
+          by: user?.name || 'Faculty Member',
+          remarks: 'Membership recorded in portal'
+        }
+      ]
     };
-    if (Array.isArray(items)) items.unshift(newItem);
-    addAuditLog('CREATE', 'Memberships', `Added membership: ${item.facultyName} (${item.organization})`, user);
+    items.unshift(newItem);
+    addAuditLog('CREATE_MEMBERSHIP', 'Memberships', `Added membership ${autoNum} for ${newItem.facultyName} (${newItem.organization})`, user);
+    saveStore(STORAGE_KEYS.MEMBERSHIPS, items);
+    return normalizeMembershipRecord(newItem);
   }
-  saveStore(STORAGE_KEYS.MEMBERSHIPS, items);
+}
+
+export function renewMembership(id, renewalData, user) {
+  const items = loadStore(STORAGE_KEYS.MEMBERSHIPS, INITIAL_MEMBERSHIPS);
+  const index = Array.isArray(items) ? items.findIndex(i => i.id === id) : -1;
+  if (index >= 0) {
+    const item = items[index];
+    const prevEndDate = item.endDate;
+    if (!item.renewals) item.renewals = [];
+
+    const newRenewalEntry = {
+      renewalId: 'REN-' + Date.now(),
+      renewalDate: renewalData.renewalDate || new Date().toISOString().split('T')[0],
+      previousEndDate: prevEndDate,
+      newEndDate: renewalData.newEndDate,
+      receiptNumber: renewalData.receiptNumber || '',
+      receiptDocument: renewalData.receiptDocument || null,
+      remarks: renewalData.remarks || 'Annual membership renewed',
+      renewedBy: user?.name || 'Faculty Member',
+      timestamp: new Date().toISOString()
+    };
+
+    item.renewals.unshift(newRenewalEntry);
+    item.endDate = renewalData.newEndDate;
+    const validStatus = calculateMembershipStatus(item.membershipType, item.endDate);
+    item.membershipStatus = validStatus.status;
+    item.updatedAt = new Date().toISOString();
+    item.updatedBy = user?.name;
+
+    addAuditLog('RENEW_MEMBERSHIP', 'Memberships', `Renewed membership ${item.membershipRecordNumber || id} until ${renewalData.newEndDate}`, user);
+    saveStore(STORAGE_KEYS.MEMBERSHIPS, items);
+    return normalizeMembershipRecord(items[index]);
+  }
+  return null;
+}
+
+export function reviewMembership(id, action, remarks, reviewerUser) {
+  const items = loadStore(STORAGE_KEYS.MEMBERSHIPS, INITIAL_MEMBERSHIPS);
+  const index = Array.isArray(items) ? items.findIndex(i => i.id === id) : -1;
+  if (index >= 0) {
+    let targetStatus = 'APPROVED';
+    if (action === 'REQUEST_REVISION') targetStatus = 'NEEDS_REVISION';
+    else if (action === 'UNDER_REVIEW') targetStatus = 'UNDER_REVIEW';
+    else if (action === 'ARCHIVE') targetStatus = 'ARCHIVED';
+
+    items[index].workflowStatus = targetStatus;
+    items[index].verifiedAt = new Date().toISOString();
+    items[index].verifiedBy = reviewerUser?.name || 'Reviewer';
+    if (!items[index].reviewHistory) items[index].reviewHistory = [];
+    items[index].reviewHistory.push({
+      action: action,
+      status: targetStatus,
+      timestamp: new Date().toISOString(),
+      by: reviewerUser?.name || 'Reviewer',
+      remarks: remarks || `Membership status updated to ${targetStatus}`
+    });
+
+    saveStore(STORAGE_KEYS.MEMBERSHIPS, items);
+    addAuditLog('REVIEW_MEMBERSHIP', 'Memberships', `Reviewed membership ${items[index].membershipRecordNumber || id}: ${action}`, reviewerUser);
+    return items.map((it, idx) => normalizeMembershipRecord(it, idx));
+  }
   return items;
 }
 
-// 11. MoUs (Auto Expiration & 30-Day Alert calculation)
-export function calculateMoUStatus(mouDate, validity) {
-  if (!mouDate) return { expiryDate: '2027-12-31', status: 'Active' };
-  const date = new Date(mouDate);
-  const years = parseInt(validity) || 3;
-  date.setFullYear(date.getFullYear() + years);
-  const expiryDate = date.toISOString().split('T')[0];
+export function softDeleteMembership(id, user) {
+  const items = loadStore(STORAGE_KEYS.MEMBERSHIPS, INITIAL_MEMBERSHIPS);
+  const index = Array.isArray(items) ? items.findIndex(i => i.id === id) : -1;
+  if (index >= 0) {
+    items[index].isDeleted = true;
+    items[index].deletedAt = new Date().toISOString();
+    items[index].deletedBy = user?.name;
+    saveStore(STORAGE_KEYS.MEMBERSHIPS, items);
+    addAuditLog('DELETE_MEMBERSHIP', 'Memberships', `Soft-deleted membership ID: ${id}`, user);
+  }
+  return items.filter(i => !i.isDeleted).map((it, idx) => normalizeMembershipRecord(it, idx));
+}
+
+// ─────────────────────────────────────────────────────────────
+// 11. INDUSTRY MoUs & PARTNERSHIPS REPOSITORY
+// ─────────────────────────────────────────────────────────────
+
+export function calculateMoUStatus(effectiveDate, validityType, customExpiryDate) {
+  if (validityType === 'Until Further Notice') {
+    return { expiryDate: null, status: 'ACTIVE', diffDays: 9999, label: 'Active (Ongoing)' };
+  }
+  let expDate = null;
+  if (validityType === 'Custom' && customExpiryDate) {
+    expDate = new Date(customExpiryDate);
+  } else if (effectiveDate) {
+    const d = new Date(effectiveDate);
+    const years = validityType === '1 Year' ? 1 : (validityType === '2 Years' ? 2 : (validityType === '5 Years' ? 5 : 3));
+    d.setFullYear(d.getFullYear() + years);
+    d.setDate(d.getDate() - 1);
+    expDate = d;
+  }
+
+  if (!expDate || isNaN(expDate.getTime())) {
+    return { expiryDate: '2029-06-30', status: 'ACTIVE', diffDays: 365, label: 'Active' };
+  }
+
+  const expiryString = expDate.toISOString().split('T')[0];
   const now = new Date();
-  const diffDays = Math.ceil((date - now) / (1000 * 60 * 60 * 24));
-  let status = 'Active';
-  if (diffDays < 0) status = 'Expired';
-  else if (diffDays <= 30) status = 'Expiring Soon';
-  return { expiryDate, status, diffDays };
+  const diffDays = Math.ceil((expDate - now) / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) {
+    return { expiryDate: expiryString, status: 'EXPIRED', diffDays, label: `Expired ${Math.abs(diffDays)} days ago` };
+  }
+  if (diffDays <= 60) {
+    return { expiryDate: expiryString, status: 'EXPIRING_SOON', diffDays, label: `Expires in ${diffDays} days` };
+  }
+  return { expiryDate: expiryString, status: 'ACTIVE', diffDays, label: 'Active' };
+}
+
+export function normalizeMoURecord(raw, idx = 0) {
+  if (!raw) return null;
+  const pType = raw.partnerType || 'Industry';
+  const typeCode = pType.includes('Industry') ? 'IND' : (pType.includes('University') ? 'UNIV' : 'COLLAB');
+  const yearSuffix = (raw.signedDate ? raw.signedDate.slice(0, 4) : '2026').trim();
+  const autoNum = raw.mouNumber || `MOU-${typeCode}-${yearSuffix}-${String(idx + 1).padStart(4, '0')}`;
+
+  const validInfo = calculateMoUStatus(raw.effectiveDate || raw.signedDate || `${yearSuffix}-07-01`, raw.validityType || raw.validity || '3 Years', raw.expiryDate);
+
+  const scopes = Array.isArray(raw.scopes) ? raw.scopes : (
+    raw.scope ? raw.scope.split(',').map(s => s.trim()) : ['Internships', 'Student Projects', 'Faculty Training', 'Workshops']
+  );
+
+  const documents = Array.isArray(raw.documents) ? raw.documents : [
+    ...(raw.mouDocumentPdf ? [{ id: 'DOC-1', name: raw.mouDocumentPdf, type: 'Signed MoU PDF', size: '3.8 MB', url: '#' }] : [])
+  ];
+
+  return {
+    ...raw,
+    id: raw.id || `mou_${Date.now()}_${idx}`,
+    mouNumber: autoNum,
+    title: raw.title || raw.mouTitle || `MoU with ${raw.partnerOrganization || raw.organization || 'Partner'}`,
+    partnerOrganization: raw.partnerOrganization || raw.organization || 'Partner Organization',
+    partnerType: pType,
+    organizationWebsite: raw.organizationWebsite || raw.website || '',
+    organizationAddress: raw.organizationAddress || '',
+    city: raw.city || 'Hyderabad',
+    state: raw.state || 'Telangana',
+    country: raw.country || 'India',
+    partnerContactPerson: raw.partnerContactPerson || raw.contactPerson || '',
+    partnerContactDesignation: raw.partnerContactDesignation || '',
+    partnerContactEmail: raw.partnerContactEmail || '',
+    partnerContactPhone: raw.partnerContactPhone || '',
+    signedDate: raw.signedDate || raw.mouDate || `${yearSuffix}-07-01`,
+    effectiveDate: raw.effectiveDate || raw.signedDate || `${yearSuffix}-07-01`,
+    validityType: raw.validityType || raw.validity || '3 Years',
+    expiryDate: raw.expiryDate || validInfo.expiryDate,
+    department: raw.department || 'All Departments (Institution-Level)',
+    purpose: raw.purpose || 'Collaborative research, student internships, curriculum development, and technical workshops.',
+    description: raw.description || '',
+    scopes: scopes,
+    primaryCoordinator: raw.primaryCoordinator || raw.facultyCoordinator || 'Dr. S. V. N. Sreenivasu',
+    coCoordinators: Array.isArray(raw.coCoordinators) ? raw.coCoordinators : [],
+    documents: documents,
+    renewals: Array.isArray(raw.renewals) ? raw.renewals : [],
+    mouStatus: raw.mouStatus || validInfo.status,
+    workflowStatus: raw.workflowStatus || (raw.status === 'Active' || raw.verificationStatus === 'Approved' ? 'APPROVED' : 'UNDER_REVIEW'),
+    publicVisibility: raw.publicVisibility || 'PUBLIC_SAFE',
+    reviewHistory: Array.isArray(raw.reviewHistory) ? raw.reviewHistory : []
+  };
 }
 
 export function getMoUs(includeDeleted = false) {
   const items = loadStore(STORAGE_KEYS.MOUS, INITIAL_MOUS);
-  return includeDeleted ? items : (Array.isArray(items) ? items.filter(i => !i.isDeleted) : []);
+  const activeList = Array.isArray(items) ? items.filter(i => includeDeleted || !i.isDeleted) : [];
+  return activeList.map((item, idx) => normalizeMoURecord(item, idx));
+}
+
+export function getMoULinkedActivities(mouNumberOrOrg) {
+  if (!mouNumberOrOrg) return { internships: 0, workshops: 0, fdps: 0, projects: 0, total: 0 };
+  const q = String(mouNumberOrOrg).toLowerCase();
+  
+  const allInternships = getInternships();
+  const allEvents = getAcademicEvents();
+  const allProjects = getStudentProjects();
+  const allFdps = getFDPs();
+
+  const intCount = allInternships.filter(i => (i.organization && i.organization.toLowerCase().includes(q)) || (i.associatedMoU && i.associatedMoU.toLowerCase().includes(q))).length;
+  const evtCount = allEvents.filter(e => (e.associatedMoU && e.associatedMoU.toLowerCase().includes(q)) || (e.associatedOrganization && e.associatedOrganization.toLowerCase().includes(q))).length;
+  const fdpCount = allFdps.filter(f => (f.sponsor && f.sponsor.toLowerCase().includes(q)) || (f.associatedOrganization && f.associatedOrganization.toLowerCase().includes(q))).length;
+  const prjCount = allProjects.filter(p => (p.industryAssociation?.organization && p.industryAssociation.organization.toLowerCase().includes(q))).length;
+
+  return {
+    internships: intCount,
+    workshops: evtCount,
+    fdps: fdpCount,
+    projects: prjCount,
+    total: intCount + evtCount + fdpCount + prjCount
+  };
 }
 
 export function saveMoU(item, user) {
   const items = loadStore(STORAGE_KEYS.MOUS, INITIAL_MOUS);
-  const auto = calculateMoUStatus(item.mouDate, item.validity);
-  const mouItem = { ...item, expiryDate: auto.expiryDate, status: auto.status };
+  const pType = item.partnerType || 'Industry';
+  const typeCode = pType.includes('Industry') ? 'IND' : (pType.includes('University') ? 'UNIV' : 'COLLAB');
+  const yearSuffix = (item.signedDate ? item.signedDate.slice(0, 4) : '2026').trim();
+  const nextSeq = String(items.length + 1).padStart(4, '0');
+  const autoNum = item.mouNumber || `MOU-${typeCode}-${yearSuffix}-${nextSeq}`;
+
+  const validInfo = calculateMoUStatus(item.effectiveDate || item.signedDate, item.validityType, item.expiryDate);
+  const mouStatus = validInfo.status;
+  const expiryDate = validInfo.expiryDate;
 
   const index = Array.isArray(items) ? items.findIndex(i => i.id === item.id) : -1;
   if (index >= 0) {
-    items[index] = { ...items[index], ...mouItem, updatedAt: new Date().toISOString(), updatedBy: user?.name };
-    addAuditLog('UPDATE', 'MoUs', `Updated MoU: ${item.organization}`, user);
-  } else {
-    const newItem = {
-      ...mouItem,
-      id: item.id || 'MOU-' + Date.now(),
-      createdAt: new Date().toISOString(),
-      createdBy: user?.name,
-      isDeleted: false
+    items[index] = {
+      ...items[index],
+      ...item,
+      expiryDate: expiryDate,
+      mouStatus: mouStatus,
+      updatedAt: new Date().toISOString(),
+      updatedBy: user?.name || 'System'
     };
-    if (Array.isArray(items)) items.unshift(newItem);
-    addAuditLog('CREATE', 'MoUs', `Added MoU: ${item.organization}`, user);
+    addAuditLog('UPDATE_MOU', 'MoUs', `Updated MoU ${autoNum} with ${item.partnerOrganization}`, user);
+    saveStore(STORAGE_KEYS.MOUS, items);
+    return normalizeMoURecord(items[index]);
+  } else {
+    const defaultWorkflowStatus = item.workflowStatus || (user?.role === 'SUPER_ADMIN' || user?.role === 'HOD' ? 'APPROVED' : 'SUBMITTED');
+    const newItem = {
+      ...item,
+      id: item.id || `mou_${Date.now()}`,
+      mouNumber: autoNum,
+      expiryDate: expiryDate,
+      mouStatus: mouStatus,
+      workflowStatus: defaultWorkflowStatus,
+      createdAt: new Date().toISOString(),
+      createdBy: user?.name || 'System',
+      isDeleted: false,
+      reviewHistory: [
+        {
+          action: 'CREATED',
+          status: defaultWorkflowStatus,
+          timestamp: new Date().toISOString(),
+          by: user?.name || 'Institutional Coordinator',
+          remarks: 'MoU recorded in institutional repository'
+        }
+      ]
+    };
+    items.unshift(newItem);
+    addAuditLog('CREATE_MOU', 'MoUs', `Recorded new MoU ${autoNum} with ${newItem.partnerOrganization}`, user);
+    saveStore(STORAGE_KEYS.MOUS, items);
+    return normalizeMoURecord(newItem);
   }
-  saveStore(STORAGE_KEYS.MOUS, items);
+}
+
+export function renewMoU(id, renewalData, user) {
+  const items = loadStore(STORAGE_KEYS.MOUS, INITIAL_MOUS);
+  const index = Array.isArray(items) ? items.findIndex(i => i.id === id) : -1;
+  if (index >= 0) {
+    const item = items[index];
+    const prevExpiry = item.expiryDate;
+    if (!item.renewals) item.renewals = [];
+
+    const newRenewalEntry = {
+      renewalId: 'MOU-REN-' + Date.now(),
+      renewalSignedDate: renewalData.renewalSignedDate || new Date().toISOString().split('T')[0],
+      previousExpiryDate: prevExpiry,
+      newExpiryDate: renewalData.newExpiryDate,
+      extensionPeriod: renewalData.extensionPeriod || '3 Years',
+      agreementDocument: renewalData.agreementDocument || null,
+      remarks: renewalData.remarks || 'MoU extended successfully',
+      renewedBy: user?.name || 'Coordinator',
+      timestamp: new Date().toISOString()
+    };
+
+    item.renewals.unshift(newRenewalEntry);
+    item.expiryDate = renewalData.newExpiryDate;
+    const validInfo = calculateMoUStatus(item.effectiveDate, 'Custom', item.expiryDate);
+    item.mouStatus = validInfo.status;
+    item.updatedAt = new Date().toISOString();
+    item.updatedBy = user?.name;
+
+    addAuditLog('RENEW_MOU', 'MoUs', `Extended MoU ${item.mouNumber || id} with ${item.partnerOrganization} until ${renewalData.newExpiryDate}`, user);
+    saveStore(STORAGE_KEYS.MOUS, items);
+    return normalizeMoURecord(items[index]);
+  }
+  return null;
+}
+
+export function reviewMoU(id, action, remarks, reviewerUser) {
+  const items = loadStore(STORAGE_KEYS.MOUS, INITIAL_MOUS);
+  const index = Array.isArray(items) ? items.findIndex(i => i.id === id) : -1;
+  if (index >= 0) {
+    let targetStatus = 'APPROVED';
+    if (action === 'REQUEST_REVISION') targetStatus = 'NEEDS_REVISION';
+    else if (action === 'UNDER_REVIEW') targetStatus = 'UNDER_REVIEW';
+    else if (action === 'TERMINATE') {
+      items[index].mouStatus = 'TERMINATED';
+      targetStatus = 'ARCHIVED';
+    } else if (action === 'ARCHIVE') targetStatus = 'ARCHIVED';
+
+    items[index].workflowStatus = targetStatus;
+    items[index].verifiedAt = new Date().toISOString();
+    items[index].verifiedBy = reviewerUser?.name || 'Reviewer';
+    if (!items[index].reviewHistory) items[index].reviewHistory = [];
+    items[index].reviewHistory.push({
+      action: action,
+      status: targetStatus,
+      timestamp: new Date().toISOString(),
+      by: reviewerUser?.name || 'Reviewer',
+      remarks: remarks || `MoU status updated to ${targetStatus}`
+    });
+
+    saveStore(STORAGE_KEYS.MOUS, items);
+    addAuditLog('REVIEW_MOU', 'MoUs', `Reviewed MoU ${items[index].mouNumber || id}: ${action}`, reviewerUser);
+    return items.map((it, idx) => normalizeMoURecord(it, idx));
+  }
   return items;
 }
 
-// 12. NPTEL / MOOCs
+export function softDeleteMoU(id, user) {
+  const items = loadStore(STORAGE_KEYS.MOUS, INITIAL_MOUS);
+  const index = Array.isArray(items) ? items.findIndex(i => i.id === id) : -1;
+  if (index >= 0) {
+    items[index].isDeleted = true;
+    items[index].deletedAt = new Date().toISOString();
+    items[index].deletedBy = user?.name;
+    saveStore(STORAGE_KEYS.MOUS, items);
+    addAuditLog('DELETE_MOU', 'MoUs', `Soft-deleted MoU ID: ${id}`, user);
+  }
+  return items.filter(i => !i.isDeleted).map((it, idx) => normalizeMoURecord(it, idx));
+}
+
+// ─────────────────────────────────────────────────────────────
+// 12. NPTEL & MOOC ONLINE CERTIFICATIONS REPOSITORY
+// ─────────────────────────────────────────────────────────────
+
+export function normalizeNptelRecord(raw, idx = 0) {
+  if (!raw) return null;
+  const dept = raw.department || 'CSE';
+  const ay = raw.academicYear || '2025-26';
+  const yearSuffix = (ay.split('-')[0] || '2026').trim();
+  const autoNum = raw.certificationNumber || `NPTEL-${dept}-${yearSuffix}-${String(idx + 1).padStart(4, '0')}`;
+
+  const holderType = raw.holderType || (raw.role === 'Student' || raw.rollNumber ? 'STUDENT' : 'FACULTY');
+  const student = holderType === 'STUDENT' ? (raw.studentDetails || {
+    rollNumber: raw.rollNumber || raw.rollNo || '22471A0589',
+    name: raw.name || raw.studentName || 'Student Learner',
+    department: dept,
+    batch: raw.batch || '2022-2026',
+    year: raw.year || 'III Year',
+    semester: raw.semester || 'II Sem'
+  }) : null;
+
+  const faculty = holderType === 'FACULTY' ? (raw.facultyDetails || {
+    facultyId: raw.facultyId || '',
+    name: raw.name || raw.facultyName || 'Faculty Learner',
+    department: dept,
+    designation: raw.designation || 'Faculty'
+  }) : null;
+
+  const documents = Array.isArray(raw.documents) ? raw.documents : [
+    ...(raw.certificatePdf ? [{ id: 'DOC-1', name: raw.certificatePdf, type: 'NPTEL Certificate PDF', size: '1.4 MB', url: '#' }] : [])
+  ];
+
+  return {
+    ...raw,
+    id: raw.id || `nptel_${Date.now()}_${idx}`,
+    certificationNumber: autoNum,
+    holderType: holderType,
+    studentDetails: student,
+    facultyDetails: faculty,
+    department: dept,
+    academicYear: ay,
+    platform: raw.platform || 'NPTEL',
+    courseName: raw.courseName || raw.course || 'Cloud Computing & Distributed Systems',
+    courseCode: raw.courseCode || '',
+    offeredBy: raw.offeredBy || raw.institute || 'IIT Kharagpur',
+    instructor: raw.instructor || '',
+    courseCategory: raw.courseCategory || 'Computer Science',
+    courseUrl: raw.courseUrl || '',
+    duration: raw.duration || (raw.durationWeeks ? `${raw.durationWeeks} Weeks` : '12 Weeks'),
+    examDate: raw.examDate || `${yearSuffix}-04-20`,
+    scores: raw.scores || {
+      assignmentScore: raw.assignmentScore || 24,
+      examScore: raw.examScore || 62,
+      finalScore: raw.finalScore || raw.score || 86
+    },
+    certificationResult: raw.certificationResult || raw.result || (raw.score >= 90 ? 'Elite + Gold' : (raw.score >= 75 ? 'Elite + Silver' : 'Elite')),
+    academicCredits: raw.academicCredits || {
+      creditsEarned: raw.creditsEarned || (raw.duration?.includes('12') ? 3 : (raw.duration?.includes('8') ? 2 : 1)),
+      creditTransferRequested: raw.creditTransferRequested || false,
+      creditTransferApproved: raw.creditTransferApproved || false,
+      approvedCredits: raw.approvedCredits || 0,
+      approvalReference: raw.approvalReference || ''
+    },
+    certificateDate: raw.certificateDate || raw.date || `${yearSuffix}-05-15`,
+    certificateId: raw.certificateId || raw.certId || `NPTEL${yearSuffix}CS${String(idx + 10).padStart(4, '0')}`,
+    certificateVerificationUrl: raw.certificateVerificationUrl || raw.verificationUrl || '',
+    documents: documents,
+    certificationStatus: raw.certificationStatus || 'COMPLETED',
+    workflowStatus: raw.workflowStatus || (raw.status === 'Verified' || raw.verificationStatus === 'Verified' ? 'APPROVED' : 'UNDER_REVIEW'),
+    publicVisibility: raw.publicVisibility || 'PUBLIC_SAFE',
+    reviewHistory: Array.isArray(raw.reviewHistory) ? raw.reviewHistory : []
+  };
+}
+
 export function getNPTEL(includeDeleted = false) {
   const items = loadStore(STORAGE_KEYS.NPTEL, INITIAL_NPTEL);
-  return includeDeleted ? items : (Array.isArray(items) ? items.filter(i => !i.isDeleted) : []);
+  const activeList = Array.isArray(items) ? items.filter(i => includeDeleted || !i.isDeleted) : [];
+  return activeList.map((item, idx) => normalizeNptelRecord(item, idx));
 }
 
 export function saveNPTEL(item, user) {
   const items = loadStore(STORAGE_KEYS.NPTEL, INITIAL_NPTEL);
+  const deptCode = item.department || user?.dept || 'CSE';
+  const ay = item.academicYear || '2025-26';
+  const yearSuffix = (ay.split('-')[0] || '2026').trim();
+  const nextSeq = String(items.length + 1).padStart(4, '0');
+  const autoNum = item.certificationNumber || `NPTEL-${deptCode}-${yearSuffix}-${nextSeq}`;
+
   const index = Array.isArray(items) ? items.findIndex(i => i.id === item.id) : -1;
+  const holderName = item.holderType === 'STUDENT' ? (item.studentDetails?.name || 'Student') : (item.facultyDetails?.name || 'Faculty');
+
   if (index >= 0) {
-    items[index] = { ...items[index], ...item, updatedAt: new Date().toISOString(), updatedBy: user?.name };
-    addAuditLog('UPDATE', 'NPTEL', `Updated NPTEL: ${item.name} (${item.course})`, user);
+    items[index] = {
+      ...items[index],
+      ...item,
+      updatedAt: new Date().toISOString(),
+      updatedBy: user?.name || 'System'
+    };
+    addAuditLog('UPDATE_NPTEL', 'NPTEL', `Updated certification ${autoNum} for ${holderName}: ${item.courseName}`, user);
+    saveStore(STORAGE_KEYS.NPTEL, items);
+    return normalizeNptelRecord(items[index]);
   } else {
+    const defaultWorkflowStatus = item.workflowStatus || (user?.role === 'SUPER_ADMIN' || user?.role === 'HOD' ? 'APPROVED' : 'SUBMITTED');
     const newItem = {
       ...item,
-      id: item.id || 'NPTEL-' + Date.now(),
+      id: item.id || `nptel_${Date.now()}`,
+      certificationNumber: autoNum,
+      certificationStatus: 'COMPLETED',
+      workflowStatus: defaultWorkflowStatus,
       createdAt: new Date().toISOString(),
-      createdBy: user?.name,
-      isDeleted: false
+      createdBy: user?.name || 'System',
+      isDeleted: false,
+      reviewHistory: [
+        {
+          action: 'CREATED',
+          status: defaultWorkflowStatus,
+          timestamp: new Date().toISOString(),
+          by: user?.name || 'Learner',
+          remarks: 'Certification recorded in portal'
+        }
+      ]
     };
-    if (Array.isArray(items)) items.unshift(newItem);
-    addAuditLog('CREATE', 'NPTEL', `Added NPTEL certification: ${item.name}`, user);
+    items.unshift(newItem);
+    addAuditLog('CREATE_NPTEL', 'NPTEL', `Recorded certification ${autoNum} for ${holderName}: ${newItem.courseName}`, user);
+    saveStore(STORAGE_KEYS.NPTEL, items);
+    return normalizeNptelRecord(newItem);
   }
-  saveStore(STORAGE_KEYS.NPTEL, items);
+}
+
+export function reviewNPTEL(id, action, remarks, reviewerUser) {
+  const items = loadStore(STORAGE_KEYS.NPTEL, INITIAL_NPTEL);
+  const index = Array.isArray(items) ? items.findIndex(i => i.id === id) : -1;
+  if (index >= 0) {
+    let targetStatus = 'APPROVED';
+    if (action === 'REQUEST_REVISION') targetStatus = 'NEEDS_REVISION';
+    else if (action === 'UNDER_REVIEW') targetStatus = 'UNDER_REVIEW';
+    else if (action === 'ARCHIVE') targetStatus = 'ARCHIVED';
+
+    items[index].workflowStatus = targetStatus;
+    items[index].verifiedAt = new Date().toISOString();
+    items[index].verifiedBy = reviewerUser?.name || 'Reviewer';
+    if (!items[index].reviewHistory) items[index].reviewHistory = [];
+    items[index].reviewHistory.push({
+      action: action,
+      status: targetStatus,
+      timestamp: new Date().toISOString(),
+      by: reviewerUser?.name || 'Reviewer',
+      remarks: remarks || `Certification status updated to ${targetStatus}`
+    });
+
+    saveStore(STORAGE_KEYS.NPTEL, items);
+    addAuditLog('REVIEW_NPTEL', 'NPTEL', `Reviewed certification ${items[index].certificationNumber || id}: ${action}`, reviewerUser);
+    return items.map((it, idx) => normalizeNptelRecord(it, idx));
+  }
   return items;
+}
+
+export function softDeleteNPTEL(id, user) {
+  const items = loadStore(STORAGE_KEYS.NPTEL, INITIAL_NPTEL);
+  const index = Array.isArray(items) ? items.findIndex(i => i.id === id) : -1;
+  if (index >= 0) {
+    items[index].isDeleted = true;
+    items[index].deletedAt = new Date().toISOString();
+    items[index].deletedBy = user?.name;
+    saveStore(STORAGE_KEYS.NPTEL, items);
+    addAuditLog('DELETE_NPTEL', 'NPTEL', `Soft-deleted NPTEL ID: ${id}`, user);
+  }
+  return items.filter(i => !i.isDeleted).map((it, idx) => normalizeNptelRecord(it, idx));
 }
 
 // 13. Placements

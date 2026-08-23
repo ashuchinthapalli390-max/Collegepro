@@ -55,6 +55,7 @@ export const NAVIGATION_CATEGORIES = [
     label: 'Faculty Development',
     icon: Award,
     items: [
+      { id: 'faculty-memberships', label: 'Faculty Memberships', icon: Award, badge: 'Bodies' },
       { id: 'fdps-organized', label: 'FDPs Organized (Host)', icon: Award, badge: 'Official' },
       { id: 'faculty-achievements', label: 'Faculty Achievements & FDPs', icon: GraduationCap, badge: 'Evidence' },
       { id: 'faculty-directory', label: 'Faculty Directory & Profiles', icon: Users, badge: '42' },
@@ -66,6 +67,7 @@ export const NAVIGATION_CATEGORIES = [
     label: 'Student Development',
     icon: Trophy,
     items: [
+      { id: 'student-projects', label: 'Student Projects & Capstone', icon: Code, badge: 'PRJ' },
       { id: 'student-achievements', label: 'Student Achievements & Honors', icon: Trophy, badge: '120+' },
       { id: 'internships', label: 'Student Internships & Training', icon: Briefcase, badge: 'Live' }
     ]
@@ -96,6 +98,7 @@ export const NAVIGATION_CATEGORIES = [
     label: 'Accreditation & Data',
     icon: FileSpreadsheet,
     items: [
+      { id: 'nptel-certifications', label: 'NPTEL & MOOC Certifications', icon: GraduationCap, badge: 'NPTEL' },
       { id: 'naac-portal', label: 'NAAC SSR Documentation', icon: Award, badge: 'A+' },
       { id: 'nba-tier1', label: 'NBA Tier-1 Compliance', icon: FileText },
       { id: 'nirf-data', label: 'NIRF Data Repository', icon: BarChart3 },
