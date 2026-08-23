@@ -24,7 +24,8 @@ import {
   Smartphone, 
   Trash2, 
   ShieldAlert, 
-  Sparkles
+  Sparkles,
+  Database
 } from 'lucide-react';
 
 export const NAVIGATION_CATEGORIES = [
