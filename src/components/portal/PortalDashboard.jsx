@@ -1,0 +1,921 @@
+import React, { useState } from 'react';
+import { 
+  Building2, 
+  Users, 
+  FileText, 
+  Lightbulb, 
+  BookOpen, 
+  Trophy, 
+  Briefcase, 
+  Code, 
+  Calendar, 
+  Award, 
+  Handshake, 
+  GraduationCap, 
+  TrendingUp, 
+  Trash2, 
+  ShieldAlert, 
+  RefreshCw, 
+  Download, 
+  Plus, 
+  ChevronRight, 
+  UserCheck,
+  ShieldCheck,
+  UserPlus,
+  UploadCloud,
+  Grid,
+  Lock,
+  Key,
+  Mail,
+  Smartphone,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+  Layers,
+  Settings,
+  Eye,
+  Sliders,
+  Send,
+  Camera,
+  Image as ImageIcon,
+  X,
+  Search,
+  Filter
+} from 'lucide-react';
+import { 
+  USER_ROLES, 
+  getUsers,
+  saveUser,
+  toggleUserStatus,
+  forcePasswordReset,
+  getFacultyList,
+  updateFacultyPhoto,
+  removeFacultyPhoto,
+  saveFacultyMember,
+  getPublications, 
+  getPatents, 
+  getMoUs, 
+  getInternships, 
+  getStudentAchievements,
+  getRecycleBin,
+  getAuditLogs,
+  getRolePermissions,
+  saveRolePermissions,
+  ALL_PERMISSIONS,
+  getActiveSessions,
+  revokeSession,
+  revokeAllOtherSessions,
+  getLoginEvents,
+  getAuthSettings,
+  updateAuthSettings,
+  getEmailTemplates,
+  updateEmailTemplate,
+  parseAndValidateUsersCSV,
+  executeBulkUserImport,
+  exportToExcel,
+  exportToPDF,
+  exportToCSV
+} from '../../data/portalStore.js';
+import { DEPARTMENTS, BRANDING_LOGOS } from '../../data/masterData.js';
+import MadamModulesCRUD from './MadamModulesCRUD.jsx';
+import { RecycleBin, AuditLogViewer, NotificationAlerts } from './PortalTools.jsx';
+import PublicationSyncModal from './PublicationSyncModal.jsx';
+import FacultyAvatar from '../common/FacultyAvatar.jsx';
+import BoSMeetingManager from './BoSMeetingManager.jsx';
+import StudentAchievementsManager from './achievements/StudentAchievementsManager.jsx';
+import StudentInternshipsManager from './internships/StudentInternshipsManager.jsx';
+import FdpsOrganizedManager from './fdps/FdpsOrganizedManager.jsx';
+import FacultyAchievementsManager from './faculty-achievements/FacultyAchievementsManager.jsx';
+
+// New Modular Dashboard Components
+import TopHeader from './dashboard/TopHeader.jsx';
+import FloatingSidebar from './dashboard/FloatingSidebar.jsx';
+import { NAVIGATION_CATEGORIES } from './dashboard/navigationCategories.js';
+import DashboardOverviewView from './dashboard/DashboardOverviewView.jsx';
+import AcademicEventsManager from './events/AcademicEventsManager.jsx';
+
+export default function PortalDashboard({ currentUser, onNavigatePublic, onLogout, onExitPortal }) {
+  const [activeModule, setActiveModule] = useState('overview');
+  const [sidebarExpanded, setSidebarExpanded] = useState(true);
+  const [isMobileDrawer, setIsMobileDrawer] = useState(false);
+  const [syncModalOpen, setSyncModalOpen] = useState(false);
+  const [userModalOpen, setUserModalOpen] = useState(false);
+  const [bulkImportModalOpen, setBulkImportModalOpen] = useState(false);
+  const [dataVersion, setDataVersion] = useState(0);
+
+  // User Management State
+  const [userSearch, setUserSearch] = useState('');
+  const [userFilterRole, setUserFilterRole] = useState('ALL');
+  const [userFilterDept, setUserFilterDept] = useState('ALL');
+
+  // Single User Form State
+  const [userForm, setUserForm] = useState({
+    name: '',
+    email: '',
+    username: '',
+    role: 'FACULTY',
+    dept: 'CSE',
+    facultyId: '',
+    allowPassword: true,
+    allowGoogle: true,
+    requireEmailOtp: true
+  });
+
+  // Bulk CSV Import State
+  const [csvText, setCsvText] = useState('');
+  const [csvParsedResult, setCsvParsedResult] = useState(null);
+
+  // Email Template Previewer State
+  const [selectedTemplateId, setSelectedTemplateId] = useState('login_otp');
+
+  // Faculty Photo Management Modal State
+  const [photoModalOpen, setPhotoModalOpen] = useState(false);
+  const [selectedFacultyForPhoto, setSelectedFacultyForPhoto] = useState(null);
+  const [newPhotoPreview, setNewPhotoPreview] = useState(null);
+  const [photoUploadError, setPhotoUploadError] = useState('');
+  const [facultySearch, setFacultySearch] = useState('');
+  const [facultyDeptFilter, setFacultyDeptFilter] = useState('ALL');
+  const [facultyPhotoStatusFilter, setFacultyPhotoStatusFilter] = useState('ALL');
+
+  const refreshData = () => setDataVersion(v => v + 1);
+
+  // Live Data Stores
+  const usersList = getUsers();
+  const facultyList = getFacultyList();
+  const publications = getPublications();
+  const patents = getPatents();
+  const mous = getMoUs();
+  const internships = getInternships();
+  const achievements = getStudentAchievements();
+  const recycleBin = getRecycleBin();
+  const auditLogs = getAuditLogs();
+  const permissionsMatrix = getRolePermissions();
+  const activeSessions = getActiveSessions();
+  const loginEvents = getLoginEvents();
+  const authSettings = getAuthSettings();
+  const emailTemplates = getEmailTemplates();
+
+  const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN';
+  const isAdminOrSuper = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN';
+
+  // Helper to extract active category & module labels for breadcrumbs
+  const getModuleMeta = (modId) => {
+    for (const cat of NAVIGATION_CATEGORIES) {
+      const item = cat.items.find(i => i.id === modId);
+      if (item) {
+        return { categoryLabel: cat.label, moduleLabel: item.label };
+      }
+    }
+    return { categoryLabel: 'Overview', moduleLabel: 'Executive Dashboard' };
+  };
+
+  const { categoryLabel, moduleLabel } = getModuleMeta(activeModule);
+
+  // Handle Single User Save
+  const handleSaveUser = (e) => {
+    e.preventDefault();
+    if (!userForm.name || !userForm.email) {
+      alert('Please enter full name and institutional email.');
+      return;
+    }
+    saveUser(userForm, currentUser);
+    alert(`Account provisioned successfully for ${userForm.name} (${userForm.role})! Notification sent.`);
+    setUserModalOpen(false);
+    setUserForm({
+      name: '', email: '', username: '', role: 'FACULTY', dept: 'CSE', facultyId: '',
+      allowPassword: true, allowGoogle: true, requireEmailOtp: true
+    });
+    refreshData();
+  };
+
+  // Handle User Status Toggle with Anti-Lockout Exception
+  const handleToggleUserStatus = (userId) => {
+    try {
+      toggleUserStatus(userId, currentUser);
+      refreshData();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  // Handle Force Password Reset
+  const handleForceReset = (userId) => {
+    const res = forcePasswordReset(userId, currentUser);
+    if (res.success) {
+      alert(res.message);
+      refreshData();
+    }
+  };
+
+  // Handle Bulk CSV Parse
+  const handleParseCSV = () => {
+    if (!csvText.trim()) {
+      alert('Please paste CSV rows into the text area.');
+      return;
+    }
+    const result = parseAndValidateUsersCSV(csvText);
+    setCsvParsedResult(result);
+  };
+
+  // Handle Bulk CSV Execution
+  const handleExecuteImport = () => {
+    if (!csvParsedResult || !csvParsedResult.validRows || csvParsedResult.validRows.length === 0) {
+      alert('No valid user accounts to import.');
+      return;
+    }
+    const result = executeBulkUserImport(csvParsedResult.validRows, currentUser);
+    alert(`Successfully imported and provisioned ${result.importedCount} user accounts.`);
+    setBulkImportModalOpen(false);
+    setCsvText('');
+    setCsvParsedResult(null);
+    refreshData();
+  };
+
+  // Faculty Photo Management Handlers
+  const handleOpenPhotoModal = (faculty) => {
+    setSelectedFacultyForPhoto(faculty);
+    setNewPhotoPreview(faculty.photo || null);
+    setPhotoUploadError('');
+    setPhotoModalOpen(true);
+  };
+
+  const handlePhotoFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setPhotoUploadError('Please select a valid image file (JPG, PNG, WebP).');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setPhotoUploadError('File size exceeds 5MB limit.');
+      return;
+    }
+
+    setPhotoUploadError('');
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      setNewPhotoPreview(evt.target.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSavePhoto = () => {
+    if (!selectedFacultyForPhoto || !newPhotoPreview) return;
+    updateFacultyPhoto(selectedFacultyForPhoto.id, newPhotoPreview, currentUser);
+    alert(`Verified photo updated for ${selectedFacultyForPhoto.name}.`);
+    setPhotoModalOpen(false);
+    setNewPhotoPreview(null);
+    refreshData();
+  };
+
+  const handleRemovePhoto = () => {
+    if (!selectedFacultyForPhoto) return;
+    removeFacultyPhoto(selectedFacultyForPhoto.id, currentUser);
+    alert(`Photo removed for ${selectedFacultyForPhoto.name}. Profile reverted to neutral "No Photo" placeholder.`);
+    setPhotoModalOpen(false);
+    setNewPhotoPreview(null);
+    refreshData();
+  };
+
+  // Filtered Users List
+  const filteredUsers = usersList.filter(u => {
+    const q = userSearch.toLowerCase();
+    const matchesQuery = u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || (u.username && u.username.toLowerCase().includes(q));
+    const matchesRole = userFilterRole === 'ALL' || u.role === userFilterRole;
+    const matchesDept = userFilterDept === 'ALL' || u.dept === userFilterDept;
+    return matchesQuery && matchesRole && matchesDept;
+  });
+
+  // Filtered Faculty List for Photo Management
+  const filteredFacultyList = facultyList.filter(f => {
+    const q = facultySearch.toLowerCase();
+    const matchesQuery = f.name.toLowerCase().includes(q) || f.id.toLowerCase().includes(q) || f.department.toLowerCase().includes(q) || f.designation.toLowerCase().includes(q);
+    const matchesDept = facultyDeptFilter === 'ALL' || f.department.toLowerCase().includes(facultyDeptFilter.toLowerCase());
+    const matchesPhoto = facultyPhotoStatusFilter === 'ALL' 
+      ? true 
+      : (facultyPhotoStatusFilter === 'WITH_PHOTO' ? !!f.photo : !f.photo);
+    return matchesQuery && matchesDept && matchesPhoto;
+  });
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#F1F5F9', display: 'flex', flexDirection: 'column', width: '100%' }}>
+      {/* 1. Production Top Header (Role Switcher Removed!) */}
+      <TopHeader
+        currentUser={currentUser}
+        sidebarExpanded={sidebarExpanded}
+        onToggleSidebar={() => {
+          if (window.innerWidth < 1024) {
+            setIsMobileDrawer(!isMobileDrawer);
+          } else {
+            setSidebarExpanded(!sidebarExpanded);
+          }
+        }}
+        activeModule={activeModule}
+        activeCategoryLabel={categoryLabel}
+        activeModuleLabel={moduleLabel}
+        onOpenSync={() => setSyncModalOpen(true)}
+        onOpenQuickAction={() => setActiveModule('events')}
+        onNavigatePublic={onNavigatePublic || onExitPortal}
+        onLogout={onLogout || onExitPortal}
+        onOpenSettings={() => setActiveModule('iam-settings')}
+        onOpenNotifications={() => setActiveModule('alerts')}
+        unreadAlertsCount={3}
+      />
+
+      {/* 2. Main Workspace Layout (Floating Sidebar + Content Canvas) */}
+      <div style={{ display: 'flex', flex: 1, width: '100%', position: 'relative', overflow: 'hidden' }}>
+        {/* Floating Animated Navigation Sidebar */}
+        <FloatingSidebar
+          activeModule={activeModule}
+          onSelectModule={(mod) => setActiveModule(mod)}
+          sidebarExpanded={sidebarExpanded}
+          onToggleSidebar={() => setSidebarExpanded(!sidebarExpanded)}
+          currentUser={currentUser}
+          onNavigatePublic={onNavigatePublic || onExitPortal}
+          onLogout={onLogout || onExitPortal}
+          isMobileDrawer={isMobileDrawer}
+          onCloseMobileDrawer={() => setIsMobileDrawer(false)}
+        />
+
+        {/* Dynamic Content Canvas */}
+        <main style={{
+          flex: 1,
+          padding: '1.25rem 1.5rem 2rem 0',
+          overflowY: 'auto',
+          minWidth: 0,
+          boxSizing: 'border-box'
+        }}>
+          {/* Actionable Notifications Banner */}
+          {activeModule !== 'overview' && (
+            <div style={{ marginBottom: '1.25rem' }}>
+              <NotificationAlerts onSelectModule={(mod) => setActiveModule(mod)} />
+            </div>
+          )}
+
+          {/* ────────────────────────────────────────────────────────── */}
+          {/* VIEW 1: EXECUTIVE DASHBOARD OVERVIEW */}
+          {/* ────────────────────────────────────────────────────────── */}
+          {activeModule === 'overview' && (
+            <DashboardOverviewView
+              currentUser={currentUser}
+              usersCount={usersList.length}
+              facultyCount={facultyList.length}
+              publicationsCount={publications.length}
+              patentsCount={patents.length}
+              mousCount={mous.length}
+              achievementsCount={achievements.length}
+              activeSessionsCount={activeSessions.length}
+              onNavigate={(mod) => setActiveModule(mod)}
+              onOpenQuickAction={() => setActiveModule('events')}
+              onOpenSync={() => setSyncModalOpen(true)}
+            />
+          )}
+
+          {/* ────────────────────────────────────────────────────────── */}
+          {/* VIEW 2: UNIFIED ACADEMIC EVENTS SUITE */}
+          {/* ────────────────────────────────────────────────────────── */}
+          {(
+            activeModule === 'events' || 
+            activeModule === 'academic-events' || 
+            activeModule === 'workshops' || 
+            activeModule === 'seminars' || 
+            activeModule === 'guest-lectures' || 
+            activeModule === 'hackathons' || 
+            activeModule === 'codeathons'
+          ) && (
+            <AcademicEventsManager
+              currentUser={currentUser}
+              onDataChange={refreshData}
+              initialTypeFilter={
+                activeModule === 'hackathons' ? 'Hackathon' :
+                activeModule === 'codeathons' ? 'Code-a-thon' :
+                activeModule === 'guest-lectures' ? 'Guest Lecture' :
+                activeModule === 'seminars' ? 'Seminar' :
+                activeModule === 'workshops' ? 'Workshop' : 'ALL'
+              }
+            />
+          )}
+
+          {/* ────────────────────────────────────────────────────────── */}
+          {/* VIEW 3: FACULTY PHOTO & DIRECTORY GOVERNANCE */}
+          {/* ────────────────────────────────────────────────────────── */}
+          {activeModule === 'faculty-directory' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                  <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.25rem 0', fontFamily: 'Cinzel, Georgia, serif' }}>
+                    Faculty Directory & Photo Governance
+                  </h1>
+                  <p style={{ fontSize: '0.82rem', color: '#64748B', margin: 0 }}>
+                    Manage authentic verified faculty photographs and institutional directory records.
+                  </p>
+                </div>
+              </div>
+
+              {/* Filter Row */}
+              <div style={{ background: '#FFFFFF', padding: '0.9rem', borderRadius: '12px', border: '1px solid #E2E8F0', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <input
+                  type="text"
+                  placeholder="Search faculty name, ID, department..."
+                  value={facultySearch}
+                  onChange={(e) => setFacultySearch(e.target.value)}
+                  style={{ flex: 1, minWidth: '220px', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.82rem' }}
+                />
+                <select
+                  value={facultyDeptFilter}
+                  onChange={(e) => setFacultyDeptFilter(e.target.value)}
+                  style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.82rem' }}
+                >
+                  <option value="ALL">All Departments</option>
+                  {DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.name} ({d.code})</option>)}
+                </select>
+                <select
+                  value={facultyPhotoStatusFilter}
+                  onChange={(e) => setFacultyPhotoStatusFilter(e.target.value)}
+                  style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.82rem' }}
+                >
+                  <option value="ALL">All Photo Statuses</option>
+                  <option value="WITH_PHOTO">With Verified Photo</option>
+                  <option value="WITHOUT_PHOTO">Missing Photo</option>
+                </select>
+              </div>
+
+              {/* Faculty Cards Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem' }}>
+                {filteredFacultyList.map(faculty => (
+                  <div
+                    key={faculty.id}
+                    style={{
+                      background: '#FFFFFF',
+                      borderRadius: '14px',
+                      padding: '1.25rem',
+                      border: '1px solid #E2E8F0',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      textAlign: 'center',
+                      position: 'relative'
+                    }}
+                  >
+                    <div style={{ position: 'relative', marginBottom: '0.75rem' }}>
+                      <FacultyAvatar
+                        faculty={faculty}
+                        size={84}
+                        showBadge={false}
+                        shape="circle"
+                        ringColor={faculty.photo ? '#10B981' : '#CBD5E1'}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleOpenPhotoModal(faculty)}
+                        style={{
+                          position: 'absolute',
+                          bottom: 0,
+                          right: 0,
+                          background: '#070F1E',
+                          color: '#F1C40F',
+                          border: '2px solid #FFFFFF',
+                          borderRadius: '50%',
+                          width: '28px',
+                          height: '28px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          boxShadow: '0 2px 6px rgba(0,0,0,0.3)'
+                        }}
+                        title="Upload / Change Photo"
+                      >
+                        <Camera size={13} />
+                      </button>
+                    </div>
+
+                    <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0F172A', marginBottom: '0.2rem' }}>
+                      {faculty.name}
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: '#64748B', marginBottom: '0.35rem' }}>
+                      {faculty.designation} • <span style={{ fontWeight: 700, color: '#D4AF37' }}>{faculty.department}</span>
+                    </div>
+
+                    <span style={{
+                      fontSize: '0.68rem',
+                      fontWeight: 700,
+                      padding: '0.15rem 0.55rem',
+                      borderRadius: '9999px',
+                      background: faculty.photo ? '#ECFDF5' : '#F1F5F9',
+                      color: faculty.photo ? '#047857' : '#64748B',
+                      border: `1px solid ${faculty.photo ? '#A7F3D0' : '#E2E8F0'}`,
+                      marginBottom: '0.75rem'
+                    }}>
+                      {faculty.photo ? 'Verified Photo' : 'No Photo Available'}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => handleOpenPhotoModal(faculty)}
+                      style={{
+                        width: '100%',
+                        padding: '0.45rem',
+                        borderRadius: '8px',
+                        background: '#F8FAFC',
+                        border: '1px solid #CBD5E1',
+                        color: '#334155',
+                        fontSize: '0.76rem',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                      className="hover:bg-slate-100"
+                    >
+                      Manage Photograph
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ────────────────────────────────────────────────────────── */}
+          {/* VIEW 4: IAM USER DIRECTORY */}
+          {/* ────────────────────────────────────────────────────────── */}
+          {activeModule === 'iam-users' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                  <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.25rem 0', fontFamily: 'Cinzel, Georgia, serif' }}>
+                    IAM User Provisioning & Directory
+                  </h1>
+                  <p style={{ fontSize: '0.82rem', color: '#64748B', margin: 0 }}>
+                    Zero public signup. Manage authorized faculty and staff credentials, 2-step OTP enforcement, and status.
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setBulkImportModalOpen(true)}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: '#F8FAFC', border: '1px solid #CBD5E1', color: '#334155', padding: '0.5rem 0.85rem', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    <UploadCloud size={14} /> Bulk CSV Import
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUserModalOpen(true)}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'linear-gradient(135deg, #F1C40F 0%, #D4AF37 100%)', border: 'none', color: '#070F1E', padding: '0.5rem 1rem', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer' }}
+                  >
+                    <UserPlus size={14} /> Provision User
+                  </button>
+                </div>
+              </div>
+
+              {/* Users Table */}
+              <div style={{ background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem' }}>
+                  <thead>
+                    <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontSize: '0.74rem', textTransform: 'uppercase' }}>
+                      <th style={{ padding: '0.75rem 1rem' }}>User / Identity</th>
+                      <th style={{ padding: '0.75rem 1rem' }}>Role</th>
+                      <th style={{ padding: '0.75rem 1rem' }}>Department</th>
+                      <th style={{ padding: '0.75rem 1rem' }}>Status</th>
+                      <th style={{ padding: '0.75rem 1rem' }}>Last Login</th>
+                      <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredUsers.map((u) => (
+                      <tr key={u.id} style={{ borderBottom: '1px solid #F1F5F9' }} className="hover:bg-slate-50">
+                        <td style={{ padding: '0.85rem 1rem' }}>
+                          <div style={{ fontWeight: 700, color: '#0F172A' }}>{u.name}</div>
+                          <div style={{ fontSize: '0.72rem', color: '#64748B' }}>{u.email}</div>
+                        </td>
+                        <td style={{ padding: '0.85rem 1rem' }}>
+                          <span style={{ background: u.role === 'SUPER_ADMIN' ? '#FEF3C7' : '#EFF6FF', color: u.role === 'SUPER_ADMIN' ? '#B45309' : '#1D4ED8', padding: '0.2rem 0.55rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700 }}>
+                            {u.role}
+                          </span>
+                        </td>
+                        <td style={{ padding: '0.85rem 1rem', color: '#334155' }}>{u.dept}</td>
+                        <td style={{ padding: '0.85rem 1rem' }}>
+                          <span style={{ background: u.status === 'Active' ? '#ECFDF5' : '#FEF2F2', color: u.status === 'Active' ? '#047857' : '#DC2626', padding: '0.2rem 0.55rem', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: 700 }}>
+                            {u.status}
+                          </span>
+                        </td>
+                        <td style={{ padding: '0.85rem 1rem', fontSize: '0.74rem', color: '#64748B' }}>
+                          {u.lastLogin ? new Date(u.lastLogin).toLocaleDateString() : 'Never'}
+                        </td>
+                        <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
+                          {u.role !== 'SUPER_ADMIN' && (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleUserStatus(u.id)}
+                              style={{ padding: '0.3rem 0.6rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 600, border: '1px solid #CBD5E1', background: '#FFFFFF', cursor: 'pointer' }}
+                            >
+                              {u.status === 'Active' ? 'Suspend' : 'Activate'}
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* ────────────────────────────────────────────────────────── */}
+          {/* VIEW 5: BOARD OF STUDIES (BoS) - DEDICATED GOVERNANCE SUITE */}
+          {/* ────────────────────────────────────────────────────────── */}
+          {(activeModule === 'bos' || activeModule === 'bos-meetings') && (
+            <BoSMeetingManager currentUser={currentUser} onDataChange={refreshData} />
+          )}
+
+          {/* ────────────────────────────────────────────────────────── */}
+          {/* VIEW 6: STUDENT ACHIEVEMENTS - DEDICATED EVIDENCE SUITE */}
+          {/* ────────────────────────────────────────────────────────── */}
+          {(activeModule === 'student-achievements' || activeModule === 'achievements') && (
+            <StudentAchievementsManager currentUser={currentUser} onDataChange={refreshData} />
+          )}
+
+          {/* ────────────────────────────────────────────────────────── */}
+          {/* VIEW 7: STUDENT INTERNSHIPS - DEDICATED EVIDENCE SUITE */}
+          {/* ────────────────────────────────────────────────────────── */}
+          {activeModule === 'internships' && (
+            <StudentInternshipsManager currentUser={currentUser} onDataChange={refreshData} />
+          )}
+
+          {/* ────────────────────────────────────────────────────────── */}
+          {/* VIEW 8: FDPS ORGANIZED - DEDICATED EVIDENCE SUITE */}
+          {/* ────────────────────────────────────────────────────────── */}
+          {(activeModule === 'fdps-organized' || activeModule === 'fdps') && (
+            <FdpsOrganizedManager currentUser={currentUser} onDataChange={refreshData} />
+          )}
+
+          {/* ────────────────────────────────────────────────────────── */}
+          {/* VIEW 9: FACULTY ACHIEVEMENTS - DEDICATED EVIDENCE SUITE */}
+          {/* ────────────────────────────────────────────────────────── */}
+          {(activeModule === 'faculty-achievements' || activeModule === 'faculty-ach') && (
+            <FacultyAchievementsManager currentUser={currentUser} onDataChange={refreshData} />
+          )}
+
+          {/* ────────────────────────────────────────────────────────── */}
+          {/* VIEW 10: RECYCLE BIN & AUDIT LOGS */}
+          {/* ────────────────────────────────────────────────────────── */}
+          {activeModule === 'recycle-bin' && (
+            <RecycleBin currentUser={currentUser} onRestored={refreshData} />
+          )}
+
+          {activeModule === 'audit-logs' && (
+            <AuditLogViewer />
+          )}
+
+          {/* ────────────────────────────────────────────────────────── */}
+          {/* VIEW 11: GENERAL CRUD MODULES */}
+          {/* ────────────────────────────────────────────────────────── */}
+          {![
+            'overview',
+            'events',
+            'academic-events',
+            'workshops',
+            'seminars',
+            'guest-lectures',
+            'hackathons',
+            'codeathons',
+            'faculty-directory',
+            'iam-users',
+            'bos',
+            'bos-meetings',
+            'student-achievements',
+            'achievements',
+            'internships',
+            'fdps-organized',
+            'fdps',
+            'faculty-achievements',
+            'faculty-ach',
+            'recycle-bin',
+            'audit-logs'
+          ].includes(activeModule) && (
+            <MadamModulesCRUD
+              activeModule={activeModule}
+              currentUser={currentUser}
+              onDataChange={refreshData}
+            />
+          )}
+        </main>
+      </div>
+
+      {/* ────────────────────────────────────────────────────────── */}
+      {/* MODALS */}
+      {/* ────────────────────────────────────────────────────────── */}
+
+      {/* Single User Provisioning Modal */}
+      {userModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(7, 15, 30, 0.75)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', zIndex: 1100 }}>
+          <div style={{ background: '#FFFFFF', borderRadius: '16px', padding: '1.5rem', maxWidth: '520px', width: '100%', boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)' }}>
+            <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0F172A', margin: '0 0 1rem 0' }}>
+              Provision Institutional User Account
+            </h2>
+            <form onSubmit={handleSaveUser} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              <div>
+                <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '0.25rem' }}>FULL NAME *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Dr. Full Name"
+                  value={userForm.name}
+                  onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
+                  style={{ width: '100%', padding: '0.55rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.82rem', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '0.25rem' }}>INSTITUTIONAL EMAIL *</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="faculty@nrtec.in"
+                  value={userForm.email}
+                  onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                  style={{ width: '100%', padding: '0.55rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.82rem', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '0.25rem' }}>ROLE</label>
+                  <select
+                    value={userForm.role}
+                    onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
+                    style={{ width: '100%', padding: '0.55rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.82rem' }}
+                  >
+                    <option value="FACULTY">Faculty</option>
+                    <option value="HOD">Head of Department (HOD)</option>
+                    <option value="DEAN">Dean / Director</option>
+                    <option value="ADMIN">College Admin</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.74rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '0.25rem' }}>DEPARTMENT</label>
+                  <select
+                    value={userForm.dept}
+                    onChange={(e) => setUserForm({ ...userForm, dept: e.target.value })}
+                    style={{ width: '100%', padding: '0.55rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.82rem' }}
+                  >
+                    {DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.name} ({d.code})</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.6rem', marginTop: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setUserModalOpen(false)}
+                  style={{ padding: '0.55rem 1rem', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#F8FAFC', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{ padding: '0.55rem 1.25rem', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #F1C40F 0%, #D4AF37 100%)', color: '#070F1E', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer' }}
+                >
+                  Provision Account
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk CSV Import Modal */}
+      {bulkImportModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(7, 15, 30, 0.75)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', zIndex: 1100 }}>
+          <div style={{ background: '#FFFFFF', borderRadius: '16px', padding: '1.5rem', maxWidth: '640px', width: '100%', boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)', maxHeight: '90vh', overflowY: 'auto' }}>
+            <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.5rem 0' }}>
+              Bulk User Provisioning (CSV)
+            </h2>
+            <p style={{ fontSize: '0.78rem', color: '#64748B', marginBottom: '1rem' }}>
+              Paste rows in format: <code>name, email, role, department, faculty_id</code>
+            </p>
+
+            <textarea
+              rows={6}
+              value={csvText}
+              onChange={(e) => setCsvText(e.target.value)}
+              placeholder="Dr. K. Ramesh, kramesh@nrtec.in, FACULTY, CSE, NEC-CSE-102&#10;Dr. S. Varma, svarma@nrtec.in, HOD, ECE, NEC-ECE-105"
+              style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.8rem', fontFamily: 'monospace', boxSizing: 'border-box', marginBottom: '1rem' }}
+            />
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <button
+                type="button"
+                onClick={handleParseCSV}
+                style={{ padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#F8FAFC', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Validate CSV Rows
+              </button>
+
+              <div style={{ display: 'flex', gap: '0.6rem' }}>
+                <button
+                  type="button"
+                  onClick={() => { setBulkImportModalOpen(false); setCsvParsedResult(null); }}
+                  style={{ padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#FFFFFF', fontSize: '0.8rem', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={!csvParsedResult || !csvParsedResult.validRows || csvParsedResult.validRows.length === 0}
+                  onClick={handleExecuteImport}
+                  style={{ padding: '0.5rem 1.25rem', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #F1C40F 0%, #D4AF37 100%)', color: '#070F1E', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer' }}
+                >
+                  Execute Import ({csvParsedResult?.validRows?.length || 0})
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Faculty Photo Upload Modal */}
+      {photoModalOpen && selectedFacultyForPhoto && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(7, 15, 30, 0.75)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', zIndex: 1100 }}>
+          <div style={{ background: '#FFFFFF', borderRadius: '16px', padding: '1.5rem', maxWidth: '480px', width: '100%', boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)' }}>
+            <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.5rem 0' }}>
+              Update Faculty Photograph
+            </h2>
+            <p style={{ fontSize: '0.8rem', color: '#64748B', marginBottom: '1rem' }}>
+              {selectedFacultyForPhoto.name} ({selectedFacultyForPhoto.department})
+            </p>
+
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
+              {newPhotoPreview ? (
+                <img
+                  src={newPhotoPreview}
+                  alt="Preview"
+                  style={{ width: '110px', height: '110px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #D4AF37', boxShadow: '0 4px 14px rgba(0,0,0,0.15)' }}
+                />
+              ) : (
+                <div style={{ width: '110px', height: '110px', borderRadius: '50%', background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8', border: '2px dashed #CBD5E1' }}>
+                  No Photo
+                </div>
+              )}
+            </div>
+
+            {photoUploadError && (
+              <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#DC2626', padding: '0.5rem', borderRadius: '6px', fontSize: '0.78rem', marginBottom: '0.85rem' }}>
+                {photoUploadError}
+              </div>
+            )}
+
+            <input
+              type="file"
+              accept=".jpg,.jpeg,.png,.webp"
+              onChange={handlePhotoFileChange}
+              style={{ width: '100%', padding: '0.5rem', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.8rem', marginBottom: '1.25rem', boxSizing: 'border-box' }}
+            />
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              {selectedFacultyForPhoto.photo ? (
+                <button
+                  type="button"
+                  onClick={handleRemovePhoto}
+                  style={{ background: '#FEE2E2', color: '#DC2626', border: '1px solid #FECACA', padding: '0.45rem 0.85rem', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Remove Photo
+                </button>
+              ) : <div />}
+
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => { setPhotoModalOpen(false); setNewPhotoPreview(null); }}
+                  style={{ padding: '0.45rem 0.85rem', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#FFFFFF', fontSize: '0.78rem', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={!newPhotoPreview}
+                  onClick={handleSavePhoto}
+                  style={{ padding: '0.45rem 1.1rem', borderRadius: '6px', border: 'none', background: 'linear-gradient(135deg, #F1C40F 0%, #D4AF37 100%)', color: '#070F1E', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer' }}
+                >
+                  Save Photo
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Auto-Sync Research Profile Modal */}
+      {syncModalOpen && (
+        <PublicationSyncModal
+          currentUser={currentUser}
+          onSyncComplete={refreshData}
+          onClose={() => setSyncModalOpen(false)}
+        />
+      )}
+    </div>
+  );
+}

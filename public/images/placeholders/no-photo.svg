@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 180" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0B192C"/>
+      <stop offset="100%" stop-color="#1E3E62"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F1C40F"/>
+      <stop offset="100%" stop-color="#D4AF37"/>
+    </linearGradient>
+  </defs>
+  <!-- Background Card -->
+  <rect width="160" height="180" rx="12" fill="url(#bgGrad)"/>
+  <rect width="158" height="178" x="1" y="1" rx="11" fill="none" stroke="rgba(212, 175, 55, 0.25)" stroke-width="1.5"/>
+  
+  <!-- Silhouette Head -->
+  <circle cx="80" cy="65" r="28" fill="#475569" opacity="0.65"/>
+  
+  <!-- Silhouette Shoulders -->
+  <path d="M35 140 C35 105, 55 98, 80 98 C105 98, 125 105, 125 140 Z" fill="#475569" opacity="0.65"/>
+  
+  <!-- Subtle Border & Badge -->
+  <rect x="30" y="148" width="100" height="20" rx="4" fill="rgba(7, 15, 30, 0.8)" stroke="rgba(212, 175, 55, 0.3)" stroke-width="1"/>
+  <text x="80" y="162" text-anchor="middle" fill="#CBD5E1" font-family="'Inter', sans-serif" font-size="9" font-weight="600" letter-spacing="0.5">NO PHOTO</text>
+</svg>
