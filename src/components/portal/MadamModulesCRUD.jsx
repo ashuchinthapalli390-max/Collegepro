@@ -54,7 +54,12 @@ export default function MadamModulesCRUD({ activeModule, currentUser, onDataChan
     'seminars',
     'guest-lectures',
     'hackathons',
-    'codeathons'
+    'codeathons',
+    'publications',
+    'research-papers',
+    'patents',
+    'ipr-patents',
+    'sync-publications'
   ].includes(activeModule)) {
     return null;
   }

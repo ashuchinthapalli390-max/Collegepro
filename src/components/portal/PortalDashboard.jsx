@@ -93,6 +93,9 @@ import FloatingSidebar from './dashboard/FloatingSidebar.jsx';
 import { NAVIGATION_CATEGORIES } from './dashboard/navigationCategories.js';
 import DashboardOverviewView from './dashboard/DashboardOverviewView.jsx';
 import AcademicEventsManager from './events/AcademicEventsManager.jsx';
+import PatentsManager from './patents/PatentsManager.jsx';
+import PublicationsManager from './publications/PublicationsManager.jsx';
+import FacultyResearchSyncModal from './publications/FacultyResearchSyncModal.jsx';
 
 export default function PortalDashboard({ currentUser, onNavigatePublic, onLogout, onExitPortal }) {
   const [activeModule, setActiveModule] = useState('overview');
@@ -659,7 +662,28 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
           )}
 
           {/* ────────────────────────────────────────────────────────── */}
-          {/* VIEW 10: RECYCLE BIN & AUDIT LOGS */}
+          {/* VIEW 10: RESEARCH PUBLICATIONS SUITE */}
+          {/* ────────────────────────────────────────────────────────── */}
+          {(activeModule === 'publications' || activeModule === 'research-papers' || activeModule === 'sync-publications') && (
+            <PublicationsManager
+              currentUser={currentUser}
+              onDataChange={refreshData}
+              onOpenSyncModal={() => setSyncModalOpen(true)}
+            />
+          )}
+
+          {/* ────────────────────────────────────────────────────────── */}
+          {/* VIEW 11: PATENTS & IPR GOVERNANCE SUITE */}
+          {/* ────────────────────────────────────────────────────────── */}
+          {(activeModule === 'patents' || activeModule === 'ipr-patents') && (
+            <PatentsManager
+              currentUser={currentUser}
+              onDataChange={refreshData}
+            />
+          )}
+
+          {/* ────────────────────────────────────────────────────────── */}
+          {/* VIEW 12: RECYCLE BIN & AUDIT LOGS */}
           {/* ────────────────────────────────────────────────────────── */}
           {activeModule === 'recycle-bin' && (
             <RecycleBin currentUser={currentUser} onRestored={refreshData} />
@@ -670,7 +694,7 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
           )}
 
           {/* ────────────────────────────────────────────────────────── */}
-          {/* VIEW 11: GENERAL CRUD MODULES */}
+          {/* VIEW 13: GENERAL CRUD MODULES */}
           {/* ────────────────────────────────────────────────────────── */}
           {![
             'overview',
@@ -692,6 +716,11 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
             'fdps',
             'faculty-achievements',
             'faculty-ach',
+            'publications',
+            'research-papers',
+            'patents',
+            'ipr-patents',
+            'sync-publications',
             'recycle-bin',
             'audit-logs'
           ].includes(activeModule) && (
@@ -908,9 +937,10 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
         </div>
       )}
 
-      {/* Auto-Sync Research Profile Modal */}
+      {/* Official Auto-Sync Research Profile Modal */}
       {syncModalOpen && (
-        <PublicationSyncModal
+        <FacultyResearchSyncModal
+          isOpen={syncModalOpen}
           currentUser={currentUser}
           onSyncComplete={refreshData}
           onClose={() => setSyncModalOpen(false)}

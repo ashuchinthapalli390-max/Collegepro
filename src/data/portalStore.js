@@ -1058,44 +1058,246 @@ export function removeFacultyPhoto(facultyId, user) {
 // Madam 12 Modules CRUD with Visibility & Approvals
 // -------------------------------------------------------------
 
-// 1. Publications
+// ─────────────────────────────────────────────────────────────
+// 1. RESEARCH PUBLICATIONS REPOSITORY & REVIEWS
+// ─────────────────────────────────────────────────────────────
+
+export function normalizePublicationRecord(raw, idx = 0) {
+  if (!raw) return null;
+  const dept = raw.department || 'CSE';
+  const ay = raw.academicYear || '2025-26';
+  const yearSuffix = (ay.split('-')[0] || '2026').trim();
+  const autoNum = raw.publicationRecordNumber || `PUB-${dept}-${yearSuffix}-${String(idx + 1).padStart(4, '0')}`;
+
+  const authors = Array.isArray(raw.authors) ? raw.authors : (
+    raw.facultyName ? [{
+      authorOrder: 1,
+      name: raw.facultyName,
+      department: dept,
+      designation: 'Faculty',
+      affiliation: 'Narasaraopeta Engineering College',
+      isFirstAuthor: true,
+      isCorresponding: true
+    }] : []
+  );
+
+  const indexing = Array.isArray(raw.indexing) ? raw.indexing : [
+    ...(raw.scopusIndexed === 'Yes' ? ['Scopus'] : []),
+    ...(raw.wosIndexed === 'Yes' ? ['Web of Science'] : []),
+    ...(raw.ugcCareIndexed === 'Yes' ? ['UGC CARE'] : []),
+    ...(raw.ieeeIndexed === 'Yes' ? ['IEEE Xplore'] : [])
+  ];
+
+  const documents = Array.isArray(raw.documents) ? raw.documents : [
+    ...(raw.paperPdf ? [{ id: 'DOC-1', name: raw.paperPdf, type: 'Full Paper PDF', size: '1.8 MB', url: '#' }] : []),
+    ...(raw.certificatePdf ? [{ id: 'DOC-2', name: raw.certificatePdf, type: 'Publication Certificate', size: '420 KB', url: '#' }] : [])
+  ];
+
+  const sources = Array.isArray(raw.sources) ? raw.sources : [
+    raw.importedSource ? raw.importedSource.toUpperCase() : 'MANUAL'
+  ];
+
+  return {
+    ...raw,
+    id: raw.id || `pub_${Date.now()}_${idx}`,
+    publicationRecordNumber: autoNum,
+    title: raw.title || raw.name || 'Untitled Publication',
+    publicationType: raw.publicationType || (raw.conferenceName ? 'Conference Paper' : 'Journal Article'),
+    paperOwnerType: raw.paperOwnerType || 'Faculty Publication',
+    department: dept,
+    academicYear: ay,
+    journalName: raw.journalName || (raw.publicationType === 'Journal Article' ? raw.venue : '') || '',
+    conferenceName: raw.conferenceName || (raw.publicationType === 'Conference Paper' ? raw.venue : '') || '',
+    publisher: raw.publisher || '',
+    volume: raw.volume || '',
+    issue: raw.issue || '',
+    pages: raw.pages || '',
+    articleNumber: raw.articleNumber || '',
+    publicationDate: raw.publicationDate || raw.date || `${yearSuffix}-06-01`,
+    publicationYear: raw.publicationYear || parseInt(yearSuffix, 10) || 2025,
+    issn: raw.issn || '',
+    eissn: raw.eissn || '',
+    isbn: raw.isbn || '',
+    doi: raw.doi || '',
+    scopusEid: raw.scopusEid || '',
+    wosUid: raw.wosUid || '',
+    pubmedId: raw.pubmedId || '',
+    url: raw.url || raw.link || (raw.doi ? `https://doi.org/${raw.doi}` : ''),
+    indexing: indexing,
+    isScopusIndexed: raw.scopusIndexed === 'Yes' || indexing.includes('Scopus'),
+    isWosIndexed: raw.wosIndexed === 'Yes' || indexing.includes('Web of Science'),
+    scopusCitations: raw.scopusCitations || (raw.citationCount ? { count: raw.citationCount, capturedAt: '2026-08-23' } : null),
+    wosCitations: raw.wosCitations || null,
+    googleScholarCitations: raw.googleScholarCitations || null,
+    impactFactor: raw.impactFactor || '',
+    impactFactorSource: raw.impactFactorSource || 'JCR',
+    impactFactorYear: raw.impactFactorYear || '2025',
+    quartile: raw.quartile || '',
+    abstract: raw.abstract || '',
+    keywords: raw.keywords || '',
+    researchDomain: raw.researchDomain || '',
+    authors: authors,
+    documents: documents,
+    sources: sources,
+    workflowStatus: raw.workflowStatus || (raw.verificationStatus === 'Published' || raw.verificationStatus === 'Verified' ? 'APPROVED' : 'UNDER_REVIEW'),
+    publicVisibility: raw.publicVisibility || 'PUBLIC_SAFE',
+    reviewHistory: Array.isArray(raw.reviewHistory) ? raw.reviewHistory : []
+  };
+}
+
 export function getPublications(includeDeleted = false) {
   const items = loadStore(STORAGE_KEYS.PUBLICATIONS, INITIAL_PUBLICATIONS);
-  return includeDeleted ? items : (Array.isArray(items) ? items.filter(i => !i.isDeleted) : []);
+  const activeList = Array.isArray(items) ? items.filter(i => includeDeleted || !i.isDeleted) : [];
+  return activeList.map((item, idx) => normalizePublicationRecord(item, idx));
 }
 
 export function getPublicPublications() {
   const items = getPublications();
-  return items.filter(i => i.verificationStatus === 'Published' || i.verificationStatus === 'Verified' || !i.verificationStatus);
+  return items.filter(i => i.workflowStatus === 'APPROVED' && !i.isDeleted);
 }
 
 export function savePublication(item, user) {
   const items = loadStore(STORAGE_KEYS.PUBLICATIONS, INITIAL_PUBLICATIONS);
   const index = Array.isArray(items) ? items.findIndex(i => i.id === item.id) : -1;
+  const isHodOrAdmin = user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN' || user?.role === 'HOD';
+
+  // Duplicate Check for new items
+  if (index === -1) {
+    const rawDoi = (item.doi || '').trim().toLowerCase();
+    const rawEid = (item.scopusEid || '').trim();
+    if (rawDoi) {
+      const existingDoi = items.find(p => !p.isDeleted && (p.doi || '').trim().toLowerCase() === rawDoi);
+      if (existingDoi) {
+        throw new Error(`A publication with DOI "${item.doi}" already exists (Record: ${existingDoi.publicationRecordNumber || existingDoi.id}).`);
+      }
+    }
+    if (rawEid) {
+      const existingEid = items.find(p => !p.isDeleted && p.scopusEid === rawEid);
+      if (existingEid) {
+        throw new Error(`A publication with Scopus EID "${item.scopusEid}" already exists (Record: ${existingEid.publicationRecordNumber || existingEid.id}).`);
+      }
+    }
+  }
+
+  const dept = item.department || user?.dept || 'CSE';
+  const ay = item.academicYear || '2025-26';
+  const yearSuffix = (ay.split('-')[0] || '2026').trim();
+  const nextSeq = String(items.length + 1).padStart(4, '0');
+  const autoNum = item.publicationRecordNumber || `PUB-${dept}-${yearSuffix}-${nextSeq}`;
+
   if (index >= 0) {
-    items[index] = { 
-      ...items[index], 
-      ...item, 
-      updatedAt: new Date().toISOString(), 
-      updatedBy: user?.name,
-      visibility: item.visibility || 'PUBLIC'
+    items[index] = {
+      ...items[index],
+      ...item,
+      updatedAt: new Date().toISOString(),
+      updatedBy: user?.name || 'System'
     };
-    addAuditLog('UPDATE', 'Publications', `Updated publication: ${item.title}`, user);
+    addAuditLog('UPDATE', 'Publications', `Updated publication: ${item.title} (${autoNum})`, user);
   } else {
+    const defaultWorkflowStatus = item.workflowStatus || (isHodOrAdmin ? 'APPROVED' : 'SUBMITTED');
     const newItem = {
       ...item,
-      id: item.id || 'PUB-' + Date.now(),
+      id: item.id || `pub_${Date.now()}`,
+      publicationRecordNumber: autoNum,
       createdAt: new Date().toISOString(),
-      createdBy: user?.name,
-      verificationStatus: user?.canApprove ? 'Published' : 'Pending Review',
-      visibility: user?.canApprove ? 'PUBLIC' : 'AUTHENTICATED',
-      isDeleted: false
+      createdBy: user?.name || 'System',
+      workflowStatus: defaultWorkflowStatus,
+      isDeleted: false,
+      reviewHistory: [
+        {
+          action: 'CREATED',
+          status: defaultWorkflowStatus,
+          timestamp: new Date().toISOString(),
+          by: user?.name || 'Author',
+          remarks: 'Initial publication submission'
+        }
+      ]
     };
-    if (Array.isArray(items)) items.unshift(newItem);
-    addAuditLog('CREATE', 'Publications', `Submitted paper: ${item.title} (Status: ${newItem.verificationStatus})`, user);
+    items.unshift(newItem);
+    addAuditLog('CREATE', 'Publications', `Submitted paper: ${item.title} (${autoNum})`, user);
   }
+
   saveStore(STORAGE_KEYS.PUBLICATIONS, items);
-  return items;
+  return items.map((it, idx) => normalizePublicationRecord(it, idx));
+}
+
+export function reviewPublication(id, action, remarks, reviewerUser) {
+  const items = loadStore(STORAGE_KEYS.PUBLICATIONS, INITIAL_PUBLICATIONS);
+  const index = Array.isArray(items) ? items.findIndex(i => i.id === id) : -1;
+  if (index === -1) return items;
+
+  let targetStatus = 'APPROVED';
+  if (action === 'REQUEST_REVISION') targetStatus = 'NEEDS_REVISION';
+  else if (action === 'UNDER_REVIEW') targetStatus = 'UNDER_REVIEW';
+  else if (action === 'PUBLISH') targetStatus = 'APPROVED';
+  else if (action === 'ARCHIVE') targetStatus = 'ARCHIVED';
+
+  items[index].workflowStatus = targetStatus;
+  items[index].verifiedAt = new Date().toISOString();
+  items[index].verifiedBy = reviewerUser?.name || 'Reviewer';
+  if (!items[index].reviewHistory) items[index].reviewHistory = [];
+  items[index].reviewHistory.push({
+    action: action,
+    status: targetStatus,
+    timestamp: new Date().toISOString(),
+    by: reviewerUser?.name || 'Reviewer',
+    remarks: remarks || `Status updated to ${targetStatus}`
+  });
+
+  saveStore(STORAGE_KEYS.PUBLICATIONS, items);
+  addAuditLog('REVIEW', 'Publications', `Reviewed publication ${items[index].publicationRecordNumber || id}: ${action} (Status: ${targetStatus})`, reviewerUser);
+  return items.map((it, idx) => normalizePublicationRecord(it, idx));
+}
+
+export function importPublicationsBatch(candidates, currentUser) {
+  if (!Array.isArray(candidates) || candidates.length === 0) return [];
+  const items = loadStore(STORAGE_KEYS.PUBLICATIONS, INITIAL_PUBLICATIONS);
+  let importedCount = 0;
+
+  candidates.forEach(cand => {
+    const rawDoi = (cand.doi || '').trim().toLowerCase();
+    const rawEid = (cand.scopusEid || '').trim();
+
+    // Check duplicate
+    const exists = items.some(p => !p.isDeleted && (
+      (rawDoi && (p.doi || '').trim().toLowerCase() === rawDoi) ||
+      (rawEid && p.scopusEid === rawEid)
+    ));
+
+    if (!exists) {
+      const dept = cand.department || currentUser?.dept || 'CSE';
+      const ay = cand.academicYear || '2025-26';
+      const yearSuffix = (ay.split('-')[0] || '2026').trim();
+      const nextSeq = String(items.length + 1).padStart(4, '0');
+      const autoNum = `PUB-${dept}-${yearSuffix}-${nextSeq}`;
+
+      const newPub = {
+        ...cand,
+        id: `pub_sync_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+        publicationRecordNumber: autoNum,
+        createdAt: new Date().toISOString(),
+        createdBy: currentUser?.name || 'Research Sync Engine',
+        workflowStatus: 'IMPORTED_PENDING_REVIEW',
+        isDeleted: false,
+        sources: cand.sources || ['ORCID'],
+        reviewHistory: [
+          {
+            action: 'IMPORTED_AUTO_SYNC',
+            status: 'IMPORTED_PENDING_REVIEW',
+            timestamp: new Date().toISOString(),
+            by: currentUser?.name || 'Sync Engine',
+            remarks: `Imported from ${cand.sources?.join(', ') || 'ORCID/Scopus'}`
+          }
+        ]
+      };
+      items.unshift(newPub);
+      importedCount++;
+    }
+  });
+
+  saveStore(STORAGE_KEYS.PUBLICATIONS, items);
+  addAuditLog('SYNC_IMPORT_BATCH', 'Publications', `Imported ${importedCount} research publication(s) into institutional review pipeline`, currentUser);
+  return items.map((it, idx) => normalizePublicationRecord(it, idx));
 }
 
 export function softDeletePublication(id, user) {
@@ -1108,35 +1310,206 @@ export function softDeletePublication(id, user) {
     saveStore(STORAGE_KEYS.PUBLICATIONS, items);
     addAuditLog('DELETE (Soft)', 'Publications', `Soft-deleted publication ID: ${id}`, user);
   }
-  return items.filter(i => !i.isDeleted);
+  return items.filter(i => !i.isDeleted).map((it, idx) => normalizePublicationRecord(it, idx));
 }
 
-// 2. Patents
+// ─────────────────────────────────────────────────────────────
+// 2. PATENTS & IPR GOVERNANCE REPOSITORY
+// ─────────────────────────────────────────────────────────────
+
+export function normalizePatentRecord(raw, idx = 0) {
+  if (!raw) return null;
+  const dept = raw.department || 'CSE';
+  const ay = raw.academicYear || '2025-26';
+  const yearSuffix = (ay.split('-')[0] || '2026').trim();
+  const autoNum = raw.patentRecordNumber || `PAT-${dept}-${yearSuffix}-${String(idx + 1).padStart(4, '0')}`;
+
+  const inventors = Array.isArray(raw.inventors) ? raw.inventors : (
+    Array.isArray(raw.authors) ? raw.authors.map((a, i) => ({
+      inventorOrder: i + 1,
+      personType: 'INTERNAL_FACULTY',
+      name: a.name || 'Inventor',
+      department: a.department || dept,
+      designation: a.role || 'Faculty',
+      affiliation: 'Narasaraopeta Engineering College',
+      isLead: i === 0,
+      isCorresponding: i === 0
+    })) : [
+      {
+        inventorOrder: 1,
+        personType: 'INTERNAL_FACULTY',
+        name: raw.facultyName || 'Principal Inventor',
+        department: dept,
+        designation: 'Faculty',
+        affiliation: 'Narasaraopeta Engineering College',
+        isLead: true,
+        isCorresponding: true
+      }
+    ]
+  );
+
+  const documents = Array.isArray(raw.documents) ? raw.documents : [
+    ...(raw.patentPdf ? [{ id: 'DOC-1', name: raw.patentPdf, type: 'Patent Specification PDF', size: '2.4 MB', url: '#' }] : []),
+    ...(raw.grantCertificatePdf ? [{ id: 'DOC-2', name: raw.grantCertificatePdf, type: 'Grant Certificate', size: '850 KB', url: '#' }] : [])
+  ];
+
+  const legalStatus = raw.legalStatus || (
+    raw.patentStatus === 'Granted' ? 'GRANTED' : (
+      raw.patentStatus === 'Published' ? 'PUBLISHED' : (
+        raw.patentStatus === 'Filed' ? 'FILED' : 'PUBLISHED'
+      )
+    )
+  );
+
+  return {
+    ...raw,
+    id: raw.id || `pat_${Date.now()}_${idx}`,
+    patentRecordNumber: autoNum,
+    title: raw.title || 'Untitled Patent',
+    department: dept,
+    academicYear: ay,
+    patentType: raw.patentType || 'Indian Patent',
+    countryCode: raw.countryCode || 'IN',
+    patentOffice: raw.patentOffice || 'Indian Patent Office (Chennai)',
+    technologyDomain: raw.technologyDomain || 'Artificial Intelligence / IoT',
+    abstract: raw.abstract || '',
+    keywords: raw.keywords || '',
+    applicationNumber: raw.applicationNumber || raw.applicationNo || '',
+    applicationDate: raw.applicationDate || raw.filingDate || `${yearSuffix}-10-01`,
+    filingDate: raw.filingDate || raw.applicationDate || `${yearSuffix}-10-01`,
+    publicationDate: raw.publicationDate || '',
+    grantNumber: raw.grantNumber || '',
+    grantDate: raw.grantDate || '',
+    priorityDate: raw.priorityDate || '',
+    ferDate: raw.ferDate || '',
+    expiryDate: raw.expiryDate || '',
+    legalStatus: legalStatus,
+    workflowStatus: raw.workflowStatus || (raw.verificationStatus === 'Verified' ? 'APPROVED' : 'UNDER_REVIEW'),
+    applicantName: raw.applicantName || 'Narasaraopeta Engineering College (Autonomous)',
+    ownershipType: raw.ownershipType || 'Narasaraopeta Engineering College',
+    partnerOrg: raw.partnerOrg || '',
+    ownershipPercent: raw.ownershipPercent || 100,
+    inventors: inventors,
+    documents: documents,
+    publicVisibility: raw.publicVisibility || 'PUBLIC_SAFE',
+    reviewHistory: Array.isArray(raw.reviewHistory) ? raw.reviewHistory : []
+  };
+}
+
 export function getPatents(includeDeleted = false) {
   const items = loadStore(STORAGE_KEYS.PATENTS, INITIAL_PATENTS);
-  return includeDeleted ? items : (Array.isArray(items) ? items.filter(i => !i.isDeleted) : []);
+  const activeList = Array.isArray(items) ? items.filter(i => includeDeleted || !i.isDeleted) : [];
+  return activeList.map((item, idx) => normalizePatentRecord(item, idx));
+}
+
+export function getPublicPatents() {
+  const items = getPatents();
+  return items.filter(i => i.workflowStatus === 'APPROVED' && !i.isDeleted);
 }
 
 export function savePatent(item, user) {
   const items = loadStore(STORAGE_KEYS.PATENTS, INITIAL_PATENTS);
   const index = Array.isArray(items) ? items.findIndex(i => i.id === item.id) : -1;
+  const isHodOrAdmin = user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN' || user?.role === 'HOD';
+
+  // Duplicate Check on Application Number
+  const appNo = (item.applicationNumber || item.applicationNo || '').trim();
+  if (appNo && index === -1) {
+    const existing = items.find(p => !p.isDeleted && ((p.applicationNumber || p.applicationNo || '').trim() === appNo));
+    if (existing) {
+      throw new Error(`A patent with Application Number "${appNo}" already exists (Record: ${existing.patentRecordNumber || existing.id}).`);
+    }
+  }
+
+  const dept = item.department || user?.dept || 'CSE';
+  const ay = item.academicYear || '2025-26';
+  const yearSuffix = (ay.split('-')[0] || '2026').trim();
+  const nextSeq = String(items.length + 1).padStart(4, '0');
+  const autoNum = item.patentRecordNumber || `PAT-${dept}-${yearSuffix}-${nextSeq}`;
+
   if (index >= 0) {
-    items[index] = { ...items[index], ...item, updatedAt: new Date().toISOString(), updatedBy: user?.name };
-    addAuditLog('UPDATE', 'Patents', `Updated patent: ${item.title}`, user);
+    items[index] = {
+      ...items[index],
+      ...item,
+      updatedAt: new Date().toISOString(),
+      updatedBy: user?.name || 'System'
+    };
+    addAuditLog('UPDATE', 'Patents', `Updated patent: ${item.title} (${autoNum})`, user);
   } else {
+    const defaultWorkflowStatus = item.workflowStatus || (isHodOrAdmin ? 'APPROVED' : 'SUBMITTED');
     const newItem = {
       ...item,
-      id: item.id || 'PAT-' + Date.now(),
+      id: item.id || `pat_${Date.now()}`,
+      patentRecordNumber: autoNum,
       createdAt: new Date().toISOString(),
-      createdBy: user?.name,
-      verificationStatus: item.verificationStatus || 'Verified',
-      isDeleted: false
+      createdBy: user?.name || 'System',
+      workflowStatus: defaultWorkflowStatus,
+      isDeleted: false,
+      reviewHistory: [
+        {
+          action: 'CREATED',
+          status: defaultWorkflowStatus,
+          timestamp: new Date().toISOString(),
+          by: user?.name || 'Inventor',
+          remarks: 'Initial patent record creation'
+        }
+      ]
     };
-    if (Array.isArray(items)) items.unshift(newItem);
-    addAuditLog('CREATE', 'Patents', `Recorded patent: ${item.title}`, user);
+    items.unshift(newItem);
+    addAuditLog('CREATE', 'Patents', `Recorded patent: ${item.title} (${autoNum})`, user);
   }
+
   saveStore(STORAGE_KEYS.PATENTS, items);
-  return items;
+  return items.map((it, idx) => normalizePatentRecord(it, idx));
+}
+
+export function reviewPatent(id, action, remarks, reviewerUser) {
+  const items = loadStore(STORAGE_KEYS.PATENTS, INITIAL_PATENTS);
+  const index = Array.isArray(items) ? items.findIndex(i => i.id === id) : -1;
+  if (index === -1) return items;
+
+  let targetStatus = 'APPROVED';
+  if (action === 'REQUEST_REVISION') targetStatus = 'NEEDS_REVISION';
+  else if (action === 'UNDER_REVIEW') targetStatus = 'UNDER_REVIEW';
+  else if (action === 'PUBLISH') targetStatus = 'APPROVED';
+  else if (action === 'ARCHIVE') targetStatus = 'ARCHIVED';
+
+  items[index].workflowStatus = targetStatus;
+  items[index].verifiedAt = new Date().toISOString();
+  items[index].verifiedBy = reviewerUser?.name || 'Reviewer';
+  if (!items[index].reviewHistory) items[index].reviewHistory = [];
+  items[index].reviewHistory.push({
+    action: action,
+    status: targetStatus,
+    timestamp: new Date().toISOString(),
+    by: reviewerUser?.name || 'Reviewer',
+    remarks: remarks || `Patent status updated to ${targetStatus}`
+  });
+
+  saveStore(STORAGE_KEYS.PATENTS, items);
+  addAuditLog('REVIEW', 'Patents', `Reviewed patent ${items[index].patentRecordNumber || id}: ${action} (Status: ${targetStatus})`, reviewerUser);
+  return items.map((it, idx) => normalizePatentRecord(it, idx));
+}
+
+export function updatePatentLegalStatus(id, newLegalStatus, user) {
+  const items = loadStore(STORAGE_KEYS.PATENTS, INITIAL_PATENTS);
+  const index = Array.isArray(items) ? items.findIndex(i => i.id === id) : -1;
+  if (index >= 0) {
+    items[index].legalStatus = newLegalStatus;
+    items[index].updatedAt = new Date().toISOString();
+    items[index].updatedBy = user?.name;
+    if (!items[index].reviewHistory) items[index].reviewHistory = [];
+    items[index].reviewHistory.push({
+      action: 'LEGAL_STATUS_CHANGE',
+      status: items[index].workflowStatus,
+      timestamp: new Date().toISOString(),
+      by: user?.name,
+      remarks: `Legal status updated to ${newLegalStatus}`
+    });
+    saveStore(STORAGE_KEYS.PATENTS, items);
+    addAuditLog('LEGAL_STATUS', 'Patents', `Updated legal status of ${items[index].patentRecordNumber || id} to ${newLegalStatus}`, user);
+  }
+  return items.map((it, idx) => normalizePatentRecord(it, idx));
 }
 
 export function softDeletePatent(id, user) {
@@ -1149,7 +1522,7 @@ export function softDeletePatent(id, user) {
     saveStore(STORAGE_KEYS.PATENTS, items);
     addAuditLog('DELETE (Soft)', 'Patents', `Soft-deleted patent ID: ${id}`, user);
   }
-  return Array.isArray(items) ? items.filter(i => !i.isDeleted) : [];
+  return items.filter(i => !i.isDeleted).map((it, idx) => normalizePatentRecord(it, idx));
 }
 
 // -------------------------------------------------------------
