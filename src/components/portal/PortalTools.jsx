@@ -239,7 +239,7 @@ export function NotificationAlerts({ onSelectModule }) {
             </div>
           </div>
           <button
-            onClick={() => onSelectModule('mous')}
+            onClick={() => onSelectModule('mous-collaborations')}
             className="btn-outline"
             style={{ borderColor: '#D97706', color: '#92400E', padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
           >

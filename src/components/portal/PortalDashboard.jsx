@@ -101,6 +101,20 @@ import MousManager from './mous/MousManager.jsx';
 import StudentProjectsManager from './projects/StudentProjectsManager.jsx';
 import NptelCertificationsManager from './nptel/NptelCertificationsManager.jsx';
 
+// Dedicated Governance, Intelligence & Compliance Suites
+import AnalyticsView from './dashboard/AnalyticsView.jsx';
+import AlertsCenterView from './dashboard/AlertsCenterView.jsx';
+import ActivityFeedView from './dashboard/ActivityFeedView.jsx';
+import MediaGalleryManager from './governance/MediaGalleryManager.jsx';
+import CircularsManager from './governance/CircularsManager.jsx';
+import StaffProfilesManager from './governance/StaffProfilesManager.jsx';
+import AcademicCouncilManager from './governance/AcademicCouncilManager.jsx';
+import RegulationsHubManager from './governance/RegulationsHubManager.jsx';
+import FundedProjectsManager from './research/FundedProjectsManager.jsx';
+import { NaacPortalManager, NbaTier1Manager, NirfDataManager, ExportHubManager } from './compliance/ComplianceHubs.jsx';
+import { IamMatrixManager, IamSessionsManager, IamSettingsManager } from './iam/IamModules.jsx';
+import PortalModuleFallback from './common/PortalModuleFallback.jsx';
+
 export default function PortalDashboard({ currentUser, onNavigatePublic, onLogout, onExitPortal }) {
   const [activeModule, setActiveModule] = useState('overview');
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
@@ -727,7 +741,83 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
           )}
 
           {/* ────────────────────────────────────────────────────────── */}
-          {/* VIEW 16: RECYCLE BIN & AUDIT LOGS */}
+          {/* VIEW 16: EXECUTIVE INTELLIGENCE & NOTIFICATIONS */}
+          {/* ────────────────────────────────────────────────────────── */}
+          {activeModule === 'analytics' && (
+            <AnalyticsView currentUser={currentUser} onNavigate={(mod) => setActiveModule(mod)} />
+          )}
+
+          {activeModule === 'alerts' && (
+            <AlertsCenterView currentUser={currentUser} onNavigate={(mod) => setActiveModule(mod)} />
+          )}
+
+          {activeModule === 'activity' && (
+            <ActivityFeedView currentUser={currentUser} />
+          )}
+
+          {/* ────────────────────────────────────────────────────────── */}
+          {/* VIEW 17: OUTREACH & GOVERNANCE SUITES */}
+          {/* ────────────────────────────────────────────────────────── */}
+          {activeModule === 'gallery-media' && (
+            <MediaGalleryManager currentUser={currentUser} />
+          )}
+
+          {activeModule === 'circulars-notices' && (
+            <CircularsManager currentUser={currentUser} />
+          )}
+
+          {activeModule === 'staff-profiles' && (
+            <StaffProfilesManager currentUser={currentUser} />
+          )}
+
+          {activeModule === 'academic-council' && (
+            <AcademicCouncilManager currentUser={currentUser} />
+          )}
+
+          {activeModule === 'regulations-hub' && (
+            <RegulationsHubManager currentUser={currentUser} />
+          )}
+
+          {activeModule === 'funded-projects' && (
+            <FundedProjectsManager currentUser={currentUser} />
+          )}
+
+          {/* ────────────────────────────────────────────────────────── */}
+          {/* VIEW 18: ACCREDITATION & COMPLIANCE HUBS */}
+          {/* ────────────────────────────────────────────────────────── */}
+          {activeModule === 'naac-portal' && (
+            <NaacPortalManager currentUser={currentUser} />
+          )}
+
+          {activeModule === 'nba-tier1' && (
+            <NbaTier1Manager currentUser={currentUser} />
+          )}
+
+          {activeModule === 'nirf-data' && (
+            <NirfDataManager currentUser={currentUser} />
+          )}
+
+          {activeModule === 'export-hub' && (
+            <ExportHubManager currentUser={currentUser} />
+          )}
+
+          {/* ────────────────────────────────────────────────────────── */}
+          {/* VIEW 19: IAM & SECURITY CONFIGURATIONS */}
+          {/* ────────────────────────────────────────────────────────── */}
+          {activeModule === 'iam-matrix' && (
+            <IamMatrixManager currentUser={currentUser} />
+          )}
+
+          {activeModule === 'iam-sessions' && (
+            <IamSessionsManager currentUser={currentUser} />
+          )}
+
+          {activeModule === 'iam-settings' && (
+            <IamSettingsManager currentUser={currentUser} />
+          )}
+
+          {/* ────────────────────────────────────────────────────────── */}
+          {/* VIEW 20: RECYCLE BIN & AUDIT LOGS */}
           {/* ────────────────────────────────────────────────────────── */}
           {activeModule === 'recycle-bin' && (
             <RecycleBin currentUser={currentUser} onRestored={refreshData} />
@@ -738,10 +828,13 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
           )}
 
           {/* ────────────────────────────────────────────────────────── */}
-          {/* VIEW 17: GENERAL CRUD MODULES */}
+          {/* VIEW 21: ZERO-BLANK-SCREEN FALLBACK */}
           {/* ────────────────────────────────────────────────────────── */}
           {![
             'overview',
+            'analytics',
+            'alerts',
+            'activity',
             'events',
             'academic-events',
             'workshops',
@@ -749,40 +842,53 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
             'guest-lectures',
             'hackathons',
             'codeathons',
-            'faculty-directory',
-            'iam-users',
-            'bos',
-            'bos-meetings',
-            'student-achievements',
-            'achievements',
-            'internships',
+            'gallery-media',
+            'circulars-notices',
+            'faculty-memberships',
+            'memberships',
             'fdps-organized',
             'fdps',
             'faculty-achievements',
             'faculty-ach',
+            'faculty-directory',
+            'staff-profiles',
+            'student-projects',
+            'projects',
+            'capstone-projects',
+            'student-achievements',
+            'achievements',
+            'internships',
+            'bos',
+            'bos-meetings',
+            'academic-council',
+            'regulations-hub',
             'publications',
             'research-papers',
             'patents',
             'ipr-patents',
+            'funded-projects',
             'sync-publications',
-            'faculty-memberships',
-            'memberships',
             'mous-collaborations',
             'mous',
             'collaborations',
-            'student-projects',
-            'projects',
-            'capstone-projects',
             'nptel-certifications',
             'nptel',
             'moocs',
+            'naac-portal',
+            'nba-tier1',
+            'nirf-data',
+            'export-hub',
+            'iam-users',
+            'iam-matrix',
+            'iam-sessions',
+            'iam-settings',
             'recycle-bin',
             'audit-logs'
           ].includes(activeModule) && (
-            <MadamModulesCRUD
+            <PortalModuleFallback
               activeModule={activeModule}
               currentUser={currentUser}
-              onDataChange={refreshData}
+              onBackToOverview={() => setActiveModule('overview')}
             />
           )}
         </main>
