@@ -34,16 +34,18 @@ export default function PortalAuth({ currentUser, onLoginSuccess, onClose }) {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [capsLockActive, setCapsLockActive] = useState(false);
+  const [rememberDevice, setRememberDevice] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [nudgeError, setNudgeError] = useState(false);
+  const [cardNudge, setCardNudge] = useState(false);
 
   // Active OTP Challenge Context
   const [otpChallengeData, setOtpChallengeData] = useState(null);
 
   // Forgot Password / Force Change States
   const [forgotEmail, setForgotEmail] = useState('');
-  const [forgotSent, setForgotSent] = useState(false);
+  const [forgotSubmitted, setForgotSubmitted] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
@@ -52,8 +54,8 @@ export default function PortalAuth({ currentUser, onLoginSuccess, onClose }) {
   // Trigger error shake animation
   const triggerCardNudge = (msg) => {
     setErrorMessage(msg);
-    setNudgeError(true);
-    setTimeout(() => setNudgeError(false), 500);
+    setCardNudge(true);
+    setTimeout(() => setCardNudge(false), 500);
   };
 
   // 1. Password Login Handler with Mandatory 2-Step OTP
