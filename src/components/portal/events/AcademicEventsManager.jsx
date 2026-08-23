@@ -43,6 +43,16 @@ import {
   exportToPDF
 } from '../../../data/portalStore.js';
 import AcademicEventWizardModal from './AcademicEventWizardModal.jsx';
+import { 
+  MotionPage, 
+  ModulePageHeader, 
+  AnimatedKpiGrid, 
+  MotionKpiCard, 
+  MotionTable, 
+  MotionTableRow, 
+  MotionEmptyState,
+  MotionButton 
+} from '../../motion/index.js';
 
 const EVENT_TYPE_TABS = [
   { id: 'ALL', label: 'All Events' },
@@ -98,7 +108,7 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
     return { total, upcoming, ongoing, completed, pendingReview, thisYear };
   }, [events]);
 
-  // Filtered Events
+  // Filtered Records
   const filteredEvents = useMemo(() => {
     return events.filter(item => {
       const q = searchQuery.toLowerCase().trim();
@@ -106,21 +116,21 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
         (item.eventNumber && item.eventNumber.toLowerCase().includes(q)) ||
         (item.title && item.title.toLowerCase().includes(q)) ||
         (item.name && item.name.toLowerCase().includes(q)) ||
-        (item.coordinatorName && item.coordinatorName.toLowerCase().includes(q)) ||
-        (item.resourcePersons && item.resourcePersons.some(rp => rp.name && rp.name.toLowerCase().includes(q)));
+        (item.speakers && item.speakers.some(s => s.name && s.name.toLowerCase().includes(q))) ||
+        (item.coordinators && item.coordinators.some(c => c.name && c.name.toLowerCase().includes(q)));
 
-      const matchTab = selectedTypeTab === 'ALL' || item.eventType === selectedTypeTab;
       const itemDept = item.department || '';
       const matchDept = selectedDept === 'ALL' || itemDept.toLowerCase().includes(selectedDept.toLowerCase());
       const matchAy = selectedAy === 'ALL' || item.academicYear === selectedAy;
-      const matchEventStatus = selectedEventStatus === 'ALL' || item.eventStatus === selectedEventStatus;
-      const matchWorkflowStatus = selectedWorkflowStatus === 'ALL' || item.workflowStatus === selectedWorkflowStatus;
+      const matchType = selectedTypeTab === 'ALL' || item.eventType === selectedTypeTab;
+      const matchStatus = selectedEventStatus === 'ALL' || item.eventStatus === selectedEventStatus;
+      const matchWorkflow = selectedWorkflowStatus === 'ALL' || item.workflowStatus === selectedWorkflowStatus;
       const matchMode = selectedMode === 'ALL' || item.mode === selectedMode;
       const matchLevel = selectedLevel === 'ALL' || item.level === selectedLevel;
 
-      return matchSearch && matchTab && matchDept && matchAy && matchEventStatus && matchWorkflowStatus && matchMode && matchLevel;
+      return matchSearch && matchDept && matchAy && matchType && matchStatus && matchWorkflow && matchMode && matchLevel;
     });
-  }, [events, searchQuery, selectedTypeTab, selectedDept, selectedAy, selectedEventStatus, selectedWorkflowStatus, selectedMode, selectedLevel]);
+  }, [events, searchQuery, selectedDept, selectedAy, selectedTypeTab, selectedEventStatus, selectedWorkflowStatus, selectedMode, selectedLevel]);
 
   // Permissions
   const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD' || currentUser?.role === 'FACULTY';
@@ -135,7 +145,7 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
   };
 
   const handleDelete = (item) => {
-    if (confirm(`Are you sure you want to delete event record ${item.eventNumber || item.id} (${item.title})?`)) {
+    if (window.confirm(`Are you sure you want to move event "${item.title || item.name}" to Recycle Bin?`)) {
       softDeleteAcademicEvent(item.id, currentUser);
       refresh();
     }
@@ -177,97 +187,35 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem', width: '100%' }}>
+    <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem' }}>
       {/* 1. Header & Quick Actions */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.74rem', color: '#64748B', marginBottom: '0.25rem' }}>
-            <span>Dashboard</span>
-            <ChevronRight size={12} />
-            <span>Events & Outreach</span>
-            <ChevronRight size={12} />
-            <span style={{ color: '#0F172A', fontWeight: 700 }}>Academic Events</span>
-          </div>
+      <ModulePageHeader
+        breadcrumbs={[
+          { label: 'Dashboard' },
+          { label: 'Events & Outreach' },
+          { label: 'Academic Events' }
+        ]}
+        title="Academic Events & Workshops"
+        subtitle="Manage workshops, seminars, guest lectures, hackathons, code-a-thons and institutional events."
+        onExportCSV={() => exportToCSV('events')}
+        onExportExcel={() => exportToExcel('events')}
+        onExportPDF={() => exportToPDF('events')}
+        primaryAction={canCreate ? {
+          label: 'Create Event',
+          icon: Plus,
+          onClick: () => { setEditingItem(null); setWizardOpen(true); }
+        } : null}
+      />
 
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.25rem 0', fontFamily: 'Cinzel, Georgia, serif' }}>
-            Academic Events
-          </h1>
-          <p style={{ fontSize: '0.82rem', color: '#64748B', margin: 0 }}>
-            Manage workshops, seminars, guest lectures, hackathons, code-a-thons and institutional events.
-          </p>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={() => exportToCSV('events')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}
-          >
-            <Download size={14} /> CSV
-          </button>
-          <button
-            type="button"
-            onClick={() => exportToExcel('events')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#10B981', cursor: 'pointer' }}
-          >
-            <FileText size={14} /> Excel
-          </button>
-          <button
-            type="button"
-            onClick={() => exportToPDF('events')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#DC2626', cursor: 'pointer' }}
-          >
-            <Printer size={14} /> PDF
-          </button>
-
-          {canCreate && (
-            <button
-              type="button"
-              onClick={() => { setEditingItem(null); setWizardOpen(true); }}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                background: 'linear-gradient(135deg, #F1C40F 0%, #D4AF37 100%)',
-                color: '#070F1E',
-                padding: '0.55rem 1.05rem',
-                borderRadius: '8px',
-                fontWeight: 800,
-                fontSize: '0.8rem',
-                border: 'none',
-                cursor: 'pointer',
-                boxShadow: '0 2px 10px rgba(212, 175, 55, 0.35)'
-              }}
-              className="hover:scale-105 transition-transform"
-            >
-              <Plus size={15} /> Create Event
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* 2. KPI Summary Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.85rem' }}>
-        {[
-          { label: 'Total Events', value: stats.total, color: '#0F172A', icon: Megaphone, bg: '#F8FAFC' },
-          { label: 'Upcoming', value: stats.upcoming, color: '#2563EB', icon: Calendar, bg: '#EFF6FF' },
-          { label: 'Ongoing Now', value: stats.ongoing, color: '#D97706', icon: Clock, bg: '#FEFCE8' },
-          { label: 'Completed', value: stats.completed, color: '#059669', icon: CheckCircle2, bg: '#ECFDF5' },
-          { label: 'Pending Review', value: stats.pendingReview, color: '#9333EA', icon: Sparkles, bg: '#FDF4FF' },
-          { label: 'This Academic Year', value: stats.thisYear, color: '#0D9488', icon: Building2, bg: '#F0FDFA' }
-        ].map((k, i) => {
-          const Icon = k.icon;
-          return (
-            <div key={i} style={{ background: k.bg, padding: '1rem', borderRadius: '12px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>{k.label}</span>
-                <Icon size={16} style={{ color: k.color }} />
-              </div>
-              <div style={{ fontSize: '1.45rem', fontWeight: 800, color: k.color, fontFamily: 'Cinzel, serif' }}>{k.value}</div>
-            </div>
-          );
-        })}
-      </div>
+      {/* 2. Staggered Animated KPI Summary Cards */}
+      <AnimatedKpiGrid minWidth="150px">
+        <MotionKpiCard label="Total Events" value={stats.total} icon={Megaphone} color="#0F172A" bg="#F8FAFC" />
+        <MotionKpiCard label="Upcoming" value={stats.upcoming} icon={Calendar} color="#2563EB" bg="#EFF6FF" />
+        <MotionKpiCard label="Ongoing Now" value={stats.ongoing} icon={Clock} color="#D97706" bg="#FEFCE8" />
+        <MotionKpiCard label="Completed" value={stats.completed} icon={CheckCircle2} color="#059669" bg="#ECFDF5" />
+        <MotionKpiCard label="Pending Review" value={stats.pendingReview} icon={Sparkles} color="#9333EA" bg="#FDF4FF" />
+        <MotionKpiCard label="This Academic Year" value={stats.thisYear} icon={Building2} color="#0D9488" bg="#F0FDFA" />
+      </AnimatedKpiGrid>
 
       {/* 3. Event Type Horizontal Tabs */}
       <div style={{ display: 'flex', gap: '0.4rem', overflowX: 'auto', paddingBottom: '0.2rem' }}>
@@ -757,6 +705,6 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
           </div>
         </div>
       )}
-    </div>
+    </MotionPage>
   );
 }

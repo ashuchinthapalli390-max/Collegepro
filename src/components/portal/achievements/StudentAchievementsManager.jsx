@@ -32,6 +32,16 @@ import {
   exportToPDF
 } from '../../../data/portalStore.js';
 import StudentAchievementWizardModal from './StudentAchievementWizardModal.jsx';
+import { 
+  MotionPage, 
+  ModulePageHeader, 
+  AnimatedKpiGrid, 
+  MotionKpiCard, 
+  MotionTable, 
+  MotionTableRow, 
+  MotionEmptyState,
+  MotionButton 
+} from '../../motion/index.js';
 
 export default function StudentAchievementsManager({ currentUser, onDataChange }) {
   const [dataVersion, setDataVersion] = useState(0);
@@ -72,23 +82,26 @@ export default function StudentAchievementsManager({ currentUser, onDataChange }
     return { total, pending, approved, national, prizeWinners, thisYear };
   }, [achievements]);
 
-  // Filtered List
+  // Filtered Achievements
   const filteredAchievements = useMemo(() => {
     return achievements.filter(item => {
       const q = searchQuery.toLowerCase().trim();
-      const matchSearch = !q || 
-        (item.rollNumber && item.rollNumber.toLowerCase().includes(q)) ||
+      const matchSearch = !q ||
+        (item.achievementNumber && item.achievementNumber.toLowerCase().includes(q)) ||
         (item.studentName && item.studentName.toLowerCase().includes(q)) ||
-        (item.title && item.title.toLowerCase().includes(q)) ||
+        (item.rollNumber && item.rollNumber.toLowerCase().includes(q)) ||
         (item.eventName && item.eventName.toLowerCase().includes(q)) ||
-        (item.organizedBy && item.organizedBy.toLowerCase().includes(q));
+        (item.awardTitle && item.awardTitle.toLowerCase().includes(q)) ||
+        (item.organizingInstitute && item.organizingInstitute.toLowerCase().includes(q));
 
       const itemDept = item.department || item.branch || '';
       const matchDept = selectedDept === 'ALL' || itemDept.toLowerCase().includes(selectedDept.toLowerCase());
       const matchAy = selectedAy === 'ALL' || item.academicYear === selectedAy;
-      const matchCategory = selectedCategory === 'ALL' || item.achievementType === selectedCategory;
+      const matchCategory = selectedCategory === 'ALL' || item.category === selectedCategory || item.achievementType === selectedCategory;
       const matchLevel = selectedLevel === 'ALL' || item.level === selectedLevel;
-      const matchPrize = selectedPrize === 'ALL' || (selectedPrize === 'YES' ? (item.hasPrize === 'Yes' || item.prize === 'Yes') : (item.hasPrize === 'No' || item.prize === 'No'));
+      const matchPrize = selectedPrize === 'ALL' ||
+        (selectedPrize === 'YES' && (item.hasPrize === 'Yes' || item.prize === 'Yes')) ||
+        (selectedPrize === 'NO' && item.hasPrize !== 'Yes' && item.prize !== 'Yes');
       
       const itemStatus = item.workflowStatus || (item.status === 'Approved' ? 'APPROVED' : 'DRAFT');
       const matchStatus = selectedStatus === 'ALL' || itemStatus === selectedStatus;
@@ -112,26 +125,22 @@ export default function StudentAchievementsManager({ currentUser, onDataChange }
 
   // Handle Soft Delete
   const handleDelete = (item) => {
-    if (confirm(`Are you sure you want to delete achievement record for ${item.studentName} (${item.achievementNumber || item.id})?`)) {
+    if (window.confirm(`Are you sure you want to move achievement "${item.studentName}: ${item.awardTitle || item.eventName}" to Recycle Bin?`)) {
       softDeleteStudentAchievement(item.id, currentUser);
       refresh();
     }
   };
 
-  const getStatusBadge = (status) => {
+  const getWorkflowBadge = (status) => {
     switch (status) {
       case 'APPROVED':
-        return { bg: '#ECFDF5', text: '#047857', border: '#A7F3D0', icon: CheckCircle2, label: 'APPROVED' };
       case 'VERIFIED':
-        return { bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0', icon: ShieldCheck, label: 'VERIFIED' };
+        return { bg: '#ECFDF5', text: '#047857', border: '#A7F3D0', icon: CheckCircle2, label: 'VERIFIED' };
       case 'SUBMITTED':
-        return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', icon: Clock, label: 'SUBMITTED' };
       case 'UNDER_REVIEW':
-        return { bg: '#FDF4FF', text: '#9333EA', border: '#F0ABFC', icon: Sparkles, label: 'UNDER REVIEW' };
+        return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', icon: Clock, label: 'SUBMITTED' };
       case 'NEEDS_REVISION':
         return { bg: '#FEF2F2', text: '#DC2626', border: '#FECACA', icon: AlertTriangle, label: 'REVISION REQ.' };
-      case 'ARCHIVED':
-        return { bg: '#F1F5F9', text: '#475569', border: '#CBD5E1', icon: Archive, label: 'ARCHIVED' };
       case 'DRAFT':
       default:
         return { bg: '#FEFCE8', text: '#A16207', border: '#FEF08A', icon: Edit3, label: 'DRAFT' };
@@ -139,114 +148,35 @@ export default function StudentAchievementsManager({ currentUser, onDataChange }
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.4rem', width: '100%' }}>
+    <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.4rem' }}>
       {/* 1. Header & Quick Actions */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.74rem', color: '#64748B', marginBottom: '0.25rem' }}>
-            <span>Dashboard</span>
-            <ChevronRight size={12} />
-            <span>Student Development</span>
-            <ChevronRight size={12} />
-            <span style={{ color: '#0F172A', fontWeight: 700 }}>Student Achievements</span>
-          </div>
-
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.25rem 0', fontFamily: 'Cinzel, Georgia, serif' }}>
-            Student Achievements & Honors Repository
-          </h1>
-          <p style={{ fontSize: '0.82rem', color: '#64748B', margin: 0 }}>
-            Official departmental evidence for hackathons, paper presentations, sports medals, awards, and certifications.
-          </p>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={() => exportToCSV('achievements')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}
-            className="hover:bg-slate-50"
-          >
-            <Download size={14} /> CSV
-          </button>
-          <button
-            type="button"
-            onClick={() => exportToExcel('achievements')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#10B981', cursor: 'pointer' }}
-            className="hover:bg-slate-50"
-          >
-            <FileText size={14} /> Excel
-          </button>
-          <button
-            type="button"
-            onClick={() => exportToPDF('achievements')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#DC2626', cursor: 'pointer' }}
-            className="hover:bg-slate-50"
-          >
-            <Printer size={14} /> PDF
-          </button>
-
-          {canCreate && (
-            <button
-              type="button"
-              onClick={() => { setEditingItem(null); setWizardOpen(true); }}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                background: 'linear-gradient(135deg, #F1C40F 0%, #D4AF37 100%)',
-                color: '#070F1E',
-                padding: '0.55rem 1.05rem',
-                borderRadius: '8px',
-                fontWeight: 800,
-                fontSize: '0.8rem',
-                border: 'none',
-                cursor: 'pointer',
-                boxShadow: '0 2px 10px rgba(212, 175, 55, 0.35)'
-              }}
-              className="hover:scale-105 transition-transform"
-            >
-              <Plus size={15} /> Record Achievement
-            </button>
-          )}
-        </div>
-      </div>
+      <ModulePageHeader
+        breadcrumbs={[
+          { label: 'Dashboard' },
+          { label: 'Student Development' },
+          { label: 'Student Achievements' }
+        ]}
+        title="Student Achievements & Honors Repository"
+        subtitle="Official departmental evidence for hackathons, paper presentations, sports medals, awards, and certifications."
+        onExportCSV={() => exportToCSV('achievements')}
+        onExportExcel={() => exportToExcel('achievements')}
+        onExportPDF={() => exportToPDF('achievements')}
+        primaryAction={canCreate ? {
+          label: 'Record Achievement',
+          icon: Plus,
+          onClick: () => { setEditingItem(null); setWizardOpen(true); }
+        } : null}
+      />
 
       {/* 2. KPI Summary Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.85rem' }}>
-        {[
-          { label: 'Total Achievements', value: stats.total, color: '#0F172A', icon: Trophy, bg: '#F8FAFC' },
-          { label: 'Pending Verification', value: stats.pending, color: '#D97706', icon: Clock, bg: '#FEFCE8' },
-          { label: 'Verified & Approved', value: stats.approved, color: '#059669', icon: CheckCircle2, bg: '#ECFDF5' },
-          { label: 'National / Intl.', value: stats.national, color: '#2563EB', icon: Award, bg: '#EFF6FF' },
-          { label: 'Prize Winners', value: stats.prizeWinners, color: '#9333EA', icon: Sparkles, bg: '#FDF4FF' },
-          { label: 'Active AY Records', value: stats.thisYear, color: '#0D9488', icon: Building2, bg: '#F0FDFA' }
-        ].map((k, i) => {
-          const Icon = k.icon;
-          return (
-            <div
-              key={i}
-              style={{
-                background: k.bg,
-                padding: '1rem',
-                borderRadius: '12px',
-                border: '1px solid #E2E8F0',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>{k.label}</span>
-                <Icon size={16} style={{ color: k.color }} />
-              </div>
-              <div style={{ fontSize: '1.45rem', fontWeight: 800, color: k.color, fontFamily: 'Cinzel, serif' }}>
-                {k.value}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      <AnimatedKpiGrid minWidth="160px">
+        <MotionKpiCard label="Total Achievements" value={stats.total} icon={Trophy} color="#0F172A" bg="#F8FAFC" />
+        <MotionKpiCard label="Pending Verification" value={stats.pending} icon={Clock} color="#D97706" bg="#FEFCE8" />
+        <MotionKpiCard label="Verified & Approved" value={stats.approved} icon={CheckCircle2} color="#059669" bg="#ECFDF5" />
+        <MotionKpiCard label="National / Intl." value={stats.national} icon={Award} color="#2563EB" bg="#EFF6FF" />
+        <MotionKpiCard label="Prize Winners" value={stats.prizeWinners} icon={Sparkles} color="#9333EA" bg="#FDF4FF" />
+        <MotionKpiCard label="Active AY Records" value={stats.thisYear} icon={Building2} color="#0D9488" bg="#F0FDFA" />
+      </AnimatedKpiGrid>
 
       {/* 3. Search & Multi-Filter Toolbar */}
       <div style={{
@@ -753,6 +683,6 @@ export default function StudentAchievementsManager({ currentUser, onDataChange }
           </div>
         </div>
       )}
-    </div>
+    </MotionPage>
   );
 }

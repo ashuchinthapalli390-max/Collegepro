@@ -17,12 +17,10 @@ import {
   ChevronRight,
   ExternalLink,
   Sparkles,
-  Printer,
-  Calendar,
   Award,
   BookOpen
 } from 'lucide-react';
-import { DEPARTMENTS, FACULTY_DATA } from '../../../data/masterData.js';
+import { DEPARTMENTS } from '../../../data/masterData.js';
 import { 
   getFacultyAchievements, 
   reviewFacultyAchievement, 
@@ -32,6 +30,16 @@ import {
   exportToPDF
 } from '../../../data/portalStore.js';
 import FacultyAchievementWizardModal from './FacultyAchievementWizardModal.jsx';
+import { 
+  MotionPage, 
+  ModulePageHeader, 
+  AnimatedKpiGrid, 
+  MotionKpiCard, 
+  MotionTable, 
+  MotionTableRow, 
+  MotionEmptyState,
+  MotionButton 
+} from '../../motion/index.js';
 
 export default function FacultyAchievementsManager({ currentUser, onDataChange }) {
   const [dataVersion, setDataVersion] = useState(0);
@@ -70,29 +78,31 @@ export default function FacultyAchievementsManager({ currentUser, onDataChange }
     return { total, uniqueFaculty, fdps, training, awards, pending };
   }, [achievements]);
 
+  // Filtered List
   const filteredAchievements = useMemo(() => {
     return achievements.filter(item => {
       const q = searchQuery.toLowerCase().trim();
       const matchSearch = !q ||
+        (item.achievementNumber && item.achievementNumber.toLowerCase().includes(q)) ||
         (item.facultyName && item.facultyName.toLowerCase().includes(q)) ||
         (item.title && item.title.toLowerCase().includes(q)) ||
-        (item.organizedBy && item.organizedBy.toLowerCase().includes(q)) ||
-        (item.facultyId && item.facultyId.toLowerCase().includes(q));
+        (item.eventTitle && item.eventTitle.toLowerCase().includes(q)) ||
+        (item.organization && item.organization.toLowerCase().includes(q));
 
       const itemDept = item.department || '';
       const matchDept = selectedDept === 'ALL' || itemDept.toLowerCase().includes(selectedDept.toLowerCase());
       const matchAy = selectedAy === 'ALL' || item.academicYear === selectedAy;
-      const matchType = selectedType === 'ALL' || item.type === selectedType;
-      const matchRole = selectedRole === 'ALL' || item.participationRole === selectedRole;
+      const matchType = selectedType === 'ALL' || item.type === selectedType || item.achievementType === selectedType;
+      const matchRole = selectedRole === 'ALL' || item.role === selectedRole;
       
-      const itemStatus = item.workflowStatus || (item.status === 'Verified' ? 'VERIFIED' : 'DRAFT');
+      const itemStatus = item.workflowStatus || (item.status === 'Approved' ? 'APPROVED' : 'DRAFT');
       const matchStatus = selectedStatus === 'ALL' || itemStatus === selectedStatus;
 
       return matchSearch && matchDept && matchAy && matchType && matchRole && matchStatus;
     });
   }, [achievements, searchQuery, selectedDept, selectedAy, selectedType, selectedRole, selectedStatus]);
 
-  const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD' || currentUser?.role === 'FACULTY';
+  const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD' || currentUser?.role === 'FACULTY' || currentUser?.role === 'DATA_ENTRY';
   const canReview = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD';
 
   const handleExecuteReview = () => {
@@ -104,18 +114,17 @@ export default function FacultyAchievementsManager({ currentUser, onDataChange }
   };
 
   const handleDelete = (item) => {
-    if (confirm(`Are you sure you want to delete achievement for ${item.facultyName}?`)) {
+    if (window.confirm(`Are you sure you want to move achievement "${item.facultyName}: ${item.title || item.eventTitle}" to Recycle Bin?`)) {
       softDeleteFacultyAchievement(item.id, currentUser);
       refresh();
     }
   };
 
-  const getStatusBadge = (status) => {
+  const getWorkflowBadge = (status) => {
     switch (status) {
       case 'APPROVED':
-        return { bg: '#ECFDF5', text: '#047857', border: '#A7F3D0', icon: CheckCircle2, label: 'APPROVED' };
       case 'VERIFIED':
-        return { bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0', icon: ShieldCheck, label: 'VERIFIED' };
+        return { bg: '#ECFDF5', text: '#047857', border: '#A7F3D0', icon: CheckCircle2, label: 'VERIFIED' };
       case 'SUBMITTED':
       case 'UNDER_REVIEW':
         return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', icon: Clock, label: 'SUBMITTED' };
@@ -128,97 +137,35 @@ export default function FacultyAchievementsManager({ currentUser, onDataChange }
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.4rem', width: '100%' }}>
+    <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.4rem' }}>
       {/* 1. Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.74rem', color: '#64748B', marginBottom: '0.25rem' }}>
-            <span>Dashboard</span>
-            <ChevronRight size={12} />
-            <span>Faculty Development</span>
-            <ChevronRight size={12} />
-            <span style={{ color: '#0F172A', fontWeight: 700 }}>Faculty Achievements</span>
-          </div>
-
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.25rem 0', fontFamily: 'Cinzel, Georgia, serif' }}>
-            Faculty Achievements & Professional Development
-          </h1>
-          <p style={{ fontSize: '0.82rem', color: '#64748B', margin: 0 }}>
-            Individual faculty professional achievements: FDP attendance, external workshops, certifications, invited lectures, and awards (NAAC Criterion 6 Evidence).
-          </p>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={() => exportToCSV('faculty-ach')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}
-          >
-            <Download size={14} /> CSV
-          </button>
-          <button
-            type="button"
-            onClick={() => exportToExcel('faculty-ach')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#10B981', cursor: 'pointer' }}
-          >
-            <FileText size={14} /> Excel
-          </button>
-          <button
-            type="button"
-            onClick={() => exportToPDF('faculty-ach')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#DC2626', cursor: 'pointer' }}
-          >
-            <Printer size={14} /> PDF
-          </button>
-
-          {canCreate && (
-            <button
-              type="button"
-              onClick={() => { setEditingItem(null); setWizardOpen(true); }}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                background: 'linear-gradient(135deg, #F1C40F 0%, #D4AF37 100%)',
-                color: '#070F1E',
-                padding: '0.55rem 1.05rem',
-                borderRadius: '8px',
-                fontWeight: 800,
-                fontSize: '0.8rem',
-                border: 'none',
-                cursor: 'pointer',
-                boxShadow: '0 2px 10px rgba(212, 175, 55, 0.35)'
-              }}
-              className="hover:scale-105 transition-transform"
-            >
-              <Plus size={15} /> Record Faculty Achievement
-            </button>
-          )}
-        </div>
-      </div>
+      <ModulePageHeader
+        breadcrumbs={[
+          { label: 'Dashboard' },
+          { label: 'Faculty Development' },
+          { label: 'Faculty Achievements' }
+        ]}
+        title="Faculty Achievements & Professional Development"
+        subtitle="Individual faculty professional achievements: FDP attendance, external workshops, certifications, invited lectures, and awards (NAAC Criterion 6 Evidence)."
+        onExportCSV={() => exportToCSV('faculty-ach')}
+        onExportExcel={() => exportToExcel('faculty-ach')}
+        onExportPDF={() => exportToPDF('faculty-ach')}
+        primaryAction={canCreate ? {
+          label: 'Record Faculty Achievement',
+          icon: Plus,
+          onClick: () => { setEditingItem(null); setWizardOpen(true); }
+        } : null}
+      />
 
       {/* 2. KPI Summary Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.85rem' }}>
-        {[
-          { label: 'Total Achievements', value: stats.total, color: '#0F172A', icon: GraduationCap, bg: '#F8FAFC' },
-          { label: 'Active Faculty', value: stats.uniqueFaculty, color: '#059669', icon: CheckCircle2, bg: '#ECFDF5' },
-          { label: 'FDPs Completed', value: stats.fdps, color: '#2563EB', icon: BookOpen, bg: '#EFF6FF' },
-          { label: 'Training Programmes', value: stats.training, color: '#7C3AED', icon: Award, bg: '#F5F3FF' },
-          { label: 'Awards & Honors', value: stats.awards, color: '#D97706', icon: Sparkles, bg: '#FEFCE8' },
-          { label: 'Pending Verification', value: stats.pending, color: '#DC2626', icon: AlertTriangle, bg: '#FEF2F2' }
-        ].map((k, i) => {
-          const Icon = k.icon;
-          return (
-            <div key={i} style={{ background: k.bg, padding: '1rem', borderRadius: '12px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>{k.label}</span>
-                <Icon size={16} style={{ color: k.color }} />
-              </div>
-              <div style={{ fontSize: '1.45rem', fontWeight: 800, color: k.color, fontFamily: 'Cinzel, serif' }}>{k.value}</div>
-            </div>
-          );
-        })}
-      </div>
+      <AnimatedKpiGrid minWidth="160px">
+        <MotionKpiCard label="Total Achievements" value={stats.total} icon={GraduationCap} color="#0F172A" bg="#F8FAFC" />
+        <MotionKpiCard label="Active Faculty" value={stats.uniqueFaculty} icon={CheckCircle2} color="#059669" bg="#ECFDF5" />
+        <MotionKpiCard label="FDPs Completed" value={stats.fdps} icon={BookOpen} color="#2563EB" bg="#EFF6FF" />
+        <MotionKpiCard label="Training Programmes" value={stats.training} icon={Award} color="#7C3AED" bg="#F5F3FF" />
+        <MotionKpiCard label="Awards & Honors" value={stats.awards} icon={Sparkles} color="#D97706" bg="#FEFCE8" />
+        <MotionKpiCard label="Pending Verification" value={stats.pending} icon={AlertTriangle} color="#DC2626" bg="#FEF2F2" />
+      </AnimatedKpiGrid>
 
       {/* 3. Search & Filters */}
       <div style={{ background: '#FFFFFF', padding: '1rem 1.25rem', borderRadius: '14px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
@@ -497,6 +444,6 @@ export default function FacultyAchievementsManager({ currentUser, onDataChange }
           </div>
         </div>
       )}
-    </div>
+    </MotionPage>
   );
 }

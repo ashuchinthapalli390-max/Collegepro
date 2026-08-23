@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   Trophy, 
   Briefcase, 
@@ -28,6 +29,7 @@ import {
   getPlacementRecords,
   getBoSMeetings
 } from '../../data/portalStore.js';
+import { routeVariants } from '../../lib/motion/variants.js';
 
 export default function MadamShowcase({ onOpenPortal }) {
   const [activeModuleTab, setActiveModuleTab] = useState('achievements');
@@ -61,7 +63,13 @@ export default function MadamShowcase({ onOpenPortal }) {
     <section style={{ padding: '5rem 0', background: '#FFFFFF' }}>
       <div className="container">
         {/* Section Header */}
-        <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+        <motion.div 
+          style={{ textAlign: 'center', marginBottom: '3rem' }}
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 0.4 }}
+        >
           <span className="badge badge-gold" style={{ marginBottom: '0.6rem' }}>
             Madam's Academic Modules & Student Showcase
           </span>
@@ -71,7 +79,7 @@ export default function MadamShowcase({ onOpenPortal }) {
           <p style={{ color: '#64748B', maxWidth: '750px', margin: '0 auto', fontSize: '1.05rem' }}>
             Comprehensive institutional records covering student awards, national hackathons, global internships, Board of Studies meetings, faculty development programs, and enterprise placements.
           </p>
-        </div>
+        </motion.div>
 
         {/* Horizontal Module Scrollbar */}
         <div style={{
@@ -88,8 +96,10 @@ export default function MadamShowcase({ onOpenPortal }) {
             const Icon = tab.icon;
             const isActive = activeModuleTab === tab.id;
             return (
-              <button
+              <motion.button
                 key={tab.id}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => setActiveModuleTab(tab.id)}
                 style={{
                   padding: '0.6rem 1.1rem',
@@ -103,21 +113,23 @@ export default function MadamShowcase({ onOpenPortal }) {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.4rem',
-                  transition: 'all 0.2s ease'
+                  cursor: 'pointer'
                 }}
               >
                 <Icon size={15} /> {tab.label}
-              </button>
+              </motion.button>
             );
           })}
         </div>
 
-        {/* 1. Student Achievements */}
-        {activeModuleTab === 'achievements' && (
-          achievements.length === 0 ? (
-            <div style={{ padding: '3.5rem 1.5rem', background: '#F8FAFC', borderRadius: '16px', border: '1px dashed #CBD5E1', textAlign: 'center', color: '#64748B' }}>
-              <div style={{ fontSize: '1rem', fontWeight: 700, color: '#0F172A', marginBottom: '0.35rem' }}>No Student Achievements Recorded</div>
-              <div style={{ fontSize: '0.84rem' }}>Verified state and national level competition achievements will appear here once approved.</div>
+        <AnimatePresence mode="wait">
+          <motion.div key={activeModuleTab} variants={routeVariants} initial="initial" animate="animate" exit="exit">
+            {/* 1. Student Achievements */}
+            {activeModuleTab === 'achievements' && (
+              achievements.length === 0 ? (
+                <div style={{ padding: '3.5rem 1.5rem', background: '#F8FAFC', borderRadius: '16px', border: '1px dashed #CBD5E1', textAlign: 'center', color: '#64748B' }}>
+                  <div style={{ fontSize: '1rem', fontWeight: 700, color: '#0F172A', marginBottom: '0.35rem' }}>No Student Achievements Recorded</div>
+                  <div style={{ fontSize: '0.84rem' }}>Verified state and national level competition achievements will appear here once approved.</div>
             </div>
           ) : (
             <div className="grid-3" style={{ gap: '1.5rem' }}>
@@ -510,7 +522,9 @@ export default function MadamShowcase({ onOpenPortal }) {
             </div>
           </div>
         )}
-      </div>
-    </section>
+      </motion.div>
+    </AnimatePresence>
+  </div>
+</section>
   );
 }

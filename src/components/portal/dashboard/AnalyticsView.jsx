@@ -29,6 +29,16 @@ import {
   exportToCSV
 } from '../../../data/portalStore.js';
 import { DEPARTMENTS } from '../../../data/masterData.js';
+import { 
+  MotionPage, 
+  ModulePageHeader, 
+  AnimatedKpiGrid, 
+  MotionKpiCard, 
+  MotionTable, 
+  MotionTableRow, 
+  MotionEmptyState,
+  MotionButton 
+} from '../../motion/index.js';
 
 export default function AnalyticsView({ currentUser, onNavigate }) {
   const pubs = getPublications();
@@ -63,70 +73,34 @@ export default function AnalyticsView({ currentUser, onNavigate }) {
   }, [pubs, patents, internships, memberships, nptel]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem', width: '100%' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.74rem', color: '#64748B', marginBottom: '0.25rem' }}>
-            <span>Dashboard</span>
-            <ChevronRight size={12} />
-            <span>Executive Intelligence</span>
-            <ChevronRight size={12} />
-            <span style={{ color: '#0F172A', fontWeight: 700 }}>Quick Analytics</span>
-          </div>
+    <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.4rem' }}>
+      {/* 1. Header */}
+      <ModulePageHeader
+        breadcrumbs={[
+          { label: 'Dashboard' },
+          { label: 'Governance' },
+          { label: 'Executive Analytics' }
+        ]}
+        title="Institutional Velocity & Performance Analytics"
+        subtitle="Cross-departmental research indexing velocity, IP generation, MoUs, faculty achievements, and accreditation indices."
+        onExportCSV={() => exportToCSV('analytics_overview')}
+        onExportExcel={() => exportToExcel('analytics_overview')}
+        onExportPDF={() => exportToPDF('analytics_overview')}
+      />
 
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.25rem 0', fontFamily: 'Cinzel, Georgia, serif' }}>
-            Executive Analytics & Performance Insights
-          </h1>
-          <p style={{ fontSize: '0.82rem', color: '#64748B', margin: 0 }}>
-            Real-time cross-departmental research velocity, NAAC Criterion 3 indexing, student outcome metrics, and MoUs.
-          </p>
-        </div>
+      {/* 2. KPI Summary Cards */}
+      <AnimatedKpiGrid minWidth="150px">
+        <MotionKpiCard label="Research Papers" value={pubs.length} icon={FileText} color="#2563EB" bg="#EFF6FF" />
+        <MotionKpiCard label="Patents / IPR" value={patents.length} icon={Lightbulb} color="#D97706" bg="#FEFCE8" />
+        <MotionKpiCard label="Active MoUs" value={mous.length} icon={Award} color="#7C3AED" bg="#F5F3FF" />
+        <MotionKpiCard label="Student Internships" value={internships.length} icon={Briefcase} color="#0D9488" bg="#F0FDFA" />
+        <MotionKpiCard label="Student Honors" value={achievements.length} icon={Sparkles} color="#EC4899" bg="#FDF2F8" />
+        <MotionKpiCard label="Faculty Memberships" value={memberships.length} icon={Users} color="#059669" bg="#ECFDF5" />
+      </AnimatedKpiGrid>
 
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          <button
-            type="button"
-            onClick={() => exportToCSV('publications')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}
-          >
-            <Download size={14} /> Export CSV
-          </button>
-          <button
-            type="button"
-            onClick={() => exportToExcel('publications')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#10B981', cursor: 'pointer' }}
-          >
-            <FileText size={14} /> Excel Summary
-          </button>
-        </div>
-      </div>
-
-      {/* Top Level Metric Highlights */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.85rem' }}>
-        {[
-          { label: 'Total Publications', value: pubs.length, color: '#2563EB', icon: FileText, bg: '#EFF6FF' },
-          { label: 'Patents & IPR', value: patents.length, color: '#D97706', icon: Lightbulb, bg: '#FEFCE8' },
-          { label: 'Active MoUs', value: mous.length, color: '#059669', icon: Award, bg: '#ECFDF5' },
-          { label: 'Student Internships', value: internships.length, color: '#7C3AED', icon: Briefcase, bg: '#F5F3FF' },
-          { label: 'Student Awards', value: achievements.length, color: '#DC2626', icon: Award, bg: '#FEF2F2' },
-          { label: 'NPTEL Certified', value: nptel.length, color: '#0D9488', icon: BookOpen, bg: '#F0FDFA' }
-        ].map((k, i) => {
-          const Icon = k.icon;
-          return (
-            <div key={i} style={{ background: k.bg, padding: '1rem', borderRadius: '12px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>{k.label}</span>
-                <Icon size={16} style={{ color: k.color }} />
-              </div>
-              <div style={{ fontSize: '1.45rem', fontWeight: 800, color: k.color, fontFamily: 'Cinzel, serif' }}>{k.value}</div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Departmental Performance Matrix */}
-      <div style={{ background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', padding: '1.25rem' }}>
-        <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', margin: '0 0 1rem 0', fontFamily: 'Cinzel, serif' }}>
+      {/* 3. Departmental Velocity Leaderboard */}
+      <div style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '1.25rem', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+        <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', margin: '0 0 1rem 0' }}>
           Departmental Research & Accreditation Velocity Breakdown
         </h3>
         <div style={{ overflowX: 'auto' }}>
@@ -165,6 +139,6 @@ export default function AnalyticsView({ currentUser, onNavigate }) {
           </table>
         </div>
       </div>
-    </div>
+    </MotionPage>
   );
 }

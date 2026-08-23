@@ -56,6 +56,16 @@ import {
 } from '../../data/portalStore.js';
 import { DEPARTMENTS, BRANDING_LOGOS } from '../../data/masterData.js';
 import BosWizardModal from './bos/BosWizardModal.jsx';
+import { 
+  MotionPage, 
+  ModulePageHeader, 
+  AnimatedKpiGrid, 
+  MotionKpiCard, 
+  MotionTable, 
+  MotionTableRow, 
+  MotionEmptyState,
+  MotionButton 
+} from '../motion/index.js';
 
 export default function BoSMeetingManager({ currentUser, onDataChange }) {
   const [meetings, setMeetings] = useState([]);
@@ -229,99 +239,34 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.4rem', width: '100%' }}>
+    <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.4rem' }}>
       {/* 1. Page Title & Action Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.74rem', color: '#64748B', marginBottom: '0.25rem' }}>
-            <span>Dashboard</span>
-            <ChevronRight size={12} />
-            <span>Academic Governance</span>
-            <ChevronRight size={12} />
-            <span style={{ color: '#0F172A', fontWeight: 700 }}>Board of Studies (BoS)</span>
-          </div>
-
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.25rem 0', fontFamily: 'Cinzel, Georgia, serif' }}>
-            Board of Studies (BoS) Academic Governance
-          </h1>
-          <p style={{ fontSize: '0.82rem', color: '#64748B', margin: 0 }}>
-            Statutory repository for department BoS regulations, external nominees, meeting minutes, and compliance approvals.
-          </p>
-        </div>
-
-        {/* Action Toolbar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          {canCreate && (
-            <button
-              type="button"
-              onClick={handleOpenCreate}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                background: 'linear-gradient(135deg, #F1C40F 0%, #D4AF37 100%)',
-                color: '#070F1E',
-                padding: '0.55rem 1.05rem',
-                borderRadius: '8px',
-                fontWeight: 800,
-                fontSize: '0.8rem',
-                border: 'none',
-                cursor: 'pointer',
-                boxShadow: '0 2px 10px rgba(212, 175, 55, 0.35)'
-              }}
-              className="hover:scale-105 transition-transform"
-            >
-              <Plus size={15} /> Create BoS Record
-            </button>
-          )}
-        </div>
-      </div>
+      <ModulePageHeader
+        breadcrumbs={[
+          { label: 'Dashboard' },
+          { label: 'Academic Governance' },
+          { label: 'Board of Studies (BoS)' }
+        ]}
+        title="Board of Studies (BoS) Academic Governance"
+        subtitle="Statutory repository for department BoS regulations, external nominees, meeting minutes, and compliance approvals."
+        onExportCSV={() => exportToCSV('bos_meetings')}
+        onExportExcel={() => exportToExcel('bos_meetings')}
+        onExportPDF={() => exportToPDF('bos_meetings')}
+        primaryAction={canCreate ? {
+          label: 'Create BoS Record',
+          icon: Plus,
+          onClick: handleOpenCreate
+        } : null}
+      />
 
       {/* 2. Mini KPI Stats Summary Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.85rem' }}>
-        {[
-          { label: 'Total BoS Meetings', value: totalCount, icon: BookOpen, color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.08)' },
-          { label: 'Draft Meetings', value: draftCount, icon: Edit3, color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.08)' },
-          { label: 'Awaiting Review', value: reviewCount, icon: Clock, color: '#8B5CF6', bg: 'rgba(139, 92, 246, 0.08)' },
-          { label: 'Approved Records', value: approvedCount, icon: CheckCircle2, color: '#10B981', bg: 'rgba(16, 185, 129, 0.08)' },
-          { label: 'AY 2025-26 Meetings', value: currentYearCount, icon: Calendar, color: '#D4AF37', bg: 'rgba(212, 175, 55, 0.08)' }
-        ].map((st, idx) => {
-          const StIcon = st.icon;
-          return (
-            <div
-              key={idx}
-              style={{
-                background: '#FFFFFF',
-                borderRadius: '12px',
-                padding: '0.9rem 1rem',
-                border: '1px solid #E2E8F0',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.02)'
-              }}
-            >
-              <div style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '8px',
-                background: st.bg,
-                color: st.color,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-              }}>
-                <StIcon size={18} />
-              </div>
-              <div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A', lineHeight: 1 }}>{st.value}</div>
-                <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '0.2rem' }}>{st.label}</div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      <AnimatedKpiGrid minWidth="180px">
+        <MotionKpiCard label="Total BoS Meetings" value={totalCount} icon={BookOpen} color="#3B82F6" bg="rgba(59, 130, 246, 0.08)" />
+        <MotionKpiCard label="Draft Meetings" value={draftCount} icon={Edit3} color="#F59E0B" bg="rgba(245, 158, 11, 0.08)" />
+        <MotionKpiCard label="Awaiting Review" value={reviewCount} icon={Clock} color="#8B5CF6" bg="rgba(139, 92, 246, 0.08)" />
+        <MotionKpiCard label="Approved Records" value={approvedCount} icon={CheckCircle2} color="#10B981" bg="rgba(16, 185, 129, 0.08)" />
+        <MotionKpiCard label="AY 2025-26 Meetings" value={currentYearCount} icon={Calendar} color="#D4AF37" bg="rgba(212, 175, 55, 0.08)" />
+      </AnimatedKpiGrid>
 
       {/* 3. Filter & Search Toolbar */}
       <div style={{
@@ -935,6 +880,6 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
           </motion.div>
         </div>
       )}
-    </div>
+    </MotionPage>
   );
 }

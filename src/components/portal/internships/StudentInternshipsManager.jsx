@@ -31,6 +31,16 @@ import {
   exportToPDF
 } from '../../../data/portalStore.js';
 import StudentInternshipWizardModal from './StudentInternshipWizardModal.jsx';
+import { 
+  MotionPage, 
+  ModulePageHeader, 
+  AnimatedKpiGrid, 
+  MotionKpiCard, 
+  MotionTable, 
+  MotionTableRow, 
+  MotionEmptyState,
+  MotionButton 
+} from '../../motion/index.js';
 
 export default function StudentInternshipsManager({ currentUser, onDataChange }) {
   const [dataVersion, setDataVersion] = useState(0);
@@ -70,31 +80,32 @@ export default function StudentInternshipsManager({ currentUser, onDataChange })
     return { total, ongoing, completed, paid, industry, pendingReview };
   }, [internships]);
 
+  // Filtered internships
   const filteredInternships = useMemo(() => {
     return internships.filter(item => {
       const q = searchQuery.toLowerCase().trim();
       const matchSearch = !q ||
-        (item.rollNumber && item.rollNumber.toLowerCase().includes(q)) ||
+        (item.internshipNumber && item.internshipNumber.toLowerCase().includes(q)) ||
         (item.studentName && item.studentName.toLowerCase().includes(q)) ||
-        (item.organization && item.organization.toLowerCase().includes(q)) ||
-        (item.internshipTitle && item.internshipTitle.toLowerCase().includes(q)) ||
-        (item.domain && item.domain.toLowerCase().includes(q));
+        (item.rollNumber && item.rollNumber.toLowerCase().includes(q)) ||
+        (item.organizationName && item.organizationName.toLowerCase().includes(q)) ||
+        (item.role && item.role.toLowerCase().includes(q));
 
-      const itemDept = item.department || item.branch || '';
+      const itemDept = item.department || '';
       const matchDept = selectedDept === 'ALL' || itemDept.toLowerCase().includes(selectedDept.toLowerCase());
       const matchAy = selectedAy === 'ALL' || item.academicYear === selectedAy;
       const matchMode = selectedMode === 'ALL' || item.mode === selectedMode;
       const matchType = selectedType === 'ALL' || item.internshipType === selectedType;
-      const matchStipend = selectedStipend === 'ALL' || (selectedStipend === 'YES' ? (item.hasStipend === 'Yes' || item.stipend === 'Yes') : (item.hasStipend === 'No' || item.stipend === 'No'));
-      
-      const itemStatus = item.workflowStatus || (item.status === 'Verified' ? 'VERIFIED' : 'DRAFT');
-      const matchStatus = selectedStatus === 'ALL' || itemStatus === selectedStatus;
+      const matchStipend = selectedStipend === 'ALL' ||
+        (selectedStipend === 'PAID' && (item.hasStipend === 'Yes' || item.stipend === 'Yes')) ||
+        (selectedStipend === 'UNPAID' && (item.hasStipend !== 'Yes' && item.stipend !== 'Yes'));
+      const matchStatus = selectedStatus === 'ALL' || item.internshipStatus === selectedStatus;
 
       return matchSearch && matchDept && matchAy && matchMode && matchType && matchStipend && matchStatus;
     });
   }, [internships, searchQuery, selectedDept, selectedAy, selectedMode, selectedType, selectedStipend, selectedStatus]);
 
-  const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD' || currentUser?.role === 'FACULTY' || currentUser?.role === 'DATA_ENTRY';
+  const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD' || currentUser?.role === 'FACULTY';
   const canReview = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD';
 
   const handleExecuteReview = () => {
@@ -106,7 +117,7 @@ export default function StudentInternshipsManager({ currentUser, onDataChange })
   };
 
   const handleDelete = (item) => {
-    if (confirm(`Are you sure you want to delete internship record for ${item.studentName} at ${item.organization}?`)) {
+    if (window.confirm(`Are you sure you want to move internship "${item.studentName || item.internshipNumber}" to Recycle Bin?`)) {
       softDeleteInternship(item.id, currentUser);
       refresh();
     }
@@ -114,119 +125,47 @@ export default function StudentInternshipsManager({ currentUser, onDataChange })
 
   const getStatusBadge = (status) => {
     switch (status) {
-      case 'COMPLETED':
-      case 'APPROVED':
-        return { bg: '#ECFDF5', text: '#047857', border: '#A7F3D0', icon: CheckCircle2, label: 'COMPLETED' };
-      case 'VERIFIED':
-        return { bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0', icon: ShieldCheck, label: 'VERIFIED' };
-      case 'SUBMITTED':
-      case 'UNDER_REVIEW':
-        return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', icon: Clock, label: 'SUBMITTED' };
-      case 'NEEDS_REVISION':
-        return { bg: '#FEF2F2', text: '#DC2626', border: '#FECACA', icon: AlertTriangle, label: 'REVISION REQ.' };
-      case 'DRAFT':
+      case 'Completed':
+        return { bg: '#ECFDF5', text: '#065F46', border: '#A7F3D0', label: 'COMPLETED' };
+      case 'Ongoing':
+        return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', label: 'ONGOING' };
+      case 'Upcoming':
+        return { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A', label: 'UPCOMING' };
       default:
-        return { bg: '#FEFCE8', text: '#A16207', border: '#FEF08A', icon: Edit3, label: 'DRAFT' };
+        return { bg: '#F1F5F9', text: '#475569', border: '#CBD5E1', label: status || 'ACTIVE' };
     }
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.4rem', width: '100%' }}>
+    <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.4rem' }}>
       {/* 1. Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.74rem', color: '#64748B', marginBottom: '0.25rem' }}>
-            <span>Dashboard</span>
-            <ChevronRight size={12} />
-            <span>Student Development</span>
-            <ChevronRight size={12} />
-            <span style={{ color: '#0F172A', fontWeight: 700 }}>Student Internships</span>
-          </div>
-
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.25rem 0', fontFamily: 'Cinzel, Georgia, serif' }}>
-            Industry Internships & Practical Training
-          </h1>
-          <p style={{ fontSize: '0.82rem', color: '#64748B', margin: 0 }}>
-            Comprehensive institutional record for Summer, Short-Term, Long-Term, and Industry Internships (NBA Criterion 4 Evidence).
-          </p>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={() => exportToCSV('internships')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}
-          >
-            <Download size={14} /> CSV
-          </button>
-          <button
-            type="button"
-            onClick={() => exportToExcel('internships')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#10B981', cursor: 'pointer' }}
-          >
-            <FileText size={14} /> Excel
-          </button>
-          <button
-            type="button"
-            onClick={() => exportToPDF('internships')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#DC2626', cursor: 'pointer' }}
-          >
-            <Printer size={14} /> PDF
-          </button>
-
-          {canCreate && (
-            <button
-              type="button"
-              onClick={() => { setEditingItem(null); setWizardOpen(true); }}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                background: 'linear-gradient(135deg, #F1C40F 0%, #D4AF37 100%)',
-                color: '#070F1E',
-                padding: '0.55rem 1.05rem',
-                borderRadius: '8px',
-                fontWeight: 800,
-                fontSize: '0.8rem',
-                border: 'none',
-                cursor: 'pointer',
-                boxShadow: '0 2px 10px rgba(212, 175, 55, 0.35)'
-              }}
-              className="hover:scale-105 transition-transform"
-            >
-              <Plus size={15} /> Record Internship
-            </button>
-          )}
-        </div>
-      </div>
+      <ModulePageHeader
+        breadcrumbs={[
+          { label: 'Dashboard' },
+          { label: 'Student Development' },
+          { label: 'Student Internships' }
+        ]}
+        title="Industry Internships & Practical Training"
+        subtitle="Comprehensive institutional record for Summer, Short-Term, Long-Term, and Industry Internships (NBA Criterion 4 Evidence)."
+        onExportCSV={() => exportToCSV('internships')}
+        onExportExcel={() => exportToExcel('internships')}
+        onExportPDF={() => exportToPDF('internships')}
+        primaryAction={canCreate ? {
+          label: 'Record Internship',
+          icon: Plus,
+          onClick: () => { setEditingItem(null); setWizardOpen(true); }
+        } : null}
+      />
 
       {/* 2. KPI Summary Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.85rem' }}>
-        {[
-          { label: 'Total Internships', value: stats.total, color: '#0F172A', icon: Briefcase, bg: '#F8FAFC' },
-          { label: 'Ongoing Training', value: stats.ongoing, color: '#2563EB', icon: Clock, bg: '#EFF6FF' },
-          { label: 'Completed Internships', value: stats.completed, color: '#059669', icon: CheckCircle2, bg: '#ECFDF5' },
-          { label: 'Paid / Stipendiary', value: stats.paid, color: '#D97706', icon: Sparkles, bg: '#FEFCE8' },
-          { label: 'Industry Partners', value: stats.industry, color: '#7C3AED', icon: Building2, bg: '#F5F3FF' },
-          { label: 'Pending Verification', value: stats.pendingReview, color: '#DC2626', icon: AlertTriangle, bg: '#FEF2F2' }
-        ].map((k, i) => {
-          const Icon = k.icon;
-          return (
-            <div
-              key={i}
-              style={{ background: k.bg, padding: '1rem', borderRadius: '12px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>{k.label}</span>
-                <Icon size={16} style={{ color: k.color }} />
-              </div>
-              <div style={{ fontSize: '1.45rem', fontWeight: 800, color: k.color, fontFamily: 'Cinzel, serif' }}>
-                {k.value}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      <AnimatedKpiGrid minWidth="160px">
+        <MotionKpiCard label="Total Internships" value={stats.total} icon={Briefcase} color="#0F172A" bg="#F8FAFC" />
+        <MotionKpiCard label="Ongoing Training" value={stats.ongoing} icon={Clock} color="#2563EB" bg="#EFF6FF" />
+        <MotionKpiCard label="Completed Internships" value={stats.completed} icon={CheckCircle2} color="#059669" bg="#ECFDF5" />
+        <MotionKpiCard label="Paid / Stipendiary" value={stats.paid} icon={Sparkles} color="#D97706" bg="#FEFCE8" />
+        <MotionKpiCard label="Industry Partners" value={stats.industry} icon={Building2} color="#7C3AED" bg="#F5F3FF" />
+        <MotionKpiCard label="Pending Verification" value={stats.pendingReview} icon={AlertTriangle} color="#DC2626" bg="#FEF2F2" />
+      </AnimatedKpiGrid>
 
       {/* 3. Search & Filter Bar */}
       <div style={{
@@ -536,6 +475,6 @@ export default function StudentInternshipsManager({ currentUser, onDataChange })
           </div>
         </div>
       )}
-    </div>
+    </MotionPage>
   );
 }

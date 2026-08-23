@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'motion/react';
 import { 
   Compass, 
   Layers, 
   FlaskConical,
   GraduationCap
 } from 'lucide-react';
+import { useSafeMotion } from '../../lib/motion/reducedMotion.js';
+import { fadeUp, staggerContainer, staggerChild } from '../../lib/motion/variants.js';
 
 export default function Hero({ onExploreClick, onGoToResearch, onGoToDepartments }) {
+  const { safeVariant } = useSafeMotion();
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const videoRef = useRef(null);
 
@@ -100,9 +104,14 @@ export default function Hero({ onExploreClick, onGoToResearch, onGoToDepartments
 
       {/* Main Hero Typography & CTAs */}
       <div className="container" style={{ position: 'relative', zIndex: 10, paddingTop: '3.5rem', paddingBottom: '3.5rem', width: '100%' }}>
-        <div style={{ maxWidth: '850px' }}>
+        <motion.div 
+          style={{ maxWidth: '850px' }}
+          variants={staggerContainer}
+          initial="hidden"
+          animate="show"
+        >
           {/* Eyebrow Accreditation Tag */}
-          <div style={{ marginBottom: '1.2rem' }}>
+          <motion.div variants={staggerChild} style={{ marginBottom: '1.2rem' }}>
             <span style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -120,18 +129,21 @@ export default function Hero({ onExploreClick, onGoToResearch, onGoToDepartments
             }}>
               Autonomous • Estd. 1998 • Affiliated to JNTUK
             </span>
-          </div>
+          </motion.div>
 
           {/* Main Institution Title with Responsive clamp() */}
-          <h1 style={{
-            fontFamily: 'Cinzel, serif',
-            fontSize: 'clamp(2.2rem, 5.2vw, 3.8rem)',
-            fontWeight: 800,
-            color: '#FFFFFF',
-            lineHeight: 1.15,
-            marginBottom: '1.1rem',
-            textShadow: '0 4px 25px rgba(0,0,0,0.7)'
-          }}>
+          <motion.h1 
+            variants={staggerChild}
+            style={{
+              fontFamily: 'Cinzel, serif',
+              fontSize: 'clamp(2.2rem, 5.2vw, 3.8rem)',
+              fontWeight: 800,
+              color: '#FFFFFF',
+              lineHeight: 1.15,
+              marginBottom: '1.1rem',
+              textShadow: '0 4px 25px rgba(0,0,0,0.7)'
+            }}
+          >
             NARASARAOPETA <br />
             <span style={{
               background: 'linear-gradient(135deg, #FFF6D6 0%, #D4AF37 50%, #F5A623 100%)',
@@ -140,40 +152,49 @@ export default function Hero({ onExploreClick, onGoToResearch, onGoToDepartments
             }}>
               ENGINEERING COLLEGE
             </span>
-          </h1>
+          </motion.h1>
 
           {/* Concise Institutional Subtitle */}
-          <p style={{
-            fontSize: 'clamp(0.98rem, 1.8vw, 1.2rem)',
-            color: '#E2E8F0',
-            lineHeight: 1.65,
-            marginBottom: '2.2rem',
-            maxWidth: '720px',
-            textShadow: '0 2px 10px rgba(0,0,0,0.5)'
-          }}>
+          <motion.p 
+            variants={staggerChild}
+            style={{
+              fontSize: 'clamp(0.98rem, 1.8vw, 1.2rem)',
+              color: '#E2E8F0',
+              lineHeight: 1.65,
+              marginBottom: '2.2rem',
+              maxWidth: '720px',
+              textShadow: '0 2px 10px rgba(0,0,0,0.5)'
+            }}
+          >
             Engineering • Research • Innovation. Nurturing multidisciplinary research in AICTE IDEA Labs, 
             cutting-edge patents, and global leadership across 13 departments.
-          </p>
+          </motion.p>
 
           {/* Clean Action Buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-            <button 
+          <motion.div variants={staggerChild} style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+            <motion.button 
+              whileHover={{ scale: 1.03, y: -1 }}
+              whileTap={{ scale: 0.97 }}
               onClick={onExploreClick}
               className="btn-primary"
               style={{ padding: '0.8rem 1.8rem', fontSize: '0.96rem' }}
             >
               <Compass size={18} /> Explore NEC
-            </button>
+            </motion.button>
 
-            <button 
+            <motion.button 
+              whileHover={{ scale: 1.03, y: -1 }}
+              whileTap={{ scale: 0.97 }}
               onClick={onGoToDepartments}
               className="btn-secondary"
               style={{ padding: '0.8rem 1.8rem', fontSize: '0.96rem' }}
             >
               <Layers size={18} /> Explore Departments
-            </button>
+            </motion.button>
 
-            <button 
+            <motion.button 
+              whileHover={{ scale: 1.03, y: -1 }}
+              whileTap={{ scale: 0.97 }}
               onClick={onGoToResearch}
               style={{
                 display: 'inline-flex',
@@ -183,15 +204,18 @@ export default function Hero({ onExploreClick, onGoToResearch, onGoToDepartments
                 fontWeight: 700,
                 fontSize: '0.95rem',
                 padding: '0.8rem 1rem',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
                 transition: 'color 0.2s ease'
               }}
               onMouseEnter={(e) => e.currentTarget.style.color = '#F1C40F'}
               onMouseLeave={(e) => e.currentTarget.style.color = '#D4AF37'}
             >
               <FlaskConical size={17} /> Research & Innovation →
-            </button>
-          </div>
-        </div>
+            </motion.button>
+          </motion.div>
+        </motion.div>
       </div>
     </section>
   );

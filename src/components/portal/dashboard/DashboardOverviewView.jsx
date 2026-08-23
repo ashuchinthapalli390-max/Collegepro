@@ -21,16 +21,24 @@ import {
   ExternalLink,
   Sparkles
 } from 'lucide-react';
+import { 
+  MotionPage, 
+  AnimatedKpiGrid, 
+  MotionKpiCard, 
+  MotionNumber, 
+  MotionButton, 
+  MotionCard 
+} from '../../motion/index.js';
 
 export default function DashboardOverviewView({
   currentUser,
-  usersCount = 12,
-  facultyCount = 42,
-  publicationsCount = 184,
-  patentsCount = 28,
-  mousCount = 35,
-  achievementsCount = 92,
-  activeSessionsCount = 2,
+  usersCount = 0,
+  facultyCount = 0,
+  publicationsCount = 0,
+  patentsCount = 0,
+  mousCount = 0,
+  achievementsCount = 0,
+  activeSessionsCount = 0,
   onNavigate,
   onOpenQuickAction,
   onOpenSync
@@ -165,7 +173,7 @@ export default function DashboardOverviewView({
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem', width: '100%' }}>
+    <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
       {/* 1. Welcome & Governance Header Strip */}
       <div style={{
         background: 'linear-gradient(135deg, #070F1E 0%, #0B192C 70%, #122846 100%)',
@@ -219,11 +227,17 @@ export default function DashboardOverviewView({
             margin: '0 0 0.35rem 0',
             fontFamily: 'Cinzel, Georgia, serif'
           }}>
-            Welcome back, <span style={{ color: '#F1C40F' }}>{displayName}</span>
+            Welcome Back, {displayName}
           </h1>
 
-          <p style={{ color: '#CBD5E1', fontSize: '0.85rem', margin: 0, maxWidth: '640px', lineHeight: 1.5 }}>
-            Executive administration dashboard for Narasaraopeta Engineering College. All autonomous academic modules, research archives, and IAM security controls are live and synced.
+          <p style={{
+            color: '#CBD5E1',
+            fontSize: '0.85rem',
+            margin: 0,
+            maxWidth: '650px',
+            lineHeight: 1.45
+          }}>
+            Narasaraopeta Engineering College Autonomous Academic Management Portal. You have active oversight across all 13 academic departments and research centers.
           </p>
         </div>
 
@@ -283,11 +297,7 @@ export default function DashboardOverviewView({
           <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Real-time verified data</span>
         </div>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '1rem'
-        }}>
+        <AnimatedKpiGrid minWidth="200px" gap="1rem">
           {kpiCards.map((card, idx) => {
             const CardIcon = card.icon;
             return (
@@ -328,8 +338,8 @@ export default function DashboardOverviewView({
                 </div>
 
                 <div>
-                  <div style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.1, marginBottom: '0.25rem' }}>
-                    {card.value}
+                  <div style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.1, marginBottom: '0.25rem', fontFamily: 'Cinzel, serif' }}>
+                    <MotionNumber value={card.value} />
                   </div>
                   <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '0.2rem' }}>
                     {card.title}
@@ -341,7 +351,7 @@ export default function DashboardOverviewView({
               </motion.div>
             );
           })}
-        </div>
+        </AnimatedKpiGrid>
       </div>
 
       {/* 3. Action Required & Alerts Banner */}
@@ -532,6 +542,6 @@ export default function DashboardOverviewView({
           </div>
         </div>
       </div>
-    </div>
+    </MotionPage>
   );
 }

@@ -38,6 +38,16 @@ import {
   exportToPDF
 } from '../../../data/portalStore.js';
 import PublicationWizardModal from './PublicationWizardModal.jsx';
+import { 
+  MotionPage, 
+  ModulePageHeader, 
+  AnimatedKpiGrid, 
+  MotionKpiCard, 
+  MotionTable, 
+  MotionTableRow, 
+  MotionEmptyState,
+  MotionButton 
+} from '../../motion/index.js';
 
 const QUICK_FILTER_TABS = [
   { id: 'ALL', label: 'All Publications' },
@@ -102,25 +112,27 @@ export default function PublicationsManager({ currentUser, onDataChange, onOpenS
         (item.conferenceName && item.conferenceName.toLowerCase().includes(q)) ||
         (item.authors && item.authors.some(a => a.name && a.name.toLowerCase().includes(q)));
 
-      // Quick Tab Filter
-      let matchTab = true;
-      if (selectedQuickTab === 'JOURNAL') matchTab = item.publicationType === 'Journal Article';
-      else if (selectedQuickTab === 'CONFERENCE') matchTab = item.publicationType === 'Conference Paper';
-      else if (selectedQuickTab === 'SCOPUS') matchTab = !!item.isScopusIndexed;
-      else if (selectedQuickTab === 'WOS') matchTab = !!item.isWosIndexed;
-      else if (selectedQuickTab === 'PENDING') matchTab = item.workflowStatus === 'SUBMITTED' || item.workflowStatus === 'UNDER_REVIEW' || item.workflowStatus === 'IMPORTED_PENDING_REVIEW';
-      else if (selectedQuickTab === 'IMPORTED') matchTab = item.sources && item.sources.some(s => s !== 'MANUAL');
-
-      const itemDept = item.department || '';
-      const matchDept = selectedDept === 'ALL' || itemDept.toLowerCase().includes(selectedDept.toLowerCase());
+      const matchDept = selectedDept === 'ALL' || (item.department || '').toLowerCase().includes(selectedDept.toLowerCase());
       const matchAy = selectedAy === 'ALL' || item.academicYear === selectedAy;
       const matchType = selectedType === 'ALL' || item.publicationType === selectedType;
-      const matchScopus = selectedScopusFilter === 'ALL' || (selectedScopusFilter === 'YES' ? item.isScopusIndexed : !item.isScopusIndexed);
+      const matchScopus = selectedScopusFilter === 'ALL' ||
+        (selectedScopusFilter === 'SCOPUS' && item.isScopusIndexed) ||
+        (selectedScopusFilter === 'WOS' && item.isWosIndexed) ||
+        (selectedScopusFilter === 'BOTH' && item.isScopusIndexed && item.isWosIndexed);
       const matchWorkflow = selectedWorkflowStatus === 'ALL' || item.workflowStatus === selectedWorkflowStatus;
 
-      return matchSearch && matchTab && matchDept && matchAy && matchType && matchScopus && matchWorkflow;
+      // Quick Tabs Filter
+      let matchQuick = true;
+      if (selectedQuickTab === 'JOURNAL') matchQuick = item.publicationType === 'Journal Article';
+      if (selectedQuickTab === 'CONFERENCE') matchQuick = item.publicationType === 'Conference Paper';
+      if (selectedQuickTab === 'SCOPUS') matchQuick = !!item.isScopusIndexed;
+      if (selectedQuickTab === 'WOS') matchQuick = !!item.isWosIndexed;
+      if (selectedQuickTab === 'PENDING') matchQuick = item.workflowStatus === 'SUBMITTED' || item.workflowStatus === 'UNDER_REVIEW' || item.workflowStatus === 'IMPORTED_PENDING_REVIEW';
+      if (selectedQuickTab === 'IMPORTED') matchQuick = item.source === 'OPENALEX_LOCAL_INDEX' || item.source === 'SCOPUS_API' || item.source === 'WOS_API';
+
+      return matchSearch && matchDept && matchAy && matchType && matchScopus && matchWorkflow && matchQuick;
     });
-  }, [publications, searchQuery, selectedQuickTab, selectedDept, selectedAy, selectedType, selectedScopusFilter, selectedWorkflowStatus]);
+  }, [publications, searchQuery, selectedDept, selectedAy, selectedType, selectedScopusFilter, selectedWorkflowStatus, selectedQuickTab]);
 
   // Permissions
   const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD' || currentUser?.role === 'FACULTY';
@@ -135,7 +147,7 @@ export default function PublicationsManager({ currentUser, onDataChange, onOpenS
   };
 
   const handleDelete = (item) => {
-    if (confirm(`Are you sure you want to soft-delete publication record ${item.publicationRecordNumber || item.id} (${item.title})?`)) {
+    if (window.confirm(`Are you sure you want to move publication "${item.title}" to Recycle Bin?`)) {
       softDeletePublication(item.id, currentUser);
       refresh();
     }
@@ -145,11 +157,11 @@ export default function PublicationsManager({ currentUser, onDataChange, onOpenS
     switch (status) {
       case 'APPROVED':
         return { bg: '#ECFDF5', text: '#047857', border: '#A7F3D0', icon: CheckCircle2, label: 'APPROVED' };
-      case 'IMPORTED_PENDING_REVIEW':
-        return { bg: '#FDF4FF', text: '#9333EA', border: '#F5D0FE', icon: RefreshCw, label: 'SYNC REVIEW' };
       case 'SUBMITTED':
       case 'UNDER_REVIEW':
         return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', icon: Clock, label: 'UNDER REVIEW' };
+      case 'IMPORTED_PENDING_REVIEW':
+        return { bg: '#FDF4FF', text: '#7E22CE', border: '#F5D0FE', icon: Sparkles, label: 'IMPORTED (PENDING)' };
       case 'NEEDS_REVISION':
         return { bg: '#FEF2F2', text: '#DC2626', border: '#FECACA', icon: AlertTriangle, label: 'REVISION REQ.' };
       case 'ARCHIVED':
@@ -161,120 +173,57 @@ export default function PublicationsManager({ currentUser, onDataChange, onOpenS
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem', width: '100%' }}>
+    <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem' }}>
       {/* 1. Header & Quick Actions */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.74rem', color: '#64748B', marginBottom: '0.25rem' }}>
-            <span>Dashboard</span>
-            <ChevronRight size={12} />
-            <span>Research & Innovation</span>
-            <ChevronRight size={12} />
-            <span style={{ color: '#0F172A', fontWeight: 700 }}>Research Publications</span>
-          </div>
-
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.25rem 0', fontFamily: 'Cinzel, Georgia, serif' }}>
-            Research Publications
-          </h1>
-          <p style={{ fontSize: '0.82rem', color: '#64748B', margin: 0 }}>
-            Manage faculty and student research papers, conference publications, indexing and research identifiers.
-          </p>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+      <ModulePageHeader
+        breadcrumbs={[
+          { label: 'Dashboard' },
+          { label: 'Research & Innovation' },
+          { label: 'Research Publications' }
+        ]}
+        title="Research Publications"
+        subtitle="Manage faculty and student research papers, conference publications, indexing and research identifiers."
+        onExportCSV={() => exportToCSV('publications')}
+        onExportExcel={() => exportToExcel('publications')}
+        onExportPDF={() => exportToPDF('publications')}
+        customActions={onOpenSyncModal ? (
           <button
             type="button"
-            onClick={() => exportToCSV('publications')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}
+            onClick={onOpenSyncModal}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              padding: '0.5rem 0.95rem',
+              background: '#070F1E',
+              color: '#F1C40F',
+              border: '1px solid #D4AF37',
+              borderRadius: '8px',
+              fontSize: '0.78rem',
+              fontWeight: 800,
+              cursor: 'pointer'
+            }}
           >
-            <Download size={14} /> CSV
+            <RefreshCw size={14} /> Auto-Sync (ORCID / Scopus)
           </button>
-          <button
-            type="button"
-            onClick={() => exportToExcel('publications')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#10B981', cursor: 'pointer' }}
-          >
-            <FileText size={14} /> Excel
-          </button>
-          <button
-            type="button"
-            onClick={() => exportToPDF('publications')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#DC2626', cursor: 'pointer' }}
-          >
-            <Printer size={14} /> PDF
-          </button>
+        ) : null}
+        primaryAction={canCreate ? {
+          label: 'Record Paper',
+          icon: Plus,
+          onClick: () => { setEditingItem(null); setWizardOpen(true); }
+        } : null}
+      />
 
-          {onOpenSyncModal && (
-            <button
-              type="button"
-              onClick={onOpenSyncModal}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                padding: '0.5rem 0.95rem',
-                background: '#070F1E',
-                color: '#F1C40F',
-                border: '1px solid #D4AF37',
-                borderRadius: '8px',
-                fontSize: '0.78rem',
-                fontWeight: 800,
-                cursor: 'pointer'
-              }}
-            >
-              <RefreshCw size={14} /> Auto-Sync (ORCID / Scopus)
-            </button>
-          )}
-
-          {canCreate && (
-            <button
-              type="button"
-              onClick={() => { setEditingItem(null); setWizardOpen(true); }}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                background: 'linear-gradient(135deg, #F1C40F 0%, #D4AF37 100%)',
-                color: '#070F1E',
-                padding: '0.55rem 1.05rem',
-                borderRadius: '8px',
-                fontWeight: 800,
-                fontSize: '0.8rem',
-                border: 'none',
-                cursor: 'pointer',
-                boxShadow: '0 2px 10px rgba(212, 175, 55, 0.35)'
-              }}
-              className="hover:scale-105 transition-transform"
-            >
-              <Plus size={15} /> Record Paper
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* 2. KPI Summary Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.85rem' }}>
-        {[
-          { label: 'Total Publications', value: stats.total, color: '#0F172A', icon: BookOpen, bg: '#F8FAFC' },
-          { label: 'Journal Articles', value: stats.journal, color: '#2563EB', icon: FileText, bg: '#EFF6FF' },
-          { label: 'Conference Papers', value: stats.conference, color: '#0284C7', icon: Users, bg: '#F0F9FF' },
-          { label: 'Scopus Indexed', value: stats.scopus, color: '#059669', icon: Award, bg: '#ECFDF5' },
-          { label: 'Web of Science', value: stats.wos, color: '#D97706', icon: Globe, bg: '#FEFCE8' },
-          { label: 'Pending Review', value: stats.pendingReview, color: '#9333EA', icon: Sparkles, bg: '#FDF4FF' },
-          { label: 'This Academic Year', value: stats.thisYear, color: '#0D9488', icon: Building2, bg: '#F0FDFA' }
-        ].map((k, i) => {
-          const Icon = k.icon;
-          return (
-            <div key={i} style={{ background: k.bg, padding: '1rem', borderRadius: '12px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>{k.label}</span>
-                <Icon size={16} style={{ color: k.color }} />
-              </div>
-              <div style={{ fontSize: '1.45rem', fontWeight: 800, color: k.color, fontFamily: 'Cinzel, serif' }}>{k.value}</div>
-            </div>
-          );
-        })}
-      </div>
+      {/* 2. Staggered Animated KPI Summary Cards */}
+      <AnimatedKpiGrid minWidth="140px">
+        <MotionKpiCard label="Total Publications" value={stats.total} icon={BookOpen} color="#0F172A" bg="#F8FAFC" />
+        <MotionKpiCard label="Journal Articles" value={stats.journal} icon={FileText} color="#2563EB" bg="#EFF6FF" />
+        <MotionKpiCard label="Conference Papers" value={stats.conference} icon={Users} color="#0284C7" bg="#F0F9FF" />
+        <MotionKpiCard label="Scopus Indexed" value={stats.scopus} icon={Award} color="#059669" bg="#ECFDF5" />
+        <MotionKpiCard label="Web of Science" value={stats.wos} icon={Globe} color="#D97706" bg="#FEFCE8" />
+        <MotionKpiCard label="Pending Review" value={stats.pendingReview} icon={Sparkles} color="#9333EA" bg="#FDF4FF" />
+        <MotionKpiCard label="This Academic Year" value={stats.thisYear} icon={Building2} color="#0D9488" bg="#F0FDFA" />
+      </AnimatedKpiGrid>
 
       {/* 3. Quick Tabs */}
       <div style={{ display: 'flex', gap: '0.4rem', overflowX: 'auto', paddingBottom: '0.2rem' }}>
@@ -786,6 +735,6 @@ export default function PublicationsManager({ currentUser, onDataChange, onOpenS
           </div>
         </div>
       )}
-    </div>
+    </MotionPage>
   );
 }

@@ -41,6 +41,18 @@ import {
 } from '../../../data/portalStore.js';
 import MouWizardModal from './MouWizardModal.jsx';
 
+import { 
+  MotionPage, 
+  ModulePageHeader, 
+  AnimatedKpiGrid, 
+  MotionKpiCard, 
+  MotionTable, 
+  MotionTableRow, 
+  MotionEmptyState,
+  MotionButton,
+  MotionModal
+} from '../../motion/index.js';
+
 export default function MousManager({ currentUser, onDataChange }) {
   const [dataVersion, setDataVersion] = useState(0);
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -118,9 +130,9 @@ export default function MousManager({ currentUser, onDataChange }) {
     refresh();
   };
 
-  const handleDelete = (item) => {
-    if (confirm(`Are you sure you want to soft-delete MoU ${item.mouNumber || item.id} with ${item.partnerOrganization}?`)) {
-      softDeleteMoU(item.id, currentUser);
+  const handleDelete = (id, org) => {
+    if (window.confirm(`Are you sure you want to move the MoU with "${org}" to Recycle Bin?`)) {
+      softDeleteMoU(id, currentUser);
       refresh();
     }
   };
@@ -158,74 +170,25 @@ export default function MousManager({ currentUser, onDataChange }) {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem', width: '100%' }}>
-      {/* 1. Header & Actions */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.74rem', color: '#64748B', marginBottom: '0.25rem' }}>
-            <span>Dashboard</span>
-            <ChevronRight size={12} />
-            <span>Events & Outreach</span>
-            <ChevronRight size={12} />
-            <span style={{ color: '#0F172A', fontWeight: 700 }}>Industry MoUs & Partnerships</span>
-          </div>
-
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.25rem 0', fontFamily: 'Cinzel, Georgia, serif' }}>
-            Industry MoUs & Collaborations
-          </h1>
-          <p style={{ fontSize: '0.82rem', color: '#64748B', margin: 0 }}>
-            Manage institutional bilateral agreements, industry tie-ups, validity tracking, and linked activities.
-          </p>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={() => exportToCSV('mous')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}
-          >
-            <Download size={14} /> CSV
-          </button>
-          <button
-            type="button"
-            onClick={() => exportToExcel('mous')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#10B981', cursor: 'pointer' }}
-          >
-            <FileText size={14} /> Excel
-          </button>
-          <button
-            type="button"
-            onClick={() => exportToPDF('mous')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#DC2626', cursor: 'pointer' }}
-          >
-            <Printer size={14} /> PDF
-          </button>
-
-          {canCreate && (
-            <button
-              type="button"
-              onClick={() => { setEditingItem(null); setWizardOpen(true); }}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                background: 'linear-gradient(135deg, #F1C40F 0%, #D4AF37 100%)',
-                color: '#070F1E',
-                padding: '0.55rem 1.05rem',
-                borderRadius: '8px',
-                fontWeight: 800,
-                fontSize: '0.8rem',
-                border: 'none',
-                cursor: 'pointer',
-                boxShadow: '0 2px 10px rgba(212, 175, 55, 0.35)'
-              }}
-              className="hover:scale-105 transition-transform"
-            >
-              <Plus size={15} /> Establish MoU
-            </button>
-          )}
-        </div>
-      </div>
+    <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem' }}>
+      {/* 1. Standardized Animated Header & Action Cluster */}
+      <ModulePageHeader
+        breadcrumbs={[
+          { label: 'Dashboard' },
+          { label: 'Events & Outreach' },
+          { label: 'Industry MoUs & Partnerships' }
+        ]}
+        title="Industry MoUs & Collaborations"
+        subtitle="Manage institutional bilateral agreements, industry tie-ups, validity tracking, and linked activities."
+        onExportCSV={() => exportToCSV('mous')}
+        onExportExcel={() => exportToExcel('mous')}
+        onExportPDF={() => exportToPDF('mous')}
+        primaryAction={canCreate ? {
+          label: 'Establish MoU',
+          icon: Plus,
+          onClick: () => { setEditingItem(null); setWizardOpen(true); }
+        } : null}
+      />
 
       {/* 2. Expiry Warning Banner if Any Expiring Soon */}
       {stats.expiringSoon > 0 && (
@@ -256,29 +219,16 @@ export default function MousManager({ currentUser, onDataChange }) {
         </div>
       )}
 
-      {/* 3. KPI Summary Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.85rem' }}>
-        {[
-          { label: 'Total MoUs', value: stats.total, color: '#0F172A', icon: Handshake, bg: '#F8FAFC' },
-          { label: 'Active Partnerships', value: stats.active, color: '#059669', icon: CheckCircle2, bg: '#ECFDF5' },
-          { label: 'Expiring Soon (≤60d)', value: stats.expiringSoon, color: '#D97706', icon: Clock, bg: '#FEFCE8' },
-          { label: 'Expired / Concluded', value: stats.expired, color: '#DC2626', icon: AlertTriangle, bg: '#FEF2F2' },
-          { label: 'Industry Partners', value: stats.industry, color: '#2563EB', icon: Building2, bg: '#EFF6FF' },
-          { label: 'Academic Partners', value: stats.academic, color: '#7C3AED', icon: Globe, bg: '#F5F3FF' },
-          { label: 'Activities Conducted', value: stats.totalAct, color: '#0D9488', icon: Activity, bg: '#F0FDFA' }
-        ].map((k, i) => {
-          const Icon = k.icon;
-          return (
-            <div key={i} style={{ background: k.bg, padding: '1rem', borderRadius: '12px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>{k.label}</span>
-                <Icon size={16} style={{ color: k.color }} />
-              </div>
-              <div style={{ fontSize: '1.45rem', fontWeight: 800, color: k.color, fontFamily: 'Cinzel, serif' }}>{k.value}</div>
-            </div>
-          );
-        })}
-      </div>
+      {/* 3. Staggered Animated KPI Summary Cards */}
+      <AnimatedKpiGrid minWidth="140px">
+        <MotionKpiCard label="Total MoUs" value={stats.total} icon={Handshake} color="#0F172A" bg="#F8FAFC" />
+        <MotionKpiCard label="Active Partnerships" value={stats.active} icon={CheckCircle2} color="#059669" bg="#ECFDF5" />
+        <MotionKpiCard label="Expiring Soon (≤60d)" value={stats.expiringSoon} icon={Clock} color="#D97706" bg="#FEFCE8" />
+        <MotionKpiCard label="Expired / Concluded" value={stats.expired} icon={AlertTriangle} color="#DC2626" bg="#FEF2F2" />
+        <MotionKpiCard label="Industry Partners" value={stats.industry} icon={Building2} color="#2563EB" bg="#EFF6FF" />
+        <MotionKpiCard label="Academic Partners" value={stats.academic} icon={Globe} color="#7C3AED" bg="#F5F3FF" />
+        <MotionKpiCard label="Activities Conducted" value={stats.totalAct} icon={Activity} color="#0D9488" bg="#F0FDFA" />
+      </AnimatedKpiGrid>
 
       {/* 4. Search & Multi-Filter Toolbar */}
       <div style={{ background: '#FFFFFF', padding: '1rem 1.25rem', borderRadius: '14px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
@@ -360,17 +310,24 @@ export default function MousManager({ currentUser, onDataChange }) {
         </div>
       </div>
 
-      {/* 5. MoUs Data Table */}
-      <div style={{ background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+      {/* 4. MoUs Table / Empty State */}
+      {filteredMoUs.length === 0 ? (
+        <MotionEmptyState
+          icon={Handshake}
+          title="No Industry MoUs Found"
+          description={searchQuery ? "No MoU records match your active search and filter criteria." : "No institutional MoUs recorded yet in the database."}
+          actionLabel={canCreate ? "Establish First MoU" : null}
+          onAction={canCreate ? () => { setEditingItem(null); setWizardOpen(true); } : null}
+        />
+      ) : (
+        <MotionTable>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem' }}>
             <thead>
-              <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                <th style={{ padding: '0.85rem 1rem' }}>Partner Organization</th>
-                <th style={{ padding: '0.85rem 1rem' }}>Agreement Title</th>
-                <th style={{ padding: '0.85rem 1rem' }}>Partner Type</th>
+              <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <th style={{ padding: '0.85rem 1rem' }}>MoU Code & Partner</th>
+                <th style={{ padding: '0.85rem 1rem' }}>Department & Type</th>
                 <th style={{ padding: '0.85rem 1rem' }}>Coordinators</th>
-                <th style={{ padding: '0.85rem 1rem' }}>Validity Period</th>
+                <th style={{ padding: '0.85rem 1rem' }}>Validity & Signed</th>
                 <th style={{ padding: '0.85rem 1rem' }}>Activities</th>
                 <th style={{ padding: '0.85rem 1rem' }}>Status</th>
                 <th style={{ padding: '0.85rem 1rem' }}>Approval</th>
@@ -378,44 +335,40 @@ export default function MousManager({ currentUser, onDataChange }) {
               </tr>
             </thead>
             <tbody>
-              {filteredMoUs.length === 0 ? (
-                <tr>
-                  <td colSpan={9} style={{ padding: '3.5rem 1rem', textAlign: 'center', color: '#94A3B8', fontSize: '0.85rem' }}>
-                    No MoU records found matching current filters.
-                  </td>
-                </tr>
-              ) : (
-                filteredMoUs.map((item, idx) => {
-                  const wfBadge = getWorkflowBadge(item.workflowStatus);
-                  const stBadge = getStatusBadge(item.mouStatus);
-                  const WfIcon = wfBadge.icon;
-                  const activities = getMoULinkedActivities(item.partnerOrganization || item.mouNumber);
+              {filteredMoUs.map((item, idx) => {
+                const activities = getMouActivitiesSummary(item.id);
+                const stBadge = getStatusBadge(item.status);
+                const wfBadge = getWorkflowBadge(item.workflowStatus);
+                const PartnerIcon = getPartnerTypeIcon(item.partnerType);
 
-                  return (
-                    <tr key={item.id || idx} style={{ borderBottom: '1px solid #F1F5F9' }} className="hover:bg-slate-50">
-                      <td style={{ padding: '0.85rem 1rem', maxWidth: '240px' }}>
-                        <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.84rem' }}>
-                          {item.partnerOrganization}
-                        </div>
-                        <div style={{ fontSize: '0.7rem', color: '#D4AF37', fontWeight: 700 }}>
-                          {item.mouNumber}
-                        </div>
-                      </td>
+                return (
+                  <MotionTableRow key={item.id} index={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                    <td style={{ padding: '0.85rem 1rem' }}>
+                      <div style={{ fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span>{item.organization}</span>
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: '#D4AF37', fontWeight: 700 }}>
+                        {item.mouCode || `MOU-${item.id}`}
+                      </div>
+                    </td>
 
-                      <td style={{ padding: '0.85rem 1rem', maxWidth: '220px' }}>
-                        <div style={{ fontSize: '0.8rem', color: '#334155', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {item.title}
-                        </div>
-                        <div style={{ fontSize: '0.7rem', color: '#64748B' }}>
-                          Dept: {item.department}
-                        </div>
-                      </td>
-
-                      <td style={{ padding: '0.85rem 1rem' }}>
-                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#334155', background: '#F1F5F9', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
-                          {item.partnerType}
-                        </span>
-                      </td>
+                    <td style={{ padding: '0.85rem 1rem' }}>
+                      <div style={{ fontWeight: 700, color: '#334155' }}>
+                        {item.department || 'All Departments'}
+                      </div>
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                        fontSize: '0.68rem',
+                        fontWeight: 600,
+                        color: '#64748B',
+                        marginTop: '0.2rem'
+                      }}>
+                        <PartnerIcon size={12} />
+                        {item.partnerType}
+                      </span>
+                    </td>
 
                       <td style={{ padding: '0.85rem 1rem' }}>
                         <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>
@@ -537,14 +490,13 @@ export default function MousManager({ currentUser, onDataChange }) {
                           )}
                         </div>
                       </td>
-                    </tr>
+                    </MotionTableRow>
                   );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                })}
+              </tbody>
+            </table>
+          </MotionTable>
+        )}
 
       {/* 6. MoU Wizard Modal */}
       {wizardOpen && (
@@ -754,6 +706,6 @@ export default function MousManager({ currentUser, onDataChange }) {
           </div>
         </div>
       )}
-    </div>
+    </MotionPage>
   );
 }

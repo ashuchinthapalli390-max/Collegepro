@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   FlaskConical, 
   Lightbulb, 
@@ -23,6 +24,7 @@ import { getPublications, getPatents, getMoUs, getDatasetVersions } from '../../
 import { BRANDING_LOGOS, AICTE_IDEA_LAB_TEAM, FACULTY_DATA } from '../../data/masterData.js';
 import { INDEXED_NEC_AUTHORS } from '../../lib/research/localIndex/datasetStore.js';
 import { normalizeDOI } from '../../lib/research/localDiscoveryEngine.js';
+import { routeVariants } from '../../lib/motion/variants.js';
 
 export default function ResearchHub({ onOpenPortal }) {
   const [activeTab, setActiveTab] = useState('publications');
@@ -78,19 +80,25 @@ export default function ResearchHub({ onOpenPortal }) {
     <section style={{ padding: '4.5rem 0', background: '#FFFFFF' }}>
       <div className="container">
         {/* Research Banner */}
-        <div style={{
-          background: 'linear-gradient(135deg, #070F1E 0%, #0B192C 60%, #122846 100%)',
-          borderRadius: '24px',
-          padding: 'clamp(1.5rem, 4vw, 3rem)',
-          color: '#FFFFFF',
-          marginBottom: '2.5rem',
-          border: '1px solid rgba(212, 175, 55, 0.3)',
-          boxShadow: '0 20px 50px rgba(0,0,0,0.2)',
-          display: 'grid',
-          gridTemplateColumns: 'minmax(280px, 1fr) 240px',
-          gap: '2rem',
-          alignItems: 'center'
-        }}>
+        <motion.div 
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 0.4 }}
+          style={{
+            background: 'linear-gradient(135deg, #070F1E 0%, #0B192C 60%, #122846 100%)',
+            borderRadius: '24px',
+            padding: 'clamp(1.5rem, 4vw, 3rem)',
+            color: '#FFFFFF',
+            marginBottom: '2.5rem',
+            border: '1px solid rgba(212, 175, 55, 0.3)',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.2)',
+            display: 'grid',
+            gridTemplateColumns: 'minmax(280px, 1fr) 240px',
+            gap: '2rem',
+            alignItems: 'center'
+          }}
+        >
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.8rem' }}>
               <span className="badge badge-gold">R&D Directorate & Innovation Hub</span>
@@ -146,7 +154,7 @@ export default function ResearchHub({ onOpenPortal }) {
               Centre of Research Excellence
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Tab Selector */}
         <div style={{ display: 'flex', justifyContent: 'center', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '2.5rem' }}>

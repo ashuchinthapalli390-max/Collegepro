@@ -13,6 +13,16 @@ import {
   BookOpen
 } from 'lucide-react';
 import { getMoUs, getPublications, getStudentProjects, getMemberships } from '../../../data/portalStore.js';
+import { 
+  MotionPage, 
+  ModulePageHeader, 
+  AnimatedKpiGrid, 
+  MotionKpiCard, 
+  MotionTable, 
+  MotionTableRow, 
+  MotionEmptyState,
+  MotionButton 
+} from '../../motion/index.js';
 
 export default function AlertsCenterView({ currentUser, onNavigate }) {
   const mous = getMoUs();
@@ -48,26 +58,17 @@ export default function AlertsCenterView({ currentUser, onNavigate }) {
   }, [memberships]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem', width: '100%' }}>
+    <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.74rem', color: '#64748B', marginBottom: '0.25rem' }}>
-            <span>Dashboard</span>
-            <ChevronRight size={12} />
-            <span>Governance</span>
-            <ChevronRight size={12} />
-            <span style={{ color: '#0F172A', fontWeight: 700 }}>Alerts & Notices</span>
-          </div>
-
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.25rem 0', fontFamily: 'Cinzel, Georgia, serif' }}>
-            Institutional Action Center & Alerts
-          </h1>
-          <p style={{ fontSize: '0.82rem', color: '#64748B', margin: 0 }}>
-            Active compliance deadlines, pending approvals, expiring MoUs, and faculty professional body renewals.
-          </p>
-        </div>
-      </div>
+      <ModulePageHeader
+        breadcrumbs={[
+          { label: 'Dashboard' },
+          { label: 'Governance' },
+          { label: 'Alerts & Notices' }
+        ]}
+        title="Institutional Action Center & Alerts"
+        subtitle="Active compliance deadlines, pending approvals, expiring MoUs, and faculty professional body renewals."
+      />
 
       {/* Alert Groups */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -197,6 +198,6 @@ export default function AlertsCenterView({ currentUser, onNavigate }) {
           )}
         </div>
       </div>
-    </div>
+    </MotionPage>
   );
 }

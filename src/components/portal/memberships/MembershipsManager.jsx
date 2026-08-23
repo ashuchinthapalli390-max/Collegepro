@@ -37,6 +37,16 @@ import {
 } from '../../../data/portalStore.js';
 import MembershipWizardModal from './MembershipWizardModal.jsx';
 import FacultyAvatar from '../../common/FacultyAvatar.jsx';
+import { 
+  MotionPage, 
+  ModulePageHeader, 
+  AnimatedKpiGrid, 
+  MotionKpiCard, 
+  MotionTable, 
+  MotionTableRow, 
+  MotionEmptyState,
+  MotionButton 
+} from '../../motion/index.js';
 
 export default function MembershipsManager({ currentUser, onDataChange }) {
   const [dataVersion, setDataVersion] = useState(0);
@@ -70,16 +80,17 @@ export default function MembershipsManager({ currentUser, onDataChange }) {
   // KPIs
   const stats = useMemo(() => {
     const total = memberships.length;
-    const active = memberships.filter(m => m.membershipStatus === 'ACTIVE' || m.membershipStatus === 'LIFETIME').length;
-    const life = memberships.filter(m => m.membershipType === 'Life Membership' || m.membershipStatus === 'LIFETIME').length;
-    const annual = memberships.filter(m => m.membershipType === 'Annual Membership').length;
-    const expiringSoon = memberships.filter(m => m.membershipStatus === 'EXPIRING_SOON').length;
-    const expired = memberships.filter(m => m.membershipStatus === 'EXPIRED').length;
+    const active = memberships.filter(m => m.status === 'Active' || m.status === 'ACTIVE').length;
+    const life = memberships.filter(m => m.membershipType === 'Life' || m.membershipType === 'LIFE').length;
+    const annual = memberships.filter(m => m.membershipType === 'Annual' || m.membershipType === 'ANNUAL').length;
+    const expiringSoon = memberships.filter(m => m.status === 'EXPIRING_SOON').length;
+    const expired = memberships.filter(m => m.status === 'Expired' || m.status === 'EXPIRED').length;
     const pendingReview = memberships.filter(m => m.workflowStatus === 'SUBMITTED' || m.workflowStatus === 'UNDER_REVIEW').length;
+
     return { total, active, life, annual, expiringSoon, expired, pendingReview };
   }, [memberships]);
 
-  // Filtered Records
+  // Filtered Memberships
   const filteredMemberships = useMemo(() => {
     return memberships.filter(item => {
       const q = searchQuery.toLowerCase().trim();
@@ -87,14 +98,13 @@ export default function MembershipsManager({ currentUser, onDataChange }) {
         (item.membershipRecordNumber && item.membershipRecordNumber.toLowerCase().includes(q)) ||
         (item.facultyName && item.facultyName.toLowerCase().includes(q)) ||
         (item.membershipNumber && item.membershipNumber.toLowerCase().includes(q)) ||
-        (item.organization && item.organization.toLowerCase().includes(q)) ||
-        (item.department && item.department.toLowerCase().includes(q));
+        (item.organizationName && item.organizationName.toLowerCase().includes(q));
 
       const itemDept = item.department || '';
       const matchDept = selectedDept === 'ALL' || itemDept.toLowerCase().includes(selectedDept.toLowerCase());
-      const matchOrg = selectedOrg === 'ALL' || item.organization.toLowerCase().includes(selectedOrg.toLowerCase());
+      const matchOrg = selectedOrg === 'ALL' || item.organizationName === selectedOrg || item.organizationAcronym === selectedOrg;
       const matchType = selectedType === 'ALL' || item.membershipType === selectedType;
-      const matchStatus = selectedStatus === 'ALL' || item.membershipStatus === selectedStatus;
+      const matchStatus = selectedStatus === 'ALL' || item.status === selectedStatus;
       const matchWorkflow = selectedWorkflowStatus === 'ALL' || item.workflowStatus === selectedWorkflowStatus;
 
       return matchSearch && matchDept && matchOrg && matchType && matchStatus && matchWorkflow;
@@ -114,7 +124,7 @@ export default function MembershipsManager({ currentUser, onDataChange }) {
   };
 
   const handleDelete = (item) => {
-    if (confirm(`Are you sure you want to soft-delete membership record ${item.membershipRecordNumber || item.id} for ${item.facultyName}?`)) {
+    if (window.confirm(`Are you sure you want to move membership "${item.membershipNumber}" to Recycle Bin?`)) {
       softDeleteMembership(item.id, currentUser);
       refresh();
     }
@@ -137,114 +147,52 @@ export default function MembershipsManager({ currentUser, onDataChange }) {
     }
   };
 
-  const getValidityBadge = (status) => {
+  const getStatusBadge = (status) => {
     switch (status) {
-      case 'LIFETIME':
-        return { bg: '#ECFDF5', text: '#065F46', border: '#A7F3D0', label: 'LIFE MEMBER' };
       case 'ACTIVE':
-        return { bg: '#EFF6FF', text: '#1E40AF', border: '#BFDBFE', label: 'ACTIVE' };
+      case 'Active':
+        return { bg: '#ECFDF5', text: '#065F46', border: '#A7F3D0', label: 'ACTIVE' };
       case 'EXPIRING_SOON':
         return { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A', label: 'EXPIRING SOON' };
       case 'EXPIRED':
+      case 'Expired':
         return { bg: '#FEF2F2', text: '#DC2626', border: '#FECACA', label: 'EXPIRED' };
       default:
-        return { bg: '#F1F5F9', text: '#475569', border: '#CBD5E1', label: 'ACTIVE' };
+        return { bg: '#F1F5F9', text: '#475569', border: '#CBD5E1', label: status || 'ACTIVE' };
     }
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem', width: '100%' }}>
-      {/* 1. Header & Quick Actions */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.74rem', color: '#64748B', marginBottom: '0.25rem' }}>
-            <span>Dashboard</span>
-            <ChevronRight size={12} />
-            <span>Faculty Development</span>
-            <ChevronRight size={12} />
-            <span style={{ color: '#0F172A', fontWeight: 700 }}>Faculty Memberships</span>
-          </div>
+    <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem' }}>
+      {/* 1. Header & Actions */}
+      <ModulePageHeader
+        breadcrumbs={[
+          { label: 'Dashboard' },
+          { label: 'Faculty Development' },
+          { label: 'Faculty Memberships' }
+        ]}
+        title="Faculty Professional Memberships"
+        subtitle="Manage faculty professional memberships, renewals, certificates and verification records."
+        onExportCSV={() => exportToCSV('memberships')}
+        onExportExcel={() => exportToExcel('memberships')}
+        onExportPDF={() => exportToPDF('memberships')}
+        primaryAction={canCreate ? {
+          label: 'Record Membership',
+          icon: Plus,
+          onClick: () => { setEditingItem(null); setRenewalItem(null); setWizardOpen(true); }
+        } : null}
+      />
 
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.25rem 0', fontFamily: 'Cinzel, Georgia, serif' }}>
-            Faculty Memberships
-          </h1>
-          <p style={{ fontSize: '0.82rem', color: '#64748B', margin: 0 }}>
-            Manage faculty professional memberships, renewals, certificates and verification records.
-          </p>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={() => exportToCSV('memberships')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}
-          >
-            <Download size={14} /> CSV
-          </button>
-          <button
-            type="button"
-            onClick={() => exportToExcel('memberships')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#10B981', cursor: 'pointer' }}
-          >
-            <FileText size={14} /> Excel
-          </button>
-          <button
-            type="button"
-            onClick={() => exportToPDF('memberships')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#DC2626', cursor: 'pointer' }}
-          >
-            <Printer size={14} /> PDF
-          </button>
-
-          {canCreate && (
-            <button
-              type="button"
-              onClick={() => { setEditingItem(null); setRenewalItem(null); setWizardOpen(true); }}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                background: 'linear-gradient(135deg, #F1C40F 0%, #D4AF37 100%)',
-                color: '#070F1E',
-                padding: '0.55rem 1.05rem',
-                borderRadius: '8px',
-                fontWeight: 800,
-                fontSize: '0.8rem',
-                border: 'none',
-                cursor: 'pointer',
-                boxShadow: '0 2px 10px rgba(212, 175, 55, 0.35)'
-              }}
-              className="hover:scale-105 transition-transform"
-            >
-              <Plus size={15} /> Record Membership
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* 2. KPI Summary Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.85rem' }}>
-        {[
-          { label: 'Total Memberships', value: stats.total, color: '#0F172A', icon: Award, bg: '#F8FAFC' },
-          { label: 'Active Memberships', value: stats.active, color: '#059669', icon: CheckCircle2, bg: '#ECFDF5' },
-          { label: 'Life Memberships', value: stats.life, color: '#2563EB', icon: ShieldCheck, bg: '#EFF6FF' },
-          { label: 'Annual Memberships', value: stats.annual, color: '#0D9488', icon: Calendar, bg: '#F0FDFA' },
-          { label: 'Expiring Soon', value: stats.expiringSoon, color: '#D97706', icon: Clock, bg: '#FEFCE8' },
-          { label: 'Expired', value: stats.expired, color: '#DC2626', icon: AlertTriangle, bg: '#FEF2F2' },
-          { label: 'Pending Review', value: stats.pendingReview, color: '#9333EA', icon: Sparkles, bg: '#FDF4FF' }
-        ].map((k, i) => {
-          const Icon = k.icon;
-          return (
-            <div key={i} style={{ background: k.bg, padding: '1rem', borderRadius: '12px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>{k.label}</span>
-                <Icon size={16} style={{ color: k.color }} />
-              </div>
-              <div style={{ fontSize: '1.45rem', fontWeight: 800, color: k.color, fontFamily: 'Cinzel, serif' }}>{k.value}</div>
-            </div>
-          );
-        })}
-      </div>
+      {/* 2. Staggered Animated KPI Summary Cards */}
+      <AnimatedKpiGrid minWidth="140px">
+        <MotionKpiCard label="Total Memberships" value={stats.total} icon={Award} color="#0F172A" bg="#F8FAFC" />
+        <MotionKpiCard label="Active Memberships" value={stats.active} icon={CheckCircle2} color="#059669" bg="#ECFDF5" />
+        <MotionKpiCard label="Life Memberships" value={stats.life} icon={ShieldCheck} color="#2563EB" bg="#EFF6FF" />
+        <MotionKpiCard label="Annual Memberships" value={stats.annual} icon={Calendar} color="#0D9488" bg="#F0FDFA" />
+        <MotionKpiCard label="Expiring Soon" value={stats.expiringSoon} icon={Clock} color="#D97706" bg="#FEFCE8" />
+        <MotionKpiCard label="Expired" value={stats.expired} icon={AlertTriangle} color="#DC2626" bg="#FEF2F2" />
+        <MotionKpiCard label="Pending Review" value={stats.pendingReview} icon={Sparkles} color="#9333EA" bg="#FDF4FF" />
+      </AnimatedKpiGrid>
 
       {/* 3. Search & Multi-Filter Toolbar */}
       <div style={{ background: '#FFFFFF', padding: '1rem 1.25rem', borderRadius: '14px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
@@ -734,6 +682,6 @@ export default function MembershipsManager({ currentUser, onDataChange }) {
           </div>
         </div>
       )}
-    </div>
+    </MotionPage>
   );
 }

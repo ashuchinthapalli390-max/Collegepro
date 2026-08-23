@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { motion } from 'motion/react';
 import { 
   Users, 
   Building, 
@@ -11,6 +12,8 @@ import {
 } from 'lucide-react';
 import { FACULTY_DATA, DEPARTMENTS } from '../../data/masterData.js';
 import { getPublications, getPatents, getMoUs } from '../../data/portalStore.js';
+import { MotionNumber } from '../motion/index.js';
+import { staggerContainer, staggerChild } from '../../lib/motion/variants.js';
 
 export default function StatsCounter() {
   const [stats, setStats] = useState({
@@ -41,13 +44,13 @@ export default function StatsCounter() {
   }, []);
 
   const statCards = [
-    { label: "Verified Faculty Members", value: `${stats.faculty}`, icon: Users, desc: "PhD, M.Tech & Senior Scholars across 13 departments", color: "#D4AF37" },
-    { label: "Academic Departments", value: `${stats.departments}`, icon: Building, desc: "Engineering, Computing, Management & Sciences", color: "#60A5FA" },
-    { label: "Research Publications", value: `${stats.publications}`, icon: FileText, desc: "Peer-reviewed publications recorded in institutional repository", color: "#34D399" },
-    { label: "Patents Portfolio", value: `${stats.patents}`, icon: Lightbulb, desc: "Official patent filings and granted intellectual property", color: "#FBBF24" },
-    { label: "Active Industry MoUs", value: `${stats.mous}`, icon: Handshake, desc: "Active industry collaborations and skill training partnerships", color: "#F472B6" },
-    { label: "Campus Infrastructure", value: `${stats.acres}+ Acres`, icon: MapPin, desc: "Wi-Fi enabled green tech campus & sports facilities", color: "#38BDF8" },
-    { label: "Autonomous CBCS Batches", value: "R23 / R20", icon: GraduationCap, desc: "Industry-aligned autonomous regulations", color: "#F87171" }
+    { label: "Verified Faculty Members", rawVal: stats.faculty, suffix: "", icon: Users, desc: "PhD, M.Tech & Senior Scholars across 13 departments", color: "#D4AF37" },
+    { label: "Academic Departments", rawVal: stats.departments, suffix: "", icon: Building, desc: "Engineering, Computing, Management & Sciences", color: "#60A5FA" },
+    { label: "Research Publications", rawVal: stats.publications, suffix: "", icon: FileText, desc: "Peer-reviewed publications recorded in institutional repository", color: "#34D399" },
+    { label: "Patents Portfolio", rawVal: stats.patents, suffix: "", icon: Lightbulb, desc: "Official patent filings and granted intellectual property", color: "#FBBF24" },
+    { label: "Active Industry MoUs", rawVal: stats.mous, suffix: "", icon: Handshake, desc: "Active industry collaborations and skill training partnerships", color: "#F472B6" },
+    { label: "Campus Infrastructure", rawVal: stats.acres, suffix: "+ Acres", icon: MapPin, desc: "Wi-Fi enabled green tech campus & sports facilities", color: "#38BDF8" },
+    { label: "Autonomous CBCS Batches", textVal: "R23 / R20", icon: GraduationCap, desc: "Industry-aligned autonomous regulations", color: "#F87171" }
   ];
 
   return (
@@ -58,7 +61,13 @@ export default function StatsCounter() {
       borderBottom: '1px solid rgba(212, 175, 55, 0.2)'
     }}>
       <div className="container">
-        <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+        <motion.div 
+          style={{ textAlign: 'center', marginBottom: '3rem' }}
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 0.4 }}
+        >
           <span className="badge badge-gold" style={{ marginBottom: '0.6rem' }}>
             Institutional Highlights & Scale
           </span>
@@ -68,15 +77,25 @@ export default function StatsCounter() {
           <p style={{ color: '#94A3B8', maxWidth: '650px', margin: '0 auto', fontSize: '1rem' }}>
             Live metrics calculated directly from our verified institutional database, research repositories, and placement records.
           </p>
-        </div>
+        </motion.div>
 
-        <div className="grid-4" style={{ gap: '1.5rem' }}>
+        <motion.div 
+          className="grid-4" 
+          style={{ gap: '1.5rem' }}
+          variants={staggerContainer}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, amount: 0.15 }}
+        >
           {statCards.map((item, idx) => {
             const Icon = item.icon;
             return (
-              <div
+              <motion.div
                 key={idx}
-                className="glass-card-dark card-hover"
+                variants={staggerChild}
+                whileHover={{ y: -4, scale: 1.012 }}
+                transition={{ duration: 0.2 }}
+                className="glass-card-dark"
                 style={{
                   padding: '1.8rem',
                   display: 'flex',
@@ -123,9 +142,17 @@ export default function StatsCounter() {
                     marginBottom: '0.4rem',
                     background: `linear-gradient(135deg, #FFFFFF 60%, ${item.color} 100%)`,
                     WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent'
+                    WebkitTextFillColor: 'transparent',
+                    display: 'flex',
+                    alignItems: 'baseline',
+                    gap: '0.2rem'
                   }}>
-                    {item.value}
+                    {item.textVal ? item.textVal : (
+                      <>
+                        <MotionNumber value={item.rawVal} />
+                        {item.suffix && <span>{item.suffix}</span>}
+                      </>
+                    )}
                   </div>
 
                   <div style={{
@@ -148,10 +175,10 @@ export default function StatsCounter() {
                 }}>
                   {item.desc}
                 </div>
-              </div>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
       </div>
     </section>
   );

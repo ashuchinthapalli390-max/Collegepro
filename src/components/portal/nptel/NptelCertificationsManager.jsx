@@ -38,6 +38,16 @@ import {
   exportToPDF
 } from '../../../data/portalStore.js';
 import NptelCertificationWizardModal from './NptelCertificationWizardModal.jsx';
+import { 
+  MotionPage, 
+  ModulePageHeader, 
+  AnimatedKpiGrid, 
+  MotionKpiCard, 
+  MotionTable, 
+  MotionTableRow, 
+  MotionEmptyState,
+  MotionButton 
+} from '../../motion/index.js';
 
 export default function NptelCertificationsManager({ currentUser, onDataChange }) {
   const [dataVersion, setDataVersion] = useState(0);
@@ -72,12 +82,12 @@ export default function NptelCertificationsManager({ currentUser, onDataChange }
   // KPIs
   const stats = useMemo(() => {
     const total = certifications.length;
-    const students = certifications.filter(c => c.holderType === 'STUDENT').length;
-    const faculty = certifications.filter(c => c.holderType === 'FACULTY').length;
-    const nptel = certifications.filter(c => c.platform === 'NPTEL' || c.platform === 'SWAYAM').length;
-    const elite = certifications.filter(c => c.certificationResult === 'Elite').length;
-    const silver = certifications.filter(c => c.certificationResult === 'Elite + Silver').length;
-    const gold = certifications.filter(c => c.certificationResult === 'Elite + Gold' || c.certificationResult === 'Topper').length;
+    const students = certifications.filter(c => c.learnerType === 'STUDENT' || c.learnerType === 'Student').length;
+    const faculty = certifications.filter(c => c.learnerType === 'FACULTY' || c.learnerType === 'Faculty').length;
+    const nptel = certifications.filter(c => c.platform === 'NPTEL' || c.platform === 'SWAYAM' || c.platform === 'NPTEL / SWAYAM').length;
+    const elite = certifications.filter(c => c.resultStatus === 'Elite' || c.certificateType === 'Elite').length;
+    const silver = certifications.filter(c => c.resultStatus === 'Elite + Silver' || c.certificateType === 'Elite + Silver').length;
+    const gold = certifications.filter(c => c.resultStatus === 'Elite + Gold' || c.resultStatus === 'Topper' || c.certificateType === 'Elite + Gold').length;
     const pendingReview = certifications.filter(c => c.workflowStatus === 'SUBMITTED' || c.workflowStatus === 'UNDER_REVIEW').length;
 
     return { total, students, faculty, nptel, elite, silver, gold, pendingReview };
@@ -86,32 +96,31 @@ export default function NptelCertificationsManager({ currentUser, onDataChange }
   // Filtered Certifications
   const filteredCertifications = useMemo(() => {
     return certifications.filter(item => {
-      // Quick Tab Filter
-      if (quickTab === 'STUDENTS' && item.holderType !== 'STUDENT') return false;
-      if (quickTab === 'FACULTY' && item.holderType !== 'FACULTY') return false;
-      if (quickTab === 'NPTEL' && item.platform !== 'NPTEL' && item.platform !== 'SWAYAM') return false;
-      if (quickTab === 'ELITE' && !item.certificationResult?.includes('Elite')) return false;
-      if (quickTab === 'PENDING' && item.workflowStatus !== 'SUBMITTED' && item.workflowStatus !== 'UNDER_REVIEW') return false;
-
       const q = searchQuery.toLowerCase().trim();
-      const holderName = item.holderType === 'STUDENT' ? (item.studentDetails?.name || '') : (item.facultyDetails?.name || '');
-      const rollNo = item.studentDetails?.rollNumber || '';
-
       const matchSearch = !q ||
-        (item.certificationNumber && item.certificationNumber.toLowerCase().includes(q)) ||
+        (item.certificationRecordNumber && item.certificationRecordNumber.toLowerCase().includes(q)) ||
         (item.courseName && item.courseName.toLowerCase().includes(q)) ||
-        (item.certificateId && item.certificateId.toLowerCase().includes(q)) ||
-        holderName.toLowerCase().includes(q) ||
-        rollNo.toLowerCase().includes(q);
+        (item.learnerName && item.learnerName.toLowerCase().includes(q)) ||
+        (item.learnerRollOrId && item.learnerRollOrId.toLowerCase().includes(q)) ||
+        (item.platform && item.platform.toLowerCase().includes(q));
 
-      const matchDept = selectedDept === 'ALL' || item.department.toLowerCase().includes(selectedDept.toLowerCase());
+      const itemDept = item.department || '';
+      const matchDept = selectedDept === 'ALL' || itemDept.toLowerCase().includes(selectedDept.toLowerCase());
       const matchPlatform = selectedPlatform === 'ALL' || item.platform === selectedPlatform;
-      const matchResult = selectedResult === 'ALL' || item.certificationResult === selectedResult;
+      const matchResult = selectedResult === 'ALL' || item.resultStatus === selectedResult || item.certificateType === selectedResult;
       const matchWorkflow = selectedWorkflowStatus === 'ALL' || item.workflowStatus === selectedWorkflowStatus;
 
-      return matchSearch && matchDept && matchPlatform && matchResult && matchWorkflow;
+      // Quick Tabs Filter
+      let matchQuick = true;
+      if (quickTab === 'STUDENTS') matchQuick = item.learnerType === 'STUDENT' || item.learnerType === 'Student';
+      if (quickTab === 'FACULTY') matchQuick = item.learnerType === 'FACULTY' || item.learnerType === 'Faculty';
+      if (quickTab === 'NPTEL') matchQuick = item.platform === 'NPTEL' || item.platform === 'SWAYAM' || item.platform === 'NPTEL / SWAYAM';
+      if (quickTab === 'ELITE') matchQuick = (item.resultStatus && item.resultStatus.includes('Elite')) || (item.certificateType && item.certificateType.includes('Elite'));
+      if (quickTab === 'PENDING') matchQuick = item.workflowStatus === 'SUBMITTED' || item.workflowStatus === 'UNDER_REVIEW';
+
+      return matchSearch && matchDept && matchPlatform && matchResult && matchWorkflow && matchQuick;
     });
-  }, [certifications, quickTab, searchQuery, selectedDept, selectedPlatform, selectedResult, selectedWorkflowStatus]);
+  }, [certifications, searchQuery, selectedDept, selectedPlatform, selectedResult, selectedWorkflowStatus, quickTab]);
 
   // Permissions
   const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD' || currentUser?.role === 'FACULTY';
@@ -126,7 +135,7 @@ export default function NptelCertificationsManager({ currentUser, onDataChange }
   };
 
   const handleDelete = (item) => {
-    if (confirm(`Are you sure you want to soft-delete certification ${item.certificationNumber || item.id}?`)) {
+    if (window.confirm(`Are you sure you want to move certification "${item.courseName}" to Recycle Bin?`)) {
       softDeleteNPTEL(item.id, currentUser);
       refresh();
     }
@@ -153,7 +162,7 @@ export default function NptelCertificationsManager({ currentUser, onDataChange }
     switch (result) {
       case 'Elite + Gold':
       case 'Topper':
-        return { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A', label: 'ELITE + GOLD' };
+        return { bg: '#FEF3C7', text: '#B45309', border: '#FCD34D', label: 'ELITE + GOLD' };
       case 'Elite + Silver':
         return { bg: '#F1F5F9', text: '#334155', border: '#CBD5E1', label: 'ELITE + SILVER' };
       case 'Elite':
@@ -165,99 +174,37 @@ export default function NptelCertificationsManager({ currentUser, onDataChange }
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem', width: '100%' }}>
+    <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem' }}>
       {/* 1. Header & Actions */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.74rem', color: '#64748B', marginBottom: '0.25rem' }}>
-            <span>Dashboard</span>
-            <ChevronRight size={12} />
-            <span>Accreditation & Skills</span>
-            <ChevronRight size={12} />
-            <span style={{ color: '#0F172A', fontWeight: 700 }}>NPTEL & MOOC Certifications</span>
-          </div>
+      <ModulePageHeader
+        breadcrumbs={[
+          { label: 'Dashboard' },
+          { label: 'Accreditation & Skills' },
+          { label: 'NPTEL & MOOC Certifications' }
+        ]}
+        title="NPTEL & MOOC Certifications"
+        subtitle="Manage verified online certifications for students and faculty across NPTEL, SWAYAM, Coursera, and edX."
+        onExportCSV={() => exportToCSV('nptel')}
+        onExportExcel={() => exportToExcel('nptel')}
+        onExportPDF={() => exportToPDF('nptel')}
+        primaryAction={canCreate ? {
+          label: 'Record Certification',
+          icon: Plus,
+          onClick: () => { setEditingItem(null); setWizardOpen(true); }
+        } : null}
+      />
 
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.25rem 0', fontFamily: 'Cinzel, Georgia, serif' }}>
-            NPTEL & MOOC Certifications
-          </h1>
-          <p style={{ fontSize: '0.82rem', color: '#64748B', margin: 0 }}>
-            Manage verified online certifications for students and faculty across NPTEL, SWAYAM, Coursera, and edX.
-          </p>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={() => exportToCSV('nptel')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}
-          >
-            <Download size={14} /> CSV
-          </button>
-          <button
-            type="button"
-            onClick={() => exportToExcel('nptel')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#10B981', cursor: 'pointer' }}
-          >
-            <FileText size={14} /> Excel
-          </button>
-          <button
-            type="button"
-            onClick={() => exportToPDF('nptel')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#DC2626', cursor: 'pointer' }}
-          >
-            <Printer size={14} /> PDF
-          </button>
-
-          {canCreate && (
-            <button
-              type="button"
-              onClick={() => { setEditingItem(null); setWizardOpen(true); }}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                background: 'linear-gradient(135deg, #F1C40F 0%, #D4AF37 100%)',
-                color: '#070F1E',
-                padding: '0.55rem 1.05rem',
-                borderRadius: '8px',
-                fontWeight: 800,
-                fontSize: '0.8rem',
-                border: 'none',
-                cursor: 'pointer',
-                boxShadow: '0 2px 10px rgba(212, 175, 55, 0.35)'
-              }}
-              className="hover:scale-105 transition-transform"
-            >
-              <Plus size={15} /> Record Certification
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* 2. KPI Summary Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(135px, 1fr))', gap: '0.85rem' }}>
-        {[
-          { label: 'Total Certifications', value: stats.total, color: '#0F172A', icon: Award, bg: '#F8FAFC' },
-          { label: 'Student Certifications', value: stats.students, color: '#2563EB', icon: GraduationCap, bg: '#EFF6FF' },
-          { label: 'Faculty Certifications', value: stats.faculty, color: '#0D9488', icon: User, bg: '#F0FDFA' },
-          { label: 'NPTEL / SWAYAM', value: stats.nptel, color: '#7C3AED', icon: BookOpen, bg: '#F5F3FF' },
-          { label: 'Elite Badges', value: stats.elite, color: '#0284C7', icon: Star, bg: '#F0F9FF' },
-          { label: 'Elite + Silver', value: stats.silver, color: '#475569', icon: ShieldCheck, bg: '#F1F5F9' },
-          { label: 'Elite + Gold / Topper', value: stats.gold, color: '#D97706', icon: Sparkles, bg: '#FEFCE8' },
-          { label: 'Pending Review', value: stats.pendingReview, color: '#DC2626', icon: Clock, bg: '#FEF2F2' }
-        ].map((k, i) => {
-          const Icon = k.icon;
-          return (
-            <div key={i} style={{ background: k.bg, padding: '1rem', borderRadius: '12px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>{k.label}</span>
-                <Icon size={16} style={{ color: k.color }} />
-              </div>
-              <div style={{ fontSize: '1.45rem', fontWeight: 800, color: k.color, fontFamily: 'Cinzel, serif' }}>{k.value}</div>
-            </div>
-          );
-        })}
-      </div>
+      {/* 2. Staggered Animated KPI Summary Cards */}
+      <AnimatedKpiGrid minWidth="135px">
+        <MotionKpiCard label="Total Certifications" value={stats.total} icon={Award} color="#0F172A" bg="#F8FAFC" />
+        <MotionKpiCard label="Student Certifications" value={stats.students} icon={GraduationCap} color="#2563EB" bg="#EFF6FF" />
+        <MotionKpiCard label="Faculty Certifications" value={stats.faculty} icon={User} color="#0D9488" bg="#F0FDFA" />
+        <MotionKpiCard label="NPTEL / SWAYAM" value={stats.nptel} icon={BookOpen} color="#7C3AED" bg="#F5F3FF" />
+        <MotionKpiCard label="Elite Badges" value={stats.elite} icon={Star} color="#0284C7" bg="#F0F9FF" />
+        <MotionKpiCard label="Elite + Silver" value={stats.silver} icon={ShieldCheck} color="#475569" bg="#F1F5F9" />
+        <MotionKpiCard label="Elite + Gold / Topper" value={stats.gold} icon={Sparkles} color="#D97706" bg="#FEFCE8" />
+        <MotionKpiCard label="Pending Review" value={stats.pendingReview} icon={Clock} color="#DC2626" bg="#FEF2F2" />
+      </AnimatedKpiGrid>
 
       {/* 3. Quick Tabs & Multi-Filter Toolbar */}
       <div style={{ background: '#FFFFFF', padding: '1rem 1.25rem', borderRadius: '14px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
@@ -734,6 +681,6 @@ export default function NptelCertificationsManager({ currentUser, onDataChange }
           </div>
         </div>
       )}
-    </div>
+    </MotionPage>
   );
 }

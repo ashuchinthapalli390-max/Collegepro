@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { routeVariants } from '../../lib/motion/variants.js';
 import { 
   Building2, 
   Users, 
@@ -377,11 +379,20 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
             </div>
           )}
 
-          {/* ────────────────────────────────────────────────────────── */}
-          {/* VIEW 1: EXECUTIVE DASHBOARD OVERVIEW */}
-          {/* ────────────────────────────────────────────────────────── */}
-          {activeModule === 'overview' && (
-            <DashboardOverviewView
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeModule}
+              variants={routeVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              style={{ width: '100%' }}
+            >
+              {/* ────────────────────────────────────────────────────────── */}
+              {/* VIEW 1: EXECUTIVE DASHBOARD OVERVIEW */}
+              {/* ────────────────────────────────────────────────────────── */}
+              {activeModule === 'overview' && (
+                <DashboardOverviewView
               currentUser={currentUser}
               usersCount={usersList.length}
               facultyCount={facultyList.length}
@@ -914,6 +925,8 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
               onBackToOverview={() => setActiveModule('overview')}
             />
           )}
+            </motion.div>
+          </AnimatePresence>
         </main>
       </div>
 

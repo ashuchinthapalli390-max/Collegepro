@@ -39,6 +39,16 @@ import {
   exportToPDF
 } from '../../../data/portalStore.js';
 import StudentProjectWizardModal from './StudentProjectWizardModal.jsx';
+import { 
+  MotionPage, 
+  ModulePageHeader, 
+  AnimatedKpiGrid, 
+  MotionKpiCard, 
+  MotionTable, 
+  MotionTableRow, 
+  MotionEmptyState,
+  MotionButton 
+} from '../../motion/index.js';
 
 export default function StudentProjectsManager({ currentUser, onDataChange }) {
   const [dataVersion, setDataVersion] = useState(0);
@@ -89,7 +99,7 @@ export default function StudentProjectsManager({ currentUser, onDataChange }) {
         (item.projectNumber && item.projectNumber.toLowerCase().includes(q)) ||
         (item.projectTitle && item.projectTitle.toLowerCase().includes(q)) ||
         (item.guide?.name && item.guide.name.toLowerCase().includes(q)) ||
-        (item.teamMembers && item.teamMembers.some(m => m.name.toLowerCase().includes(q) || m.rollNumber.toLowerCase().includes(q)));
+        (item.teamMembers && item.teamMembers.some(m => m.name?.toLowerCase().includes(q) || m.rollNumber?.toLowerCase().includes(q)));
 
       const itemDept = item.department || '';
       const matchDept = selectedDept === 'ALL' || itemDept.toLowerCase().includes(selectedDept.toLowerCase());
@@ -113,9 +123,9 @@ export default function StudentProjectsManager({ currentUser, onDataChange }) {
     refresh();
   };
 
-  const handleDelete = (item) => {
-    if (confirm(`Are you sure you want to soft-delete project ${item.projectNumber || item.id}: ${item.projectTitle}?`)) {
-      softDeleteStudentProject(item.id, currentUser);
+  const handleDelete = (id, title) => {
+    if (window.confirm(`Are you sure you want to move project "${title}" to Recycle Bin?`)) {
+      softDeleteStudentProject(id, currentUser);
       refresh();
     }
   };
@@ -144,108 +154,46 @@ export default function StudentProjectsManager({ currentUser, onDataChange }) {
         return { bg: '#ECFDF5', text: '#065F46', border: '#A7F3D0', label: 'COMPLETED' };
       case 'IN_PROGRESS':
       case 'Ongoing':
-        return { bg: '#EFF6FF', text: '#1E40AF', border: '#BFDBFE', label: 'IN PROGRESS' };
-      case 'UNDER_REVIEW':
-        return { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A', label: 'UNDER REVIEW' };
+        return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', label: 'IN PROGRESS' };
+      case 'SUBMITTED':
+        return { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A', label: 'SUBMITTED' };
       default:
-        return { bg: '#F1F5F9', text: '#475569', border: '#CBD5E1', label: 'IN PROGRESS' };
+        return { bg: '#F1F5F9', text: '#475569', border: '#CBD5E1', label: status || 'ONGOING' };
     }
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem', width: '100%' }}>
+    <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem' }}>
       {/* 1. Header & Actions */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.74rem', color: '#64748B', marginBottom: '0.25rem' }}>
-            <span>Dashboard</span>
-            <ChevronRight size={12} />
-            <span>Student Development</span>
-            <ChevronRight size={12} />
-            <span style={{ color: '#0F172A', fontWeight: 700 }}>Student Projects</span>
-          </div>
+      <ModulePageHeader
+        breadcrumbs={[
+          { label: 'Dashboard' },
+          { label: 'Student Development' },
+          { label: 'Student Projects' }
+        ]}
+        title="Student Capstone & Major Projects"
+        subtitle="Manage mini, major, and capstone project lifecycles, guide mappings, milestone reviews, and research output linkages."
+        onExportCSV={() => exportToCSV('projects')}
+        onExportExcel={() => exportToExcel('projects')}
+        onExportPDF={() => exportToPDF('projects')}
+        primaryAction={canCreate ? {
+          label: 'Register Project',
+          icon: Plus,
+          onClick: () => { setEditingItem(null); setWizardOpen(true); }
+        } : null}
+      />
 
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.25rem 0', fontFamily: 'Cinzel, Georgia, serif' }}>
-            Student Projects
-          </h1>
-          <p style={{ fontSize: '0.82rem', color: '#64748B', margin: 0 }}>
-            Manage mini, major, and capstone project lifecycles, guide mappings, milestone reviews, and research output linkages.
-          </p>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={() => exportToCSV('projects')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}
-          >
-            <Download size={14} /> CSV
-          </button>
-          <button
-            type="button"
-            onClick={() => exportToExcel('projects')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#10B981', cursor: 'pointer' }}
-          >
-            <FileText size={14} /> Excel
-          </button>
-          <button
-            type="button"
-            onClick={() => exportToPDF('projects')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#DC2626', cursor: 'pointer' }}
-          >
-            <Printer size={14} /> PDF
-          </button>
-
-          {canCreate && (
-            <button
-              type="button"
-              onClick={() => { setEditingItem(null); setWizardOpen(true); }}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                background: 'linear-gradient(135deg, #F1C40F 0%, #D4AF37 100%)',
-                color: '#070F1E',
-                padding: '0.55rem 1.05rem',
-                borderRadius: '8px',
-                fontWeight: 800,
-                fontSize: '0.8rem',
-                border: 'none',
-                cursor: 'pointer',
-                boxShadow: '0 2px 10px rgba(212, 175, 55, 0.35)'
-              }}
-              className="hover:scale-105 transition-transform"
-            >
-              <Plus size={15} /> Register Project
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* 2. KPI Summary Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(135px, 1fr))', gap: '0.85rem' }}>
-        {[
-          { label: 'Total Projects', value: stats.total, color: '#0F172A', icon: Code2, bg: '#F8FAFC' },
-          { label: 'Major Projects', value: stats.major, color: '#2563EB', icon: Layers, bg: '#EFF6FF' },
-          { label: 'Mini Projects', value: stats.mini, color: '#0D9488', icon: Zap, bg: '#F0FDFA' },
-          { label: 'Capstone Projects', value: stats.capstone, color: '#7C3AED', icon: Award, bg: '#F5F3FF' },
-          { label: 'In Progress', value: stats.inProgress, color: '#D97706', icon: Clock, bg: '#FEFCE8' },
-          { label: 'Completed', value: stats.completed, color: '#059669', icon: CheckCircle2, bg: '#ECFDF5' },
-          { label: 'Industry Associated', value: stats.industry, color: '#0284C7', icon: Building2, bg: '#F0F9FF' },
-          { label: 'Pending Review', value: stats.pendingReview, color: '#9333EA', icon: Sparkles, bg: '#FDF4FF' }
-        ].map((k, i) => {
-          const Icon = k.icon;
-          return (
-            <div key={i} style={{ background: k.bg, padding: '1rem', borderRadius: '12px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>{k.label}</span>
-                <Icon size={16} style={{ color: k.color }} />
-              </div>
-              <div style={{ fontSize: '1.45rem', fontWeight: 800, color: k.color, fontFamily: 'Cinzel, serif' }}>{k.value}</div>
-            </div>
-          );
-        })}
-      </div>
+      {/* 2. Staggered Animated KPI Summary Cards */}
+      <AnimatedKpiGrid minWidth="135px">
+        <MotionKpiCard label="Total Projects" value={stats.total} icon={Code2} color="#0F172A" bg="#F8FAFC" />
+        <MotionKpiCard label="Major Projects" value={stats.major} icon={Layers} color="#2563EB" bg="#EFF6FF" />
+        <MotionKpiCard label="Mini Projects" value={stats.mini} icon={Zap} color="#0D9488" bg="#F0FDFA" />
+        <MotionKpiCard label="Capstone Projects" value={stats.capstone} icon={Award} color="#7C3AED" bg="#F5F3FF" />
+        <MotionKpiCard label="In Progress" value={stats.inProgress} icon={Clock} color="#D97706" bg="#FEFCE8" />
+        <MotionKpiCard label="Completed" value={stats.completed} icon={CheckCircle2} color="#059669" bg="#ECFDF5" />
+        <MotionKpiCard label="Industry Associated" value={stats.industry} icon={Building2} color="#0284C7" bg="#F0F9FF" />
+        <MotionKpiCard label="Pending Review" value={stats.pendingReview} icon={Sparkles} color="#9333EA" bg="#FDF4FF" />
+      </AnimatedKpiGrid>
 
       {/* 3. Search & Multi-Filter Toolbar */}
       <div style={{ background: '#FFFFFF', padding: '1rem 1.25rem', borderRadius: '14px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
@@ -741,6 +689,6 @@ export default function StudentProjectsManager({ currentUser, onDataChange }) {
           </div>
         </div>
       )}
-    </div>
+    </MotionPage>
   );
 }

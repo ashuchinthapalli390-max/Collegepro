@@ -32,6 +32,16 @@ import {
   exportToPDF
 } from '../../../data/portalStore.js';
 import FdpOrganizedWizardModal from './FdpOrganizedWizardModal.jsx';
+import { 
+  MotionPage, 
+  ModulePageHeader, 
+  AnimatedKpiGrid, 
+  MotionKpiCard, 
+  MotionTable, 
+  MotionTableRow, 
+  MotionEmptyState,
+  MotionButton 
+} from '../../motion/index.js';
 
 export default function FdpsOrganizedManager({ currentUser, onDataChange }) {
   const [dataVersion, setDataVersion] = useState(0);
@@ -70,23 +80,23 @@ export default function FdpsOrganizedManager({ currentUser, onDataChange }) {
     return { total, completed, ongoing, participants, mouAssociated, totalFunding };
   }, [fdps]);
 
+  // Filtered list
   const filteredFDPs = useMemo(() => {
     return fdps.filter(item => {
       const q = searchQuery.toLowerCase().trim();
       const matchSearch = !q ||
+        (item.fdpNumber && item.fdpNumber.toLowerCase().includes(q)) ||
         (item.fdpTitle && item.fdpTitle.toLowerCase().includes(q)) ||
         (item.coordinator && item.coordinator.toLowerCase().includes(q)) ||
-        (item.coordinatorName && item.coordinatorName.toLowerCase().includes(q)) ||
-        (item.resourcePerson && item.resourcePerson.toLowerCase().includes(q)) ||
-        (item.associatedMoU && item.associatedMoU.toLowerCase().includes(q));
+        (item.sponsoringAgency && item.sponsoringAgency.toLowerCase().includes(q));
 
       const itemDept = item.department || '';
       const matchDept = selectedDept === 'ALL' || itemDept.toLowerCase().includes(selectedDept.toLowerCase());
       const matchAy = selectedAy === 'ALL' || item.academicYear === selectedAy;
       const matchMode = selectedMode === 'ALL' || item.mode === selectedMode;
-      const matchType = selectedType === 'ALL' || (item.programmeType && item.programmeType.includes(selectedType));
+      const matchType = selectedType === 'ALL' || item.programmeType === selectedType;
       
-      const itemStatus = item.workflowStatus || (item.status === 'Approved' ? 'APPROVED' : 'DRAFT');
+      const itemStatus = item.workflowStatus || (item.programmeStatus === 'COMPLETED' ? 'APPROVED' : 'DRAFT');
       const matchStatus = selectedStatus === 'ALL' || itemStatus === selectedStatus;
 
       return matchSearch && matchDept && matchAy && matchMode && matchType && matchStatus;
@@ -105,19 +115,19 @@ export default function FdpsOrganizedManager({ currentUser, onDataChange }) {
   };
 
   const handleDelete = (item) => {
-    if (confirm(`Are you sure you want to delete FDP record: ${item.fdpTitle}?`)) {
+    if (window.confirm(`Are you sure you want to move FDP "${item.fdpTitle}" to Recycle Bin?`)) {
       softDeleteFDP(item.id, currentUser);
       refresh();
     }
   };
 
-  const getStatusBadge = (status) => {
+  const getWorkflowBadge = (status) => {
     switch (status) {
       case 'APPROVED':
         return { bg: '#ECFDF5', text: '#047857', border: '#A7F3D0', icon: CheckCircle2, label: 'APPROVED' };
-      case 'UNDER_REVIEW':
       case 'SUBMITTED':
-        return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', icon: Clock, label: 'UNDER REVIEW' };
+      case 'UNDER_REVIEW':
+        return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', icon: Clock, label: 'SUBMITTED' };
       case 'NEEDS_REVISION':
         return { bg: '#FEF2F2', text: '#DC2626', border: '#FECACA', icon: AlertTriangle, label: 'REVISION REQ.' };
       case 'DRAFT':
@@ -127,97 +137,35 @@ export default function FdpsOrganizedManager({ currentUser, onDataChange }) {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.4rem', width: '100%' }}>
+    <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.4rem' }}>
       {/* 1. Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.74rem', color: '#64748B', marginBottom: '0.25rem' }}>
-            <span>Dashboard</span>
-            <ChevronRight size={12} />
-            <span>Faculty Development</span>
-            <ChevronRight size={12} />
-            <span style={{ color: '#0F172A', fontWeight: 700 }}>FDPs Organized</span>
-          </div>
-
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.25rem 0', fontFamily: 'Cinzel, Georgia, serif' }}>
-            Faculty Development Programmes (FDPs Organized)
-          </h1>
-          <p style={{ fontSize: '0.82rem', color: '#64748B', margin: 0 }}>
-            Institutional repository for college/department-organized FDPs, AICTE/UGC sponsored workshops, training programmes, and MoU collaborations.
-          </p>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={() => exportToCSV('fdps')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}
-          >
-            <Download size={14} /> CSV
-          </button>
-          <button
-            type="button"
-            onClick={() => exportToExcel('fdps')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#10B981', cursor: 'pointer' }}
-          >
-            <FileText size={14} /> Excel
-          </button>
-          <button
-            type="button"
-            onClick={() => exportToPDF('fdps')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.5rem 0.85rem', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: '#DC2626', cursor: 'pointer' }}
-          >
-            <Printer size={14} /> PDF
-          </button>
-
-          {canCreate && (
-            <button
-              type="button"
-              onClick={() => { setEditingItem(null); setWizardOpen(true); }}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                background: 'linear-gradient(135deg, #F1C40F 0%, #D4AF37 100%)',
-                color: '#070F1E',
-                padding: '0.55rem 1.05rem',
-                borderRadius: '8px',
-                fontWeight: 800,
-                fontSize: '0.8rem',
-                border: 'none',
-                cursor: 'pointer',
-                boxShadow: '0 2px 10px rgba(212, 175, 55, 0.35)'
-              }}
-              className="hover:scale-105 transition-transform"
-            >
-              <Plus size={15} /> Record Organized FDP
-            </button>
-          )}
-        </div>
-      </div>
+      <ModulePageHeader
+        breadcrumbs={[
+          { label: 'Dashboard' },
+          { label: 'Faculty Development' },
+          { label: 'FDPs Organized' }
+        ]}
+        title="Faculty Development Programmes (FDPs Organized)"
+        subtitle="Institutional repository for college/department-organized FDPs, AICTE/UGC sponsored workshops, training programmes, and MoU collaborations."
+        onExportCSV={() => exportToCSV('fdps')}
+        onExportExcel={() => exportToExcel('fdps')}
+        onExportPDF={() => exportToPDF('fdps')}
+        primaryAction={canCreate ? {
+          label: 'Record Organized FDP',
+          icon: Plus,
+          onClick: () => { setEditingItem(null); setWizardOpen(true); }
+        } : null}
+      />
 
       {/* 2. KPI Summary Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.85rem' }}>
-        {[
-          { label: 'Total Programmes', value: stats.total, color: '#0F172A', icon: Award, bg: '#F8FAFC' },
-          { label: 'Completed FDPs', value: stats.completed, color: '#059669', icon: CheckCircle2, bg: '#ECFDF5' },
-          { label: 'Scheduled / Ongoing', value: stats.ongoing, color: '#2563EB', icon: Clock, bg: '#EFF6FF' },
-          { label: 'Total Participants', value: stats.participants, color: '#9333EA', icon: Users, bg: '#FDF4FF' },
-          { label: 'MoU Associated', value: stats.mouAssociated, color: '#D97706', icon: Handshake, bg: '#FEFCE8' },
-          { label: 'Grants / Funding', value: `₹${(stats.totalFunding / 100000).toFixed(1)}L`, color: '#0D9488', icon: Building2, bg: '#F0FDFA' }
-        ].map((k, i) => {
-          const Icon = k.icon;
-          return (
-            <div key={i} style={{ background: k.bg, padding: '1rem', borderRadius: '12px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>{k.label}</span>
-                <Icon size={16} style={{ color: k.color }} />
-              </div>
-              <div style={{ fontSize: '1.45rem', fontWeight: 800, color: k.color, fontFamily: 'Cinzel, serif' }}>{k.value}</div>
-            </div>
-          );
-        })}
-      </div>
+      <AnimatedKpiGrid minWidth="160px">
+        <MotionKpiCard label="Total Programmes" value={stats.total} icon={Award} color="#0F172A" bg="#F8FAFC" />
+        <MotionKpiCard label="Completed FDPs" value={stats.completed} icon={CheckCircle2} color="#059669" bg="#ECFDF5" />
+        <MotionKpiCard label="Scheduled / Ongoing" value={stats.ongoing} icon={Clock} color="#2563EB" bg="#EFF6FF" />
+        <MotionKpiCard label="Total Participants" value={stats.participants} icon={Users} color="#9333EA" bg="#FDF4FF" />
+        <MotionKpiCard label="MoU Associated" value={stats.mouAssociated} icon={Handshake} color="#D97706" bg="#FEFCE8" />
+        <MotionKpiCard label="Grants / Funding" value={`₹${(stats.totalFunding / 100000).toFixed(1)}L`} icon={Building2} color="#0D9488" bg="#F0FDFA" />
+      </AnimatedKpiGrid>
 
       {/* 3. Search & Filters */}
       <div style={{ background: '#FFFFFF', padding: '1rem 1.25rem', borderRadius: '14px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
@@ -504,6 +452,6 @@ export default function FdpsOrganizedManager({ currentUser, onDataChange }) {
           </div>
         </div>
       )}
-    </div>
+    </MotionPage>
   );
 }
