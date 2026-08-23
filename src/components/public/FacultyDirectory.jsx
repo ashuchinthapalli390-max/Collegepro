@@ -34,31 +34,34 @@ export default function FacultyDirectory({ selectedFacultyFromParent, onClearSel
   ];
 
   const filteredFaculty = useMemo(() => {
-    return FACULTY_DATA.filter(f => {
-      const q = searchQuery.toLowerCase();
-      const matchesSearch = f.name.toLowerCase().includes(q) || 
-                            f.department.toLowerCase().includes(q) || 
-                            f.qualification.toLowerCase().includes(q) ||
-                            f.summary.toLowerCase().includes(q);
+    return (FACULTY_DATA || []).filter(f => {
+      if (!f) return false;
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch = !q || 
+                            (f.name || '').toLowerCase().includes(q) || 
+                            (f.department || '').toLowerCase().includes(q) || 
+                            (f.qualification || '').toLowerCase().includes(q) ||
+                            (f.summary || '').toLowerCase().includes(q);
 
       const matchesDept = selectedDept === 'All' || 
                           (selectedDept === 'CSE' && f.department === 'CSE') ||
-                          f.department.toLowerCase().includes(selectedDept.toLowerCase());
+                          (f.department || '').toLowerCase().includes(selectedDept.toLowerCase());
 
+      const desig = f.designation || '';
       const matchesDesig = selectedDesignation === 'All' || 
-                           (selectedDesignation === 'Professor' && (f.designation.includes('Professor') && !f.designation.includes('Assoc') && !f.designation.includes('Asst'))) ||
-                           (selectedDesignation === 'Assoc. Professor' && f.designation.includes('Assoc')) ||
-                           (selectedDesignation === 'Asst. Professor' && f.designation.includes('Asst'));
+                           (selectedDesignation === 'Professor' && (desig.includes('Professor') && !desig.includes('Assoc') && !desig.includes('Asst'))) ||
+                           (selectedDesignation === 'Assoc. Professor' && desig.includes('Assoc')) ||
+                           (selectedDesignation === 'Asst. Professor' && desig.includes('Asst'));
 
       return matchesSearch && matchesDept && matchesDesig;
     });
   }, [searchQuery, selectedDept, selectedDesignation]);
 
-  const totalPages = Math.ceil(filteredFaculty.length / itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filteredFaculty.length / itemsPerPage));
   const paginatedFaculty = filteredFaculty.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
-  const facultyPubs = selectedFaculty ? getPublications().filter(p => p.facultyName === selectedFaculty.name || p.firstAuthor === selectedFaculty.name) : [];
-  const facultyPatents = selectedFaculty ? getPatents().filter(p => p.facultyName === selectedFaculty.name) : [];
+  const facultyPubs = selectedFaculty ? (getPublications() || []).filter(p => p.facultyName === selectedFaculty.name || p.firstAuthor === selectedFaculty.name) : [];
+  const facultyPatents = selectedFaculty ? (getPatents() || []).filter(p => p.facultyName === selectedFaculty.name) : [];
 
   return (
     <section style={{ padding: '4.5rem 0', background: '#F8FAFC', width: '100%' }}>

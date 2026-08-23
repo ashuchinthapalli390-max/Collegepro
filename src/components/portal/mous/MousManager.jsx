@@ -109,7 +109,7 @@ export default function MousManager({ currentUser, onDataChange }) {
         (item.title && item.title.toLowerCase().includes(q)) ||
         (item.primaryCoordinator && item.primaryCoordinator.toLowerCase().includes(q));
 
-      const matchDept = selectedDept === 'ALL' || item.department.toLowerCase().includes(selectedDept.toLowerCase());
+      const matchDept = selectedDept === 'ALL' || (item.department || '').toLowerCase().includes(selectedDept.toLowerCase());
       const matchType = selectedPartnerType === 'ALL' || item.partnerType === selectedPartnerType;
       const matchStatus = selectedStatus === 'ALL' || item.mouStatus === selectedStatus;
       const matchWorkflow = selectedWorkflowStatus === 'ALL' || item.workflowStatus === selectedWorkflowStatus;

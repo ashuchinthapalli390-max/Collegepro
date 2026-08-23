@@ -118,6 +118,7 @@ import ResearchDataSourcesView from './research/ResearchDataSourcesView.jsx';
 import { NaacPortalManager, NbaTier1Manager, NirfDataManager, ExportHubManager } from './compliance/ComplianceHubs.jsx';
 import { IamMatrixManager, IamSessionsManager, IamSettingsManager } from './iam/IamModules.jsx';
 import PortalModuleFallback from './common/PortalModuleFallback.jsx';
+import ModuleErrorBoundary from '../common/ModuleErrorBoundary.jsx';
 
 export default function PortalDashboard({ currentUser, onNavigatePublic, onLogout, onExitPortal }) {
   const [activeModule, setActiveModule] = useState('overview');
@@ -315,9 +316,13 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
 
   // Filtered Faculty List for Photo Management
   const filteredFacultyList = facultyList.filter(f => {
-    const q = facultySearch.toLowerCase();
-    const matchesQuery = f.name.toLowerCase().includes(q) || f.id.toLowerCase().includes(q) || f.department.toLowerCase().includes(q) || f.designation.toLowerCase().includes(q);
-    const matchesDept = facultyDeptFilter === 'ALL' || f.department.toLowerCase().includes(facultyDeptFilter.toLowerCase());
+    const q = facultySearch.toLowerCase().trim();
+    const matchesQuery = !q || 
+      (f.name && f.name.toLowerCase().includes(q)) || 
+      (f.id && f.id.toLowerCase().includes(q)) || 
+      (f.department && f.department.toLowerCase().includes(q)) || 
+      (f.designation && f.designation.toLowerCase().includes(q));
+    const matchesDept = facultyDeptFilter === 'ALL' || (f.department || '').toLowerCase().includes(facultyDeptFilter.toLowerCase());
     const matchesPhoto = facultyPhotoStatusFilter === 'ALL' 
       ? true 
       : (facultyPhotoStatusFilter === 'WITH_PHOTO' ? !!f.photo : !f.photo);
@@ -388,10 +393,11 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
               exit="exit"
               style={{ width: '100%' }}
             >
-              {/* ────────────────────────────────────────────────────────── */}
-              {/* VIEW 1: EXECUTIVE DASHBOARD OVERVIEW */}
-              {/* ────────────────────────────────────────────────────────── */}
-              {activeModule === 'overview' && (
+              <ModuleErrorBoundary moduleName={activeModule} resetKey={activeModule}>
+                {/* ────────────────────────────────────────────────────────── */}
+                {/* VIEW 1: EXECUTIVE DASHBOARD OVERVIEW */}
+                {/* ────────────────────────────────────────────────────────── */}
+                {activeModule === 'overview' && (
                 <DashboardOverviewView
               currentUser={currentUser}
               usersCount={usersList.length}
@@ -925,6 +931,7 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
               onBackToOverview={() => setActiveModule('overview')}
             />
           )}
+              </ModuleErrorBoundary>
             </motion.div>
           </AnimatePresence>
         </main>

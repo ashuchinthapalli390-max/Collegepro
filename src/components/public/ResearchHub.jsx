@@ -35,11 +35,11 @@ export default function ResearchHub({ onOpenPortal }) {
   const [selectedResearcher, setSelectedResearcher] = useState(null);
 
   // Only display APPROVED + PUBLIC publications in the public website
-  const allPublications = getPublications();
-  const approvedPublicPubs = allPublications.filter(p => !p.isDeleted && p.workflowStatus !== 'REJECTED' && p.workflowStatus !== 'ARCHIVED');
-  const patents = getPatents();
-  const mous = getMoUs();
-  const datasetVersions = getDatasetVersions();
+  const allPublications = getPublications() || [];
+  const approvedPublicPubs = allPublications.filter(p => p && !p.isDeleted && p.workflowStatus !== 'REJECTED' && p.workflowStatus !== 'ARCHIVED');
+  const patents = getPatents() || [];
+  const mous = getMoUs() || [];
+  const datasetVersions = getDatasetVersions() || [];
 
   const filteredPubs = approvedPublicPubs.filter(p => {
     const q = pubSearch.toLowerCase().trim();

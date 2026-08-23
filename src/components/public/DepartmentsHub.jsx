@@ -24,11 +24,11 @@ export default function DepartmentsHub({ selectedDepartment, onSelectDepartment,
   const dept = selectedDepartment || null;
 
   // Filter department specific faculty
-  const deptFaculty = dept ? FACULTY_DATA.filter(f => f.department.toLowerCase().includes(dept.code.toLowerCase()) || (dept.code === 'CSE' && f.department === 'CSE')) : [];
-  const deptPublications = dept ? getPublications().filter(p => p.department.toLowerCase().includes(dept.code.toLowerCase())) : [];
-  const deptPatents = dept ? getPatents().filter(p => p.department.toLowerCase().includes(dept.code.toLowerCase())) : [];
-  const deptAchievements = dept ? getStudentAchievements().filter(a => a.department.toLowerCase().includes(dept.code.toLowerCase())) : [];
-  const deptInternships = dept ? getInternships().filter(i => (i.branch || '').toLowerCase().includes(dept.code.toLowerCase())) : [];
+  const deptFaculty = dept ? (FACULTY_DATA || []).filter(f => ((f.department || '').toLowerCase().includes((dept.code || '').toLowerCase()) || (dept.code === 'CSE' && f.department === 'CSE'))) : [];
+  const deptPublications = dept ? (getPublications() || []).filter(p => (p.department || '').toLowerCase().includes((dept.code || '').toLowerCase())) : [];
+  const deptPatents = dept ? (getPatents() || []).filter(p => (p.department || '').toLowerCase().includes((dept.code || '').toLowerCase())) : [];
+  const deptAchievements = dept ? (getStudentAchievements() || []).filter(a => (a.department || '').toLowerCase().includes((dept.code || '').toLowerCase())) : [];
+  const deptInternships = dept ? (getInternships() || []).filter(i => (i.branch || i.department || '').toLowerCase().includes((dept.code || '').toLowerCase())) : [];
 
   if (!dept) {
     return (

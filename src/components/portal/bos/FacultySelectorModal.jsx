@@ -17,9 +17,12 @@ export default function FacultySelectorModal({
   if (!isOpen) return null;
 
   const filteredFaculty = FACULTY_DATA.filter(f => {
-    const q = searchQuery.toLowerCase();
-    const matchesSearch = f.name.toLowerCase().includes(q) || f.designation.toLowerCase().includes(q) || f.id.toLowerCase().includes(q);
-    const matchesDept = deptFilter === 'ALL' || f.department.toLowerCase().includes(deptFilter.toLowerCase());
+    const q = searchQuery.toLowerCase().trim();
+    const matchesSearch = !q || 
+      (f.name && f.name.toLowerCase().includes(q)) || 
+      (f.designation && f.designation.toLowerCase().includes(q)) || 
+      (f.id && f.id.toLowerCase().includes(q));
+    const matchesDept = deptFilter === 'ALL' || (f.department || '').toLowerCase().includes(deptFilter.toLowerCase());
     return matchesSearch && matchesDept;
   });
 

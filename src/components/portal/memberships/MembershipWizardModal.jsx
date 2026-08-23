@@ -126,7 +126,9 @@ export default function MembershipWizardModal({
   const filteredFaculty = FACULTY_DATA.filter(f => {
     const q = facultySearch.toLowerCase().trim();
     if (!q) return true;
-    return f.name.toLowerCase().includes(q) || f.department.toLowerCase().includes(q) || f.id.toLowerCase().includes(q);
+    return (f.name && f.name.toLowerCase().includes(q)) || 
+           (f.department && f.department.toLowerCase().includes(q)) || 
+           (f.id && f.id.toLowerCase().includes(q));
   });
 
   const handleSelectFaculty = (fac) => {

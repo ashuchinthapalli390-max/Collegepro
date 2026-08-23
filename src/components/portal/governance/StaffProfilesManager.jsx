@@ -25,9 +25,12 @@ export default function StaffProfilesManager({ currentUser }) {
   ];
 
   const filtered = staffMembers.filter(s => {
-    const q = search.toLowerCase();
-    const matchQ = !q || s.name.toLowerCase().includes(q) || s.designation.toLowerCase().includes(q) || s.id.toLowerCase().includes(q);
-    const matchDept = deptFilter === 'ALL' || s.department.toLowerCase().includes(deptFilter.toLowerCase());
+    const q = search.toLowerCase().trim();
+    const matchQ = !q || 
+      (s.name && s.name.toLowerCase().includes(q)) || 
+      (s.designation && s.designation.toLowerCase().includes(q)) || 
+      (s.id && s.id.toLowerCase().includes(q));
+    const matchDept = deptFilter === 'ALL' || (s.department || '').toLowerCase().includes(deptFilter.toLowerCase());
     return matchQ && matchDept;
   });
 

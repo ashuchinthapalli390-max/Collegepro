@@ -26,9 +26,12 @@ export default function FundedProjectsManager({ currentUser }) {
   ];
 
   const filtered = fundedProjects.filter(p => {
-    const q = search.toLowerCase();
-    const matchQ = !q || p.projectTitle.toLowerCase().includes(q) || p.fundingAgency.toLowerCase().includes(q) || p.principalInvestigator.toLowerCase().includes(q);
-    const matchDept = deptFilter === 'ALL' || p.department.toLowerCase().includes(deptFilter.toLowerCase());
+    const q = search.toLowerCase().trim();
+    const matchQ = !q || 
+      (p.projectTitle && p.projectTitle.toLowerCase().includes(q)) || 
+      (p.fundingAgency && p.fundingAgency.toLowerCase().includes(q)) || 
+      (p.principalInvestigator && p.principalInvestigator.toLowerCase().includes(q));
+    const matchDept = deptFilter === 'ALL' || (p.department || '').toLowerCase().includes(deptFilter.toLowerCase());
     return matchQ && matchDept;
   });
 
