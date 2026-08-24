@@ -124,10 +124,34 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
   const [activeModule, setActiveModule] = useState('overview');
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [isMobileDrawer, setIsMobileDrawer] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 1024 : false);
   const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [bulkImportModalOpen, setBulkImportModalOpen] = useState(false);
   const [dataVersion, setDataVersion] = useState(0);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 1024;
+      setIsMobile(mobile);
+      if (!mobile && isMobileDrawer) {
+        setIsMobileDrawer(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isMobileDrawer]);
+
+  useEffect(() => {
+    if (isMobileDrawer) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobileDrawer]);
 
   // User Management State
   const [userSearch, setUserSearch] = useState('');
@@ -357,12 +381,12 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
           {dashboardToast}
         </div>
       )}
-      {/* 1. Production Top Header (Role Switcher Removed!) */}
+      {/* 1. Production Top Header */}
       <TopHeader
         currentUser={currentUser}
         sidebarExpanded={sidebarExpanded}
         onToggleSidebar={() => {
-          if (window.innerWidth < 1024) {
+          if (isMobile) {
             setIsMobileDrawer(!isMobileDrawer);
           } else {
             setSidebarExpanded(!sidebarExpanded);
@@ -382,13 +406,13 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
 
       {/* 2. Main Workspace Layout (Floating Sidebar + Content Canvas with Shared Breathing Gap) */}
       <div style={{
-        display: 'flex',
+        display: isMobile ? 'block' : 'flex',
         flex: 1,
         width: '100%',
         position: 'relative',
         boxSizing: 'border-box',
-        padding: 'var(--portal-shell-y, 18px) var(--portal-shell-x, 14px)',
-        gap: 'var(--portal-sidebar-main-gap, 18px)',
+        padding: 'var(--portal-shell-y, 16px) var(--portal-shell-x, 14px)',
+        gap: 'var(--portal-sidebar-main-gap, 16px)',
         minHeight: 'calc(100vh - 65px)'
       }}>
         {/* Floating Animated Navigation Sidebar */}
@@ -400,8 +424,10 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
           currentUser={currentUser}
           onNavigatePublic={onNavigatePublic || onExitPortal}
           onLogout={onLogout || onExitPortal}
+          isMobile={isMobile}
           isMobileDrawer={isMobileDrawer}
           onCloseMobileDrawer={() => setIsMobileDrawer(false)}
+          unreadAlertsCount={3}
         />
 
         {/* Dynamic Content Canvas */}

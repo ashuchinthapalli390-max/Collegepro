@@ -2,9 +2,20 @@ import https from 'https';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import { 
+  applyRateLimit, 
+  validateCsrf, 
+  auditSecurityEvent, 
+  loadServerAuditLogs, 
+  hasPermission,
+  protectLastSuperAdmin,
+  safeApiError 
+} from './securityMiddleware.js';
 
-// Server-side session & user persistence file path
+// Server-side session persistence file path
 const SESSIONS_FILE = path.resolve(process.cwd(), '.portal_sessions.json');
+const OTP_CHALLENGES_FILE = path.resolve(process.cwd(), '.portal_otp_challenges.json');
+
 const USERS_SEED = [
   { 
     id: 'usr_superadmin', 
@@ -112,6 +123,25 @@ function saveServerSessions(sessions) {
   }
 }
 
+function loadOtpChallenges() {
+  try {
+    if (fs.existsSync(OTP_CHALLENGES_FILE)) {
+      return JSON.parse(fs.readFileSync(OTP_CHALLENGES_FILE, 'utf8') || '[]');
+    }
+  } catch (e) {
+    console.error('[OTP_STORE_ERROR] Failed to read OTP challenges:', e);
+  }
+  return [];
+}
+
+function saveOtpChallenges(challenges) {
+  try {
+    fs.writeFileSync(OTP_CHALLENGES_FILE, JSON.stringify(challenges, null, 2));
+  } catch (e) {
+    console.error('[OTP_STORE_ERROR] Failed to save OTP challenges:', e);
+  }
+}
+
 // Load server environment variables from .env.local without exposing to client
 function getEnvConfig() {
   const envPath = path.resolve(process.cwd(), '.env.local');
@@ -206,7 +236,33 @@ export function authServerPlugin() {
       server.middlewares.use(async (req, res, next) => {
         const isProd = process.env.NODE_ENV === 'production';
 
+        // ──────────────────────────────────────────────────────────
+        // Global Security Headers on all HTTP responses
+        // ──────────────────────────────────────────────────────────
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+        res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+        res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+
+        // Only enforce API route interception
+        if (!req.url.startsWith('/api/')) {
+          return next();
+        }
+
+        // Disable caching on all dynamic authenticated API endpoints
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+
+        // CSRF Check for mutation requests
+        const csrfCheck = validateCsrf(req);
+        if (!csrfCheck.valid) {
+          return safeApiError(res, new Error(csrfCheck.reason), 403, 'CSRF verification failed.');
+        }
+
+        // ──────────────────────────────────────────────────────────
         // 1. GET /api/auth/me - Authoritative Server Session Validator
+        // ──────────────────────────────────────────────────────────
         if (req.url === '/api/auth/me' && req.method === 'GET') {
           const cookies = parseCookies(req.headers.cookie);
           const rawToken = cookies['nec_session'];
@@ -269,8 +325,17 @@ export function authServerPlugin() {
           }));
         }
 
+        // ──────────────────────────────────────────────────────────
         // 2. POST /api/auth/session/create - Create Persistent HttpOnly nec_session Cookie after OTP Success
+        // ──────────────────────────────────────────────────────────
         if (req.url === '/api/auth/session/create' && req.method === 'POST') {
+          // Rate Limit session creations: 10 per minute
+          const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+          const rateCheck = applyRateLimit(`session_create_${clientIp}`, 10, 60000);
+          if (!rateCheck.allowed) {
+            return safeApiError(res, new Error('Rate limit exceeded'), 429, `Too many session requests. Try again in ${rateCheck.resetInSeconds}s.`);
+          }
+
           let body = '';
           req.on('data', chunk => body += chunk);
           req.on('end', async () => {
@@ -278,8 +343,7 @@ export function authServerPlugin() {
               const { userId, authMethod = 'GOOGLE', rememberDevice = true } = JSON.parse(body || '{}');
 
               if (!userId) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ success: false, error: 'User ID is required' }));
+                return safeApiError(res, new Error('User ID is required'), 400, 'User ID is required.');
               }
 
               const rawToken = crypto.randomBytes(32).toString('base64url');
@@ -289,13 +353,23 @@ export function authServerPlugin() {
               const expiresAt = new Date(Date.now() + maxAge * 1000).toISOString();
 
               const sessions = loadServerSessions();
+
+              // Session Fixation Protection: Revoke any existing pre-auth / unverified sessions for this user
+              sessions.forEach(s => {
+                if (s.user_id === userId && s.state === 'PENDING_OTP') {
+                  s.state = 'SUPERSEDED';
+                  s.revoked_at = new Date().toISOString();
+                }
+              });
+
               const newSession = {
-                id: 'SES-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+                id: 'SES-' + Date.now() + '-' + crypto.randomBytes(3).toString('hex'),
                 user_id: userId,
                 token_digest: tokenDigest,
                 state: 'VERIFIED',
                 auth_method: authMethod,
                 remember_device: rememberDevice,
+                ip_address: clientIp,
                 created_at: new Date().toISOString(),
                 last_seen_at: new Date().toISOString(),
                 expires_at: expiresAt,
@@ -303,7 +377,7 @@ export function authServerPlugin() {
               };
 
               sessions.unshift(newSession);
-              if (sessions.length > 200) sessions.pop();
+              if (sessions.length > 300) sessions.pop();
               saveServerSessions(sessions);
 
               const matchedUser = USERS_SEED.find(u => u.id === userId) || {
@@ -316,14 +390,18 @@ export function authServerPlugin() {
                 status: 'Active'
               };
 
+              // Audit logging
+              auditSecurityEvent('SESSION_CREATED', 'Authentication', `Issued verified session via ${authMethod}`, matchedUser, {
+                sessionId: newSession.id,
+                rememberDevice
+              });
+
               const cookieFlags = `Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}; ${isProd ? 'Secure;' : ''}`;
 
               res.writeHead(200, {
                 'Content-Type': 'application/json',
                 'Set-Cookie': `nec_session=${rawToken}; ${cookieFlags}`
               });
-
-              console.log(`[SERVER_AUTH] Created VERIFIED persistent session for user: ${matchedUser.email}. Token digest stored.`);
 
               return res.end(JSON.stringify({
                 success: true,
@@ -339,15 +417,15 @@ export function authServerPlugin() {
                 }
               }));
             } catch (err) {
-              console.error('[SERVER_AUTH_ERROR] Session create error:', err);
-              res.writeHead(500, { 'Content-Type': 'application/json' });
-              return res.end(JSON.stringify({ success: false, error: err.message }));
+              return safeApiError(res, err, 500, 'Unable to create session.');
             }
           });
           return;
         }
 
+        // ──────────────────────────────────────────────────────────
         // 3. POST /api/auth/logout - Revoke Server Session & Delete Cookie
+        // ──────────────────────────────────────────────────────────
         if (req.url === '/api/auth/logout' && req.method === 'POST') {
           const cookies = parseCookies(req.headers.cookie);
           const rawToken = cookies['nec_session'];
@@ -360,7 +438,10 @@ export function authServerPlugin() {
               session.state = 'REVOKED';
               session.revoked_at = new Date().toISOString();
               saveServerSessions(sessions);
-              console.log(`[SERVER_AUTH] Revoked session: ${session.id}`);
+              
+              auditSecurityEvent('SESSION_REVOKED', 'Authentication', `Explicit user logout`, { id: session.user_id }, {
+                sessionId: session.id
+              });
             }
           }
 
@@ -371,8 +452,12 @@ export function authServerPlugin() {
           return res.end(JSON.stringify({ success: true, message: 'Logged out successfully' }));
         }
 
+        // ──────────────────────────────────────────────────────────
         // 4. POST /api/auth/otp/send - Live OTP Email Dispatch Endpoint
+        // ──────────────────────────────────────────────────────────
         if (req.url === '/api/auth/otp/send' && req.method === 'POST') {
+          const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+          
           let body = '';
           req.on('data', chunk => body += chunk);
           req.on('end', async () => {
@@ -381,11 +466,17 @@ export function authServerPlugin() {
               const { apiKey, authEmailFrom } = getEnvConfig();
 
               if (!email || !code) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ success: false, code: 'INVALID_PAYLOAD', error: 'Email and OTP code are required.' }));
+                return safeApiError(res, new Error('Missing fields'), 400, 'Email and OTP code are required.');
               }
 
-              console.log(`[SERVER_AUTH] Dispatching verification OTP email to recipient domain: ${email.split('@')[1]}`);
+              // Rate Limit OTP send: 5 per minute per IP/Account
+              const rateKey = `otp_send_${clientIp}_${email.toLowerCase().trim()}`;
+              const rateCheck = applyRateLimit(rateKey, 5, 60000);
+              if (!rateCheck.allowed) {
+                return safeApiError(res, new Error('OTP rate limit exceeded'), 429, `Too many OTP requests. Please wait ${rateCheck.resetInSeconds}s.`);
+              }
+
+              console.info(`[SERVER_AUTH] Dispatching verification OTP email to recipient domain: ${email.split('@')[1]}`);
 
               const htmlContent = `
                 <div style="font-family: Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8fafc; padding: 40px 20px; color: #0f172a;">
@@ -410,7 +501,7 @@ export function authServerPlugin() {
                         <div style="font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #f1c40f; font-family: monospace;">
                           ${code}
                         </div>
-                        <div style="color: #94a3b8; font-size: 12px; margin-top: 6px;">
+                        <div style="color: #94A3B8; font-size: 12px; margin-top: 6px;">
                           This code expires in 5 minutes • Single-use only
                         </div>
                       </div>
@@ -437,42 +528,34 @@ export function authServerPlugin() {
                 apiKey
               });
 
-              console.log(`[SERVER_AUTH] OTP email successfully accepted by Resend. MessageId=${result.id}`);
+              auditSecurityEvent('OTP_SENT', 'Authentication', `Dispatched OTP verification email to user domain`, { email });
+
               res.writeHead(200, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ success: true, messageId: result.id }));
+              return res.end(JSON.stringify({ success: true, messageId: result.id }));
             } catch (err) {
-              console.error(`[SERVER_AUTH_ERROR] Failed to send OTP email: ${err.message}`);
-              res.writeHead(500, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ success: false, code: 'OTP_SEND_FAILED', error: 'Unable to send verification code. Please try again.' }));
+              return safeApiError(res, err, 500, 'Unable to dispatch verification code. Please try again.');
             }
           });
           return;
         }
 
-        // 5. Development-Only Test Diagnostic Route
-        if (req.url === '/api/dev/test-resend' && req.method === 'POST') {
-          if (process.env.NODE_ENV === 'production') {
-            res.writeHead(404, { 'Content-Type': 'application/json' });
-            return res.end(JSON.stringify({ error: 'Not found' }));
+        // ──────────────────────────────────────────────────────────
+        // 5. GET /api/admin/audit-logs - Immutable Server Audit Log Trail
+        // ──────────────────────────────────────────────────────────
+        if (req.url === '/api/admin/audit-logs' && req.method === 'GET') {
+          const cookies = parseCookies(req.headers.cookie);
+          const rawToken = cookies['nec_session'];
+          const tokenDigest = rawToken ? hashToken(rawToken) : null;
+          const sessions = loadServerSessions();
+          const activeSession = sessions.find(s => s.token_digest === tokenDigest && s.state === 'VERIFIED');
+
+          if (!activeSession) {
+            return safeApiError(res, new Error('Unauthorized audit log request'), 401, 'Authentication required to view audit records.');
           }
 
-          try {
-            const { apiKey, authEmailFrom } = getEnvConfig();
-            const result = await sendResendEmail({
-              from: authEmailFrom,
-              to: 'ashuchinthapalli3900@gmail.com',
-              subject: 'NEC Portal Resend Test',
-              html: '<p>This is a Resend configuration test from NEC Secure Portal.</p>',
-              apiKey
-            });
-
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: true, messageId: result.id }));
-          } catch (err) {
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: false, error: err.message }));
-          }
-          return;
+          const logs = loadServerAuditLogs();
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ success: true, count: logs.length, logs }));
         }
 
         next();

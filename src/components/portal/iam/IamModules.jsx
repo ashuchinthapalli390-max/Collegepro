@@ -365,20 +365,28 @@ export function IamSettingsManager({ currentUser }) {
           </select>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: '240px' }}>
             <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.9rem' }}>Session Idle Timeout</div>
-            <div style={{ fontSize: '0.74rem', color: '#64748B' }}>Logs user out after continuous inactivity.</div>
+            <div style={{ fontSize: '0.74rem', color: '#64748B', marginTop: '0.15rem' }}>
+              Controls automatic logout when no mouse or keyboard activity is detected.
+            </div>
+            <div style={{ fontSize: '0.7rem', color: '#B45309', background: '#FEF3C7', border: '1px solid #FDE68A', padding: '0.35rem 0.6rem', borderRadius: '6px', marginTop: '0.4rem', display: 'inline-block' }}>
+              <strong>Security Notice:</strong> Selecting <em>Never</em> disables inactivity auto-logout only. Absolute session expiration and token revocation remain active.
+            </div>
           </div>
           <select
-            value={settings.sessionTimeoutMinutes || 60}
-            onChange={(e) => setSettings({ ...settings, sessionTimeoutMinutes: parseInt(e.target.value) })}
-            style={{ padding: '0.4rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.8rem' }}
+            value={settings.sessionTimeoutMinutes === 0 ? 0 : (settings.sessionTimeoutMinutes || 60)}
+            onChange={(e) => setSettings({ ...settings, sessionTimeoutMinutes: parseInt(e.target.value, 10) })}
+            style={{ padding: '0.45rem 0.85rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.82rem', fontWeight: 600, background: '#FFFFFF', color: '#0F172A' }}
           >
             <option value={15}>15 Minutes</option>
             <option value={30}>30 Minutes</option>
             <option value={60}>60 Minutes (1 Hour)</option>
-            <option value={120}>120 Minutes (2 Hours)</option>
+            <option value={120}>2 Hours</option>
+            <option value={240}>4 Hours</option>
+            <option value={480}>8 Hours</option>
+            <option value={0}>Never (No Idle Logout)</option>
           </select>
         </div>
       </div>

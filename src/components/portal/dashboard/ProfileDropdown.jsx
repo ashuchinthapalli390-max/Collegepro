@@ -120,18 +120,21 @@ export default function ProfileDropdown({ currentUser, onNavigatePublic, onLogou
           {initials}
         </motion.div>
 
-        {/* User Details (Desktop) */}
-        <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column' }}>
-          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#FFFFFF', lineHeight: 1.2 }}>
-            {displayName.length > 18 ? displayName.slice(0, 16) + '...' : displayName}
-          </span>
-          <span style={{ fontSize: '0.68rem', color: '#D4AF37', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-            <ShieldCheck size={10} /> {displayRole}
-          </span>
+        {/* User Details (Desktop Only) */}
+        <div className="desktop-only" style={{ textAlign: 'left' }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#FFFFFF', lineHeight: 1.2 }}>
+              {displayName.length > 18 ? displayName.slice(0, 16) + '...' : displayName}
+            </span>
+            <span style={{ fontSize: '0.68rem', color: '#D4AF37', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+              <ShieldCheck size={10} /> {displayRole}
+            </span>
+          </div>
         </div>
 
-        {/* Animated Chevron */}
+        {/* Animated Chevron (Desktop Only) */}
         <motion.div
+          className="desktop-only"
           animate={shouldReduceMotion ? {} : { rotate: isOpen ? 180 : 0 }}
           transition={{ type: 'spring', stiffness: 360, damping: 24 }}
           style={{ display: 'flex', alignItems: 'center' }}

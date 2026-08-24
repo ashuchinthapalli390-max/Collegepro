@@ -33,6 +33,7 @@ import {
   Search, 
   ChevronRight, 
   ChevronDown, 
+  ChevronLeft,
   LogOut, 
   ShieldCheck, 
   Sparkles,
@@ -51,8 +52,10 @@ export default function FloatingSidebar({
   onNavigatePublic,
   onLogout,
   onExitPortal,
-  isMobileDrawer,
-  onCloseMobileDrawer
+  isMobile = false,
+  isMobileDrawer = false,
+  onCloseMobileDrawer,
+  unreadAlertsCount = 0
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCategories, setExpandedCategories] = useState({});
@@ -72,6 +75,18 @@ export default function FloatingSidebar({
       }
     });
   }, [activeModule]);
+
+  // Handle Escape key to close mobile drawer
+  useEffect(() => {
+    if (!isMobileDrawer) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && onCloseMobileDrawer) {
+        onCloseMobileDrawer();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isMobileDrawer, onCloseMobileDrawer]);
 
   const toggleCategory = (catId) => {
     setExpandedCategories(prev => ({
@@ -103,19 +118,28 @@ export default function FloatingSidebar({
     return null;
   }).filter(Boolean);
 
-  const sidebarWidth = isMobileDrawer ? '290px' : (sidebarExpanded ? '310px' : '82px');
+  // If on mobile and drawer is closed, do NOT render in document flow
+  if (isMobile && !isMobileDrawer) {
+    return null;
+  }
+
+  const isExpandedView = isMobile ? true : sidebarExpanded;
+  const sidebarWidth = isMobile ? 'min(86vw, 320px)' : (sidebarExpanded ? '310px' : '82px');
 
   return (
     <>
-      {/* Mobile Backdrop */}
-      {isMobileDrawer && (
-        <div
+      {/* Mobile Backdrop Overlay */}
+      {isMobile && isMobileDrawer && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
           onClick={onCloseMobileDrawer}
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(7, 15, 30, 0.75)',
-            backdropFilter: 'blur(6px)',
+            background: 'rgba(7, 15, 30, 0.78)',
+            backdropFilter: 'blur(8px)',
             zIndex: 1050
           }}
         />
@@ -123,22 +147,24 @@ export default function FloatingSidebar({
 
       {/* Floating Sidebar Container */}
       <motion.aside
-        initial={false}
-        animate={{ width: sidebarWidth }}
-        transition={{ duration: 0.25, ease: [0.25, 1, 0.5, 1] }}
+        initial={isMobile ? { x: '-100%' } : false}
+        animate={isMobile ? { x: 0 } : { width: sidebarWidth }}
+        exit={isMobile ? { x: '-100%' } : undefined}
+        transition={{ duration: 0.24, ease: [0.25, 1, 0.5, 1] }}
         style={{
-          position: isMobileDrawer ? 'fixed' : 'sticky',
-          top: isMobileDrawer ? 0 : 'calc(65px + var(--portal-shell-y, 18px))',
-          left: isMobileDrawer ? 0 : 'auto',
-          bottom: isMobileDrawer ? 0 : 'auto',
-          height: isMobileDrawer ? '100vh' : 'calc(100vh - 65px - (2 * var(--portal-shell-y, 18px)))',
+          position: isMobile ? 'fixed' : 'sticky',
+          top: isMobile ? 0 : 'calc(65px + var(--portal-shell-y, 16px))',
+          left: 0,
+          bottom: isMobile ? 0 : 'auto',
+          width: sidebarWidth,
+          height: isMobile ? '100vh' : 'calc(100vh - 65px - (2 * var(--portal-shell-y, 16px)))',
           background: 'linear-gradient(180deg, #070F1E 0%, #0B192C 60%, #081220 100%)',
-          borderRadius: isMobileDrawer ? '0 20px 20px 0' : '20px',
+          borderRadius: isMobile ? '0 20px 20px 0' : '20px',
           border: '1px solid rgba(212, 175, 55, 0.22)',
-          boxShadow: '0 12px 35px rgba(0, 0, 0, 0.35), 0 0 15px rgba(212, 175, 55, 0.08)',
+          boxShadow: '0 12px 35px rgba(0, 0, 0, 0.45), 0 0 15px rgba(212, 175, 55, 0.08)',
           display: 'flex',
           flexDirection: 'column',
-          zIndex: isMobileDrawer ? 1100 : 90,
+          zIndex: isMobile ? 1100 : 90,
           overflow: 'hidden',
           flexShrink: 0,
           margin: 0
@@ -150,11 +176,18 @@ export default function FloatingSidebar({
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
           flexShrink: 0
         }}>
-          {isMobileDrawer && (
+          {isMobile && (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#D4AF37', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                Navigation Hub
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <img 
+                  src="/assets/NEC Logos/College-logo.jpeg" 
+                  alt="NEC Crest" 
+                  style={{ width: '24px', height: '24px', borderRadius: '4px', border: '1px solid #D4AF37' }}
+                />
+                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#D4AF37', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                  Navigation Hub
+                </span>
+              </div>
               <button
                 type="button"
                 onClick={onCloseMobileDrawer}
@@ -163,8 +196,11 @@ export default function FloatingSidebar({
                   border: 'none',
                   color: '#94A3B8',
                   borderRadius: '6px',
-                  padding: '0.3rem',
-                  cursor: 'pointer'
+                  padding: '0.35rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}
               >
                 <X size={16} />
@@ -172,7 +208,7 @@ export default function FloatingSidebar({
             </div>
           )}
 
-          {(sidebarExpanded || isMobileDrawer) ? (
+          {isExpandedView ? (
             <div style={{ position: 'relative' }}>
               <Search
                 size={14}
@@ -201,64 +237,51 @@ export default function FloatingSidebar({
                   boxSizing: 'border-box'
                 }}
               />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  style={{
-                    position: 'absolute',
-                    right: '8px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#94A3B8',
-                    cursor: 'pointer',
-                    fontSize: '0.7rem'
-                  }}
-                >
-                  ✕
-                </button>
-              )}
             </div>
           ) : (
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <div style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '8px',
-                background: 'rgba(212, 175, 55, 0.12)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#F1C40F',
-                border: '1px solid rgba(212, 175, 55, 0.25)'
-              }}>
-                <Sparkles size={16} />
-              </div>
+            <div style={{ textAlign: 'center' }}>
+              <button
+                type="button"
+                onClick={onToggleSidebar}
+                title="Expand Navigation Menu"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.06)',
+                  border: '1px solid rgba(212, 175, 55, 0.2)',
+                  borderRadius: '8px',
+                  color: '#D4AF37',
+                  padding: '0.45rem',
+                  cursor: 'pointer',
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <Search size={14} />
+              </button>
             </div>
           )}
         </div>
 
-        {/* Scrollable Category Accordion Tree */}
+        {/* Scrollable Navigation List */}
         <div style={{
           flex: 1,
           overflowY: 'auto',
           overflowX: 'hidden',
-          padding: '0.65rem 0.55rem',
+          padding: isExpandedView ? '0.6rem 0.65rem' : '0.6rem 0.4rem',
           display: 'flex',
           flexDirection: 'column',
           gap: '0.35rem'
         }}>
           {filteredCategories.map(cat => {
             const CatIcon = cat.icon;
-            const isCatExpanded = (sidebarExpanded || isMobileDrawer) ? (expandedCategories[cat.id] ?? false) : false;
+            const isCatExpanded = isExpandedView ? (expandedCategories[cat.id] ?? false) : false;
             const hasActiveModule = cat.items.some(item => item.id === activeModule);
 
             return (
               <div key={cat.id} style={{ marginBottom: '0.2rem' }}>
                 {/* Category Header Button */}
-                {(sidebarExpanded || isMobileDrawer) ? (
+                {isExpandedView ? (
                   <button
                     type="button"
                     onClick={() => toggleCategory(cat.id)}
@@ -298,7 +321,7 @@ export default function FloatingSidebar({
 
                 {/* Submenu Items */}
                 <AnimatePresence initial={false}>
-                  {((sidebarExpanded || isMobileDrawer) ? isCatExpanded : true) && (
+                  {(isExpandedView ? isCatExpanded : true) && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
@@ -308,13 +331,19 @@ export default function FloatingSidebar({
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '0.18rem',
-                        paddingLeft: (sidebarExpanded || isMobileDrawer) ? '0.4rem' : '0',
-                        marginTop: (sidebarExpanded || isMobileDrawer) ? '0.2rem' : '0'
+                        paddingLeft: isExpandedView ? '0.4rem' : '0',
+                        marginTop: isExpandedView ? '0.2rem' : '0'
                       }}
                     >
                       {cat.items.map(item => {
                         const ItemIcon = item.icon;
                         const isActive = activeModule === item.id;
+                        
+                        // Resolve dynamic badge (only if valid real count > 0)
+                        let badgeCount = null;
+                        if (item.dynamicBadgeKey === 'alerts' && unreadAlertsCount > 0) {
+                          badgeCount = unreadAlertsCount;
+                        }
 
                         return (
                           <motion.button
@@ -322,18 +351,18 @@ export default function FloatingSidebar({
                             type="button"
                             onClick={() => {
                               onSelectModule(item.id);
-                              if (isMobileDrawer && onCloseMobileDrawer) onCloseMobileDrawer();
+                              if (isMobile && onCloseMobileDrawer) onCloseMobileDrawer();
                             }}
-                            whileHover={{ x: (sidebarExpanded || isMobileDrawer) ? 2 : 0, scale: 1.015 }}
+                            whileHover={{ x: isExpandedView ? 2 : 0, scale: 1.015 }}
                             whileTap={{ scale: 0.98 }}
                             transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                            title={!sidebarExpanded && !isMobileDrawer ? item.label : undefined}
+                            title={!isExpandedView ? item.label : undefined}
                             style={{
                               display: 'flex',
                               alignItems: 'center',
-                              justifyContent: (sidebarExpanded || isMobileDrawer) ? 'space-between' : 'center',
+                              justifyContent: isExpandedView ? 'space-between' : 'center',
                               width: '100%',
-                              padding: (sidebarExpanded || isMobileDrawer) ? '0.48rem 0.65rem' : '0.65rem 0',
+                              padding: isExpandedView ? '0.48rem 0.65rem' : '0.65rem 0',
                               borderRadius: '8px',
                               background: isActive
                                 ? 'linear-gradient(135deg, rgba(212, 175, 55, 0.25) 0%, rgba(212, 175, 55, 0.12) 100%)'
@@ -349,7 +378,7 @@ export default function FloatingSidebar({
                             }}
                             className={isActive ? 'shadow-sm' : 'hover:bg-white/5 hover:text-white'}
                           >
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', overflow: 'hidden' }}>
                               <ItemIcon
                                 size={15}
                                 style={{
@@ -358,7 +387,7 @@ export default function FloatingSidebar({
                                   transition: 'transform 0.15s ease'
                                 }}
                               />
-                              {(sidebarExpanded || isMobileDrawer) && (
+                              {isExpandedView && (
                                 <span style={{
                                   whiteSpace: 'nowrap',
                                   overflow: 'hidden',
@@ -369,17 +398,18 @@ export default function FloatingSidebar({
                               )}
                             </span>
 
-                            {(sidebarExpanded || isMobileDrawer) && item.badge && (
+                            {isExpandedView && badgeCount && (
                               <span style={{
                                 fontSize: '0.62rem',
-                                fontWeight: 700,
+                                fontWeight: 800,
                                 padding: '0.12rem 0.45rem',
                                 borderRadius: '9999px',
-                                background: isActive ? '#F1C40F' : 'rgba(255, 255, 255, 0.1)',
-                                color: isActive ? '#070F1E' : '#CBD5E1',
-                                marginLeft: '0.4rem'
+                                background: '#DC2626',
+                                color: '#FFFFFF',
+                                marginLeft: '0.4rem',
+                                flexShrink: 0
                               }}>
-                                {item.badge}
+                                {badgeCount}
                               </span>
                             )}
                           </motion.button>
@@ -401,10 +431,10 @@ export default function FloatingSidebar({
           flexShrink: 0,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: (sidebarExpanded || isMobileDrawer) ? 'space-between' : 'center',
+          justifyContent: isExpandedView ? 'space-between' : 'center',
           gap: '0.5rem'
         }}>
-          {(sidebarExpanded || isMobileDrawer) ? (
+          {isExpandedView ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', overflow: 'hidden' }}>
               <div style={{
                 width: '30px',
@@ -422,11 +452,26 @@ export default function FloatingSidebar({
                 {initials}
               </div>
               <div style={{ overflow: 'hidden' }}>
-                <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#FFFFFF', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                  {displayName.length > 15 ? displayName.slice(0, 13) + '...' : displayName}
+                <div style={{
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  color: '#FFFFFF',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}>
+                  {displayName}
                 </div>
-                <div style={{ fontSize: '0.66rem', color: '#D4AF37', fontWeight: 600 }}>
-                  {displayRole}
+                <div style={{
+                  fontSize: '0.66rem',
+                  color: '#D4AF37',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.2rem'
+                }}>
+                  <ShieldCheck size={9} />
+                  <span>{displayRole}</span>
                 </div>
               </div>
             </div>
@@ -447,16 +492,15 @@ export default function FloatingSidebar({
             </div>
           )}
 
-          {(sidebarExpanded || isMobileDrawer) && (
+          {!isMobile && (
             <button
               type="button"
-              onClick={onLogout || onExitPortal}
-              title="Sign Out"
-              aria-label="Sign Out of Portal"
+              onClick={onToggleSidebar}
+              title={sidebarExpanded ? "Collapse Sidebar" : "Expand Sidebar"}
               style={{
-                background: 'rgba(220, 38, 38, 0.12)',
-                border: '1px solid rgba(220, 38, 38, 0.25)',
-                color: '#EF4444',
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: 'none',
+                color: '#CBD5E1',
                 borderRadius: '6px',
                 padding: '0.35rem',
                 cursor: 'pointer',
@@ -464,9 +508,9 @@ export default function FloatingSidebar({
                 alignItems: 'center',
                 justifyContent: 'center'
               }}
-              className="hover:bg-red-500/20"
+              className="hover:bg-white/10 hover:text-white"
             >
-              <LogOut size={14} />
+              {sidebarExpanded ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
             </button>
           )}
         </div>
@@ -474,4 +518,3 @@ export default function FloatingSidebar({
     </>
   );
 }
-

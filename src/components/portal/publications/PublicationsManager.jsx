@@ -86,15 +86,12 @@ export default function PublicationsManager({ currentUser, onDataChange, onOpenS
   const [selectedScopusFilter, setSelectedScopusFilter] = useState('ALL');
   const [selectedWorkflowStatus, setSelectedWorkflowStatus] = useState('ALL');
 
+  const [publications, setPublications] = useState(() => getPublications());
+
   const refresh = () => {
-    setDataVersion(v => v + 1);
+    setPublications(getPublications());
     if (onDataChange) onDataChange();
   };
-
-  // Live Records
-  const publications = useMemo(() => {
-    return getPublications();
-  }, [dataVersion]);
 
   // Aggregate Stats
   const stats = useMemo(() => {

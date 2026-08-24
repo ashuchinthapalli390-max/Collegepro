@@ -75,15 +75,12 @@ export default function StudentProjectsManager({ currentUser, onDataChange }) {
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [selectedWorkflowStatus, setSelectedWorkflowStatus] = useState('ALL');
 
+  const [projects, setProjects] = useState(() => getStudentProjects());
+
   const refresh = () => {
-    setDataVersion(v => v + 1);
+    setProjects(getStudentProjects());
     if (onDataChange) onDataChange();
   };
-
-  // Live Records
-  const projects = useMemo(() => {
-    return getStudentProjects();
-  }, [dataVersion]);
 
   // KPIs
   const stats = useMemo(() => {

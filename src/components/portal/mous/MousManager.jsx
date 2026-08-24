@@ -27,7 +27,8 @@ import {
   MapPin,
   RefreshCw,
   Zap,
-  Activity
+  Activity,
+  GraduationCap
 } from 'lucide-react';
 import { DEPARTMENTS, FACULTY_DATA } from '../../../data/masterData.js';
 import { 
@@ -66,6 +67,13 @@ export default function MousManager({ currentUser, onDataChange }) {
   const [deleteConfirmItem, setDeleteConfirmItem] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
 
+  // Authoritative Search and Filter States
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedDept, setSelectedDept] = useState(currentUser?.role === 'HOD' ? (currentUser.dept || 'ALL') : 'ALL');
+  const [selectedPartnerType, setSelectedPartnerType] = useState('ALL');
+  const [selectedStatus, setSelectedStatus] = useState('ALL');
+  const [selectedWorkflowStatus, setSelectedWorkflowStatus] = useState('ALL');
+
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
@@ -76,6 +84,22 @@ export default function MousManager({ currentUser, onDataChange }) {
     if (onDataChange) onDataChange();
   };
 
+  // Helper Icon Resolution for Collaborator Types
+  const getPartnerTypeIcon = (type) => {
+    const t = (type || '').toLowerCase();
+    if (t.includes('industry') || t.includes('corporate') || t.includes('company')) return Building2;
+    if (t.includes('university') || t.includes('college') || t.includes('academic')) return GraduationCap;
+    if (t.includes('research') || t.includes('institute') || t.includes('lab')) return Sparkles;
+    return Globe;
+  };
+
+  // Helper to query linked activity counters
+  const getMouActivitiesSummary = (item) => {
+    if (!item) return { total: 0, internships: 0, workshops: 0, fdps: 0, projects: 0 };
+    const queryKey = item.organization || item.partnerOrganization || item.collaboratingAgency || item.mouRecordNumber || item.id;
+    return getMoULinkedActivities(queryKey);
+  };
+
   // Live Records
   const mous = useMemo(() => {
     return getMoUs();
@@ -84,31 +108,54 @@ export default function MousManager({ currentUser, onDataChange }) {
   // Aggregate Stats
   const stats = useMemo(() => {
     const total = mous.length;
-    const active = mous.filter(m => m.mouStatus === 'ACTIVE').length;
-    const expiringSoon = mous.filter(m => m.mouStatus === 'EXPIRING_SOON').length;
-    const expired = mous.filter(m => m.mouStatus === 'EXPIRED').length;
-    const industry = mous.filter(m => m.collaboratorType === 'INDUSTRY').length;
-    const academic = mous.filter(m => m.collaboratorType === 'ACADEMIC_INSTITUTION').length;
+    const active = mous.filter(m => (m.mouStatus === 'ACTIVE' || m.status === 'ACTIVE')).length;
+    const expiringSoon = mous.filter(m => (m.mouStatus === 'EXPIRING_SOON' || m.status === 'EXPIRING_SOON')).length;
+    const expired = mous.filter(m => (m.mouStatus === 'EXPIRED' || m.status === 'EXPIRED')).length;
+    const industry = mous.filter(m => (m.collaboratorType === 'INDUSTRY' || m.partnerType === 'Industry' || m.collaboratorType === 'Industry')).length;
+    const academic = mous.filter(m => (m.collaboratorType === 'ACADEMIC_INSTITUTION' || m.partnerType === 'University' || m.partnerType === 'College')).length;
     const pendingReview = mous.filter(m => m.workflowStatus === 'SUBMITTED' || m.workflowStatus === 'UNDER_REVIEW').length;
-    return { total, active, expiringSoon, expired, industry, academic, pendingReview };
+    
+    let totalAct = 0;
+    mous.forEach(m => {
+      const act = getMouActivitiesSummary(m);
+      totalAct += (act.total || 0);
+    });
+
+    return { total, active, expiringSoon, expired, industry, academic, pendingReview, totalAct };
   }, [mous]);
 
-  // Filtered Records
-  const filteredMous = useMemo(() => {
+  // Filtered Records (Safe Search & Field Filter Normalization)
+  const filteredMoUs = useMemo(() => {
     return mous.filter(item => {
-      const q = searchQuery.toLowerCase().trim();
-      const matchSearch = !q ||
-        (item.mouRecordNumber && item.mouRecordNumber.toLowerCase().includes(q)) ||
-        (item.collaboratingAgency && item.collaboratingAgency.toLowerCase().includes(q)) ||
-        (item.industryName && item.industryName.toLowerCase().includes(q)) ||
-        (item.focusArea && item.focusArea.toLowerCase().includes(q)) ||
-        (item.purpose && item.purpose.toLowerCase().includes(q));
+      const q = searchQuery.trim().toLowerCase();
+      const searchable = [
+        item.mouRecordNumber,
+        item.mouCode,
+        item.organization,
+        item.partnerOrganization,
+        item.collaboratingAgency,
+        item.industryName,
+        item.title,
+        item.focusArea,
+        item.purpose,
+        item.primaryCoordinator,
+        item.department,
+        item.partnerContactPerson
+      ].filter(Boolean).join(' ').toLowerCase();
+
+      const matchSearch = !q || searchable.includes(q);
 
       const itemDept = item.department || '';
       const matchDept = selectedDept === 'ALL' || itemDept.toLowerCase().includes(selectedDept.toLowerCase());
-      const matchPartner = selectedPartnerType === 'ALL' || item.collaboratorType === selectedPartnerType;
-      const matchStatus = selectedStatus === 'ALL' || item.mouStatus === selectedStatus;
-      const matchWorkflow = selectedWorkflowStatus === 'ALL' || item.workflowStatus === selectedWorkflowStatus;
+      
+      const partnerVal = (item.collaboratorType || item.partnerType || '').toLowerCase();
+      const matchPartner = selectedPartnerType === 'ALL' || partnerVal.includes(selectedPartnerType.toLowerCase());
+      
+      const statusVal = item.mouStatus || item.status || 'ACTIVE';
+      const matchStatus = selectedStatus === 'ALL' || statusVal === selectedStatus;
+      
+      const wfVal = item.workflowStatus || 'APPROVED';
+      const matchWorkflow = selectedWorkflowStatus === 'ALL' || wfVal === selectedWorkflowStatus;
 
       return matchSearch && matchDept && matchPartner && matchStatus && matchWorkflow;
     });
@@ -121,11 +168,11 @@ export default function MousManager({ currentUser, onDataChange }) {
   const handleExecuteReview = () => {
     if (!reviewModalItem) return;
     reviewMoU(reviewModalItem.id, reviewAction, reviewRemarks, currentUser);
-    const num = reviewModalItem.mouRecordNumber || reviewModalItem.id;
+    const num = reviewModalItem.mouRecordNumber || reviewModalItem.mouCode || reviewModalItem.id;
     setReviewModalItem(null);
     setReviewRemarks('');
     refresh();
-    showToast(`MoU ${num} decision submitted.`);
+    showToast(`MoU ${num} review decision recorded.`);
   };
 
   const handleDelete = (id, org) => {
@@ -182,6 +229,7 @@ export default function MousManager({ currentUser, onDataChange }) {
           <span>{toastMessage}</span>
         </div>
       )}
+      
       {/* 1. Standardized Animated Header & Action Cluster */}
       <ModulePageHeader
         breadcrumbs={[
@@ -321,7 +369,7 @@ export default function MousManager({ currentUser, onDataChange }) {
         </div>
       </div>
 
-      {/* 4. MoUs Table / Empty State */}
+      {/* 5. MoUs Table / Empty State */}
       {filteredMoUs.length === 0 ? (
         <MotionEmptyState
           icon={Handshake}
@@ -332,58 +380,62 @@ export default function MousManager({ currentUser, onDataChange }) {
         />
       ) : (
         <MotionTable>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem' }}>
-            <thead>
-              <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                <th style={{ padding: '0.85rem 1rem' }}>MoU Code & Partner</th>
-                <th style={{ padding: '0.85rem 1rem' }}>Department & Type</th>
-                <th style={{ padding: '0.85rem 1rem' }}>Coordinators</th>
-                <th style={{ padding: '0.85rem 1rem' }}>Validity & Signed</th>
-                <th style={{ padding: '0.85rem 1rem' }}>Activities</th>
-                <th style={{ padding: '0.85rem 1rem' }}>Status</th>
-                <th style={{ padding: '0.85rem 1rem' }}>Approval</th>
-                <th style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredMoUs.map((item, idx) => {
-                const activities = getMouActivitiesSummary(item.id);
-                const stBadge = getStatusBadge(item.status);
-                const wfBadge = getWorkflowBadge(item.workflowStatus);
-                const PartnerIcon = getPartnerTypeIcon(item.partnerType);
+          <div style={{ width: '100%', overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem', minWidth: '780px' }}>
+              <thead>
+                <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <th style={{ padding: '0.85rem 1rem' }}>MoU Code & Partner</th>
+                  <th style={{ padding: '0.85rem 1rem' }}>Department & Type</th>
+                  <th style={{ padding: '0.85rem 1rem' }}>Coordinators</th>
+                  <th style={{ padding: '0.85rem 1rem' }}>Validity & Signed</th>
+                  <th style={{ padding: '0.85rem 1rem' }}>Activities</th>
+                  <th style={{ padding: '0.85rem 1rem' }}>Status</th>
+                  <th style={{ padding: '0.85rem 1rem' }}>Approval</th>
+                  <th style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredMoUs.map((item, idx) => {
+                  const activities = getMouActivitiesSummary(item);
+                  const stBadge = getStatusBadge(item.mouStatus || item.status);
+                  const wfBadge = getWorkflowBadge(item.workflowStatus || 'APPROVED');
+                  const WfIcon = wfBadge.icon || CheckCircle2;
+                  const PartnerIcon = getPartnerTypeIcon(item.collaboratorType || item.partnerType);
+                  const partnerName = item.organization || item.partnerOrganization || item.collaboratingAgency || item.industryName || 'Partner Organization';
+                  const mouCode = item.mouRecordNumber || item.mouCode || item.mouNumber || `MOU-${item.id}`;
 
-                return (
-                  <MotionTableRow key={item.id} index={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                    <td style={{ padding: '0.85rem 1rem' }}>
-                      <div style={{ fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <span>{item.organization}</span>
-                      </div>
-                      <div style={{ fontSize: '0.72rem', color: '#D4AF37', fontWeight: 700 }}>
-                        {item.mouCode || `MOU-${item.id}`}
-                      </div>
-                    </td>
+                  return (
+                    <MotionTableRow key={item.id} index={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                      <td style={{ padding: '0.85rem 1rem' }}>
+                        <div style={{ fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <span>{partnerName}</span>
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: '#D4AF37', fontWeight: 700 }}>
+                          {mouCode}
+                        </div>
+                      </td>
 
-                    <td style={{ padding: '0.85rem 1rem' }}>
-                      <div style={{ fontWeight: 700, color: '#334155' }}>
-                        {item.department || 'All Departments'}
-                      </div>
-                      <span style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.25rem',
-                        fontSize: '0.68rem',
-                        fontWeight: 600,
-                        color: '#64748B',
-                        marginTop: '0.2rem'
-                      }}>
-                        <PartnerIcon size={12} />
-                        {item.partnerType}
-                      </span>
-                    </td>
+                      <td style={{ padding: '0.85rem 1rem' }}>
+                        <div style={{ fontWeight: 700, color: '#334155' }}>
+                          {item.department || 'All Departments'}
+                        </div>
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          fontSize: '0.68rem',
+                          fontWeight: 600,
+                          color: '#64748B',
+                          marginTop: '0.2rem'
+                        }}>
+                          <PartnerIcon size={12} />
+                          {item.collaboratorType || item.partnerType || 'Industry'}
+                        </span>
+                      </td>
 
                       <td style={{ padding: '0.85rem 1rem' }}>
                         <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0F172A' }}>
-                          {item.primaryCoordinator}
+                          {item.primaryCoordinator || 'Assigned Coordinator'}
                         </div>
                         {item.partnerContactPerson && (
                           <div style={{ fontSize: '0.7rem', color: '#64748B' }}>
@@ -397,7 +449,7 @@ export default function MousManager({ currentUser, onDataChange }) {
                           Until: {item.expiryDate || 'Ongoing'}
                         </div>
                         <div style={{ fontSize: '0.7rem', color: '#64748B' }}>
-                          Signed: {item.signedDate} ({item.validityType})
+                          Signed: {item.signedDate || 'N/A'} ({item.validityType || '3 Years'})
                         </div>
                       </td>
 
@@ -419,7 +471,7 @@ export default function MousManager({ currentUser, onDataChange }) {
                             cursor: 'pointer'
                           }}
                         >
-                          <Zap size={11} /> {activities.total} Activities
+                          <Zap size={11} /> {activities.total || 0} Activities
                         </button>
                       </td>
 
@@ -492,8 +544,8 @@ export default function MousManager({ currentUser, onDataChange }) {
                           {canReview && (
                             <button
                               type="button"
-                              onClick={() => handleDelete(item)}
-                              title="Delete / Archive"
+                              onClick={() => handleDelete(item.id, partnerName)}
+                              title="Delete / Move to Recycle Bin"
                               style={{ padding: '0.35rem', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '6px', color: '#DC2626', cursor: 'pointer' }}
                             >
                               <Trash2 size={13} />
@@ -506,8 +558,9 @@ export default function MousManager({ currentUser, onDataChange }) {
                 })}
               </tbody>
             </table>
-          </MotionTable>
-        )}
+          </div>
+        </MotionTable>
+      )}
 
       {/* 6. MoU Wizard Modal */}
       {wizardOpen && (
@@ -548,10 +601,10 @@ export default function MousManager({ currentUser, onDataChange }) {
             <div style={{ background: 'linear-gradient(135deg, #070F1E 0%, #0B192C 100%)', padding: '1.25rem 1.5rem', color: '#FFFFFF', borderBottom: '2px solid #D4AF37', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <span style={{ fontSize: '0.72rem', color: '#D4AF37', fontWeight: 800, textTransform: 'uppercase' }}>
-                  {dossierModalItem.mouNumber} • {dossierModalItem.partnerType}
+                  {dossierModalItem.mouRecordNumber || dossierModalItem.mouCode || dossierModalItem.id} • {dossierModalItem.collaboratorType || dossierModalItem.partnerType || 'Industry'}
                 </span>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: '0.2rem 0 0', color: '#FFFFFF', fontFamily: 'Cinzel, serif' }}>
-                  {dossierModalItem.partnerOrganization}
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: '0.2rem 0 0', color: '#FFFFFF', fontFamily: 'Cinzel, Georgia, serif' }}>
+                  {dossierModalItem.organization || dossierModalItem.partnerOrganization || dossierModalItem.collaboratingAgency}
                 </h3>
               </div>
               <button type="button" onClick={() => setDossierModalItem(null)} style={{ background: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer' }}>
@@ -591,62 +644,66 @@ export default function MousManager({ currentUser, onDataChange }) {
             <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1 }}>
               {dossierActiveTab === 'overview' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', background: '#F8FAFC', padding: '1rem', borderRadius: '10px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', background: '#F8FAFC', padding: '1rem', borderRadius: '10px' }}>
                     <div>
                       <div style={{ fontSize: '0.72rem', color: '#64748B' }}>Agreement Title</div>
-                      <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0F172A' }}>{dossierModalItem.title}</div>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0F172A' }}>{dossierModalItem.title || dossierModalItem.purpose || 'Institutional Bilateral Agreement'}</div>
                     </div>
                     <div>
                       <div style={{ fontSize: '0.72rem', color: '#64748B' }}>Primary Coordinator</div>
-                      <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#059669' }}>{dossierModalItem.primaryCoordinator}</div>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#059669' }}>{dossierModalItem.primaryCoordinator || 'Department Coordinator'}</div>
                     </div>
                     <div>
                       <div style={{ fontSize: '0.72rem', color: '#64748B' }}>Signed & Effective Date</div>
-                      <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>{dossierModalItem.signedDate} (Effective: {dossierModalItem.effectiveDate})</div>
+                      <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>{dossierModalItem.signedDate || 'N/A'} (Effective: {dossierModalItem.effectiveDate || dossierModalItem.signedDate || 'N/A'})</div>
                     </div>
                     <div>
                       <div style={{ fontSize: '0.72rem', color: '#64748B' }}>Validity & Expiry</div>
-                      <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>{dossierModalItem.validityType} (Expires: {dossierModalItem.expiryDate})</div>
+                      <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>{dossierModalItem.validityType || '3 Years'} (Expires: {dossierModalItem.expiryDate || 'Ongoing'})</div>
                     </div>
                   </div>
 
                   <div>
                     <h4 style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0F172A', marginBottom: '0.25rem', textTransform: 'uppercase' }}>Purpose & Objectives</h4>
-                    <p style={{ fontSize: '0.82rem', color: '#475569', margin: 0 }}>{dossierModalItem.purpose}</p>
+                    <p style={{ fontSize: '0.82rem', color: '#475569', margin: 0 }}>{dossierModalItem.purpose || dossierModalItem.focusArea || 'Academic collaboration, student internships, curriculum development, and joint research.'}</p>
                   </div>
                 </div>
               )}
 
               {dossierActiveTab === 'scopes' && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  {dossierModalItem.scopes?.map(s => (
-                    <span key={s} style={{ padding: '0.45rem 0.9rem', background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', borderRadius: '9999px', fontSize: '0.78rem', fontWeight: 700 }}>
-                      ✓ {s}
-                    </span>
-                  ))}
+                  {(dossierModalItem.scopes && dossierModalItem.scopes.length > 0) ? (
+                    dossierModalItem.scopes.map(s => (
+                      <span key={s} style={{ padding: '0.45rem 0.9rem', background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', borderRadius: '9999px', fontSize: '0.78rem', fontWeight: 700 }}>
+                        ✓ {s}
+                      </span>
+                    ))
+                  ) : (
+                    <span style={{ fontSize: '0.82rem', color: '#64748B' }}>General bilateral collaboration scope.</span>
+                  )}
                 </div>
               )}
 
               {dossierActiveTab === 'activities' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
                   {(() => {
-                    const act = getMoULinkedActivities(dossierModalItem.partnerOrganization || dossierModalItem.mouNumber);
+                    const act = getMouActivitiesSummary(dossierModalItem);
                     return (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
                         <div style={{ padding: '1rem', background: '#F8FAFC', borderRadius: '8px', textAlign: 'center', border: '1px solid #E2E8F0' }}>
-                          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0F172A' }}>{act.internships}</div>
+                          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0F172A' }}>{act.internships || 0}</div>
                           <div style={{ fontSize: '0.72rem', color: '#64748B' }}>Internships</div>
                         </div>
                         <div style={{ padding: '1rem', background: '#F8FAFC', borderRadius: '8px', textAlign: 'center', border: '1px solid #E2E8F0' }}>
-                          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#059669' }}>{act.workshops}</div>
+                          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#059669' }}>{act.workshops || 0}</div>
                           <div style={{ fontSize: '0.72rem', color: '#64748B' }}>Workshops/Events</div>
                         </div>
                         <div style={{ padding: '1rem', background: '#F8FAFC', borderRadius: '8px', textAlign: 'center', border: '1px solid #E2E8F0' }}>
-                          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#2563EB' }}>{act.fdps}</div>
+                          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#2563EB' }}>{act.fdps || 0}</div>
                           <div style={{ fontSize: '0.72rem', color: '#64748B' }}>FDPs Organized</div>
                         </div>
                         <div style={{ padding: '1rem', background: '#F8FAFC', borderRadius: '8px', textAlign: 'center', border: '1px solid #E2E8F0' }}>
-                          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#7C3AED' }}>{act.projects}</div>
+                          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#7C3AED' }}>{act.projects || 0}</div>
                           <div style={{ fontSize: '0.72rem', color: '#64748B' }}>Industry Projects</div>
                         </div>
                       </div>
@@ -657,16 +714,16 @@ export default function MousManager({ currentUser, onDataChange }) {
 
               {dossierActiveTab === 'evidence' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-                  {dossierModalItem.documents?.length === 0 ? (
+                  {(!dossierModalItem.documents || dossierModalItem.documents.length === 0) ? (
                     <div style={{ padding: '2rem', textAlign: 'center', color: '#94A3B8', fontSize: '0.82rem' }}>No agreement documents attached.</div>
                   ) : (
-                    dossierModalItem.documents?.map(doc => (
-                      <div key={doc.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.65rem 0.9rem', background: '#F1F5F9', borderRadius: '8px' }}>
+                    dossierModalItem.documents.map(doc => (
+                      <div key={doc.id || doc.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.65rem 0.9rem', background: '#F1F5F9', borderRadius: '8px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                           <FileText size={16} style={{ color: '#D4AF37' }} />
                           <div>
-                            <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.8rem' }}>{doc.name}</div>
-                            <div style={{ fontSize: '0.7rem', color: '#64748B' }}>{doc.type} ({doc.size})</div>
+                            <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.8rem' }}>{doc.name || doc.title}</div>
+                            <div style={{ fontSize: '0.7rem', color: '#64748B' }}>{doc.type || 'PDF Document'} ({doc.size || 'Verified'})</div>
                           </div>
                         </div>
                       </div>
@@ -689,7 +746,7 @@ export default function MousManager({ currentUser, onDataChange }) {
           <div style={{ background: '#FFFFFF', borderRadius: '16px', maxWidth: '500px', width: '100%', border: '1px solid #D4AF37', overflow: 'hidden' }}>
             <div style={{ background: '#070F1E', padding: '1rem 1.25rem', color: '#FFFFFF', borderBottom: '2px solid #D4AF37' }}>
               <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0, color: '#FFFFFF' }}>Review & Approve MoU</h3>
-              <div style={{ fontSize: '0.75rem', color: '#D4AF37' }}>{reviewModalItem.partnerOrganization}</div>
+              <div style={{ fontSize: '0.75rem', color: '#D4AF37' }}>{reviewModalItem.organization || reviewModalItem.partnerOrganization}</div>
             </div>
 
             <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
@@ -717,6 +774,7 @@ export default function MousManager({ currentUser, onDataChange }) {
           </div>
         </div>
       )}
+
       {/* Confirm Delete Dialog */}
       <ConfirmDeleteDialog
         isOpen={Boolean(deleteConfirmItem)}

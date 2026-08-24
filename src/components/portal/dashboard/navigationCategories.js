@@ -34,9 +34,9 @@ export const NAVIGATION_CATEGORIES = [
     label: 'Overview',
     icon: TrendingUp,
     items: [
-      { id: 'overview', label: 'Executive Dashboard', icon: TrendingUp, badge: 'Live' },
+      { id: 'overview', label: 'Executive Dashboard', icon: TrendingUp },
       { id: 'analytics', label: 'Quick Analytics', icon: BarChart3 },
-      { id: 'alerts', label: 'Alerts & Notices', icon: Bell, badge: '3' },
+      { id: 'alerts', label: 'Alerts & Notices', icon: Bell, dynamicBadgeKey: 'alerts' },
       { id: 'activity', label: 'Recent Activity', icon: Activity }
     ]
   },
@@ -45,8 +45,8 @@ export const NAVIGATION_CATEGORIES = [
     label: 'Events & Outreach',
     icon: Megaphone,
     items: [
-      { id: 'events', label: 'Workshops & Events', icon: Megaphone, badge: 'Unified' },
-      { id: 'mous-collaborations', label: 'Industry MoUs & Tie-Ups', icon: Handshake, badge: 'MoU' },
+      { id: 'events', label: 'Workshops & Events', icon: Megaphone },
+      { id: 'mous-collaborations', label: 'Industry MoUs & Tie-Ups', icon: Handshake },
       { id: 'gallery-media', label: 'Media & Campus Gallery', icon: ImageIcon },
       { id: 'circulars-notices', label: 'Official Circulars', icon: Mail }
     ]
@@ -56,10 +56,10 @@ export const NAVIGATION_CATEGORIES = [
     label: 'Faculty Development',
     icon: Award,
     items: [
-      { id: 'faculty-memberships', label: 'Faculty Memberships', icon: Award, badge: 'Bodies' },
-      { id: 'fdps-organized', label: 'FDPs Organized (Host)', icon: Award, badge: 'Official' },
-      { id: 'faculty-achievements', label: 'Faculty Achievements & FDPs', icon: GraduationCap, badge: 'Evidence' },
-      { id: 'faculty-directory', label: 'Faculty Directory & Profiles', icon: Users, badge: '42' },
+      { id: 'faculty-memberships', label: 'Faculty Memberships', icon: Award },
+      { id: 'fdps-organized', label: 'FDPs Organized (Host)', icon: Award },
+      { id: 'faculty-achievements', label: 'Faculty Achievements & FDPs', icon: GraduationCap },
+      { id: 'faculty-directory', label: 'Faculty Directory & Profiles', icon: Users },
       { id: 'staff-profiles', label: 'Staff Profiles', icon: UserCheck }
     ]
   },
@@ -68,9 +68,9 @@ export const NAVIGATION_CATEGORIES = [
     label: 'Student Development',
     icon: Trophy,
     items: [
-      { id: 'student-projects', label: 'Student Projects & Capstone', icon: Code, badge: 'PRJ' },
-      { id: 'student-achievements', label: 'Student Achievements & Honors', icon: Trophy, badge: '120+' },
-      { id: 'internships', label: 'Student Internships & Training', icon: Briefcase, badge: 'Live' }
+      { id: 'student-projects', label: 'Student Projects & Capstone', icon: Code },
+      { id: 'student-achievements', label: 'Student Achievements & Honors', icon: Trophy },
+      { id: 'internships', label: 'Student Internships & Training', icon: Briefcase }
     ]
   },
   {
@@ -78,7 +78,7 @@ export const NAVIGATION_CATEGORIES = [
     label: 'Academic Governance',
     icon: BookOpen,
     items: [
-      { id: 'bos-meetings', label: 'Board of Studies (BoS)', icon: BookOpen, badge: 'Official' },
+      { id: 'bos-meetings', label: 'Board of Studies (BoS)', icon: BookOpen },
       { id: 'academic-council', label: 'Academic Council', icon: Award },
       { id: 'regulations-hub', label: 'Curriculum & Regulations', icon: FileText }
     ]
@@ -88,10 +88,10 @@ export const NAVIGATION_CATEGORIES = [
     label: 'Research & Publications',
     icon: Lightbulb,
     items: [
-      { id: 'publications', label: 'Journal & Conference Papers', icon: FileText, badge: '1,420+' },
-      { id: 'patents', label: 'Patents & IPR Records', icon: Lightbulb, badge: '48' },
+      { id: 'publications', label: 'Journal & Conference Papers', icon: FileText },
+      { id: 'patents', label: 'Patents & IPR Records', icon: Lightbulb },
       { id: 'funded-projects', label: 'Funded Research Projects', icon: Briefcase },
-      { id: 'research-discovery', label: 'Research Discovery & Local Index', icon: Sparkles, badge: 'OpenAlex' },
+      { id: 'research-discovery', label: 'Research Discovery & Local Index', icon: Sparkles },
       { id: 'research-data-sources', label: 'Research Datasets & Index', icon: Database }
     ]
   },
@@ -100,8 +100,8 @@ export const NAVIGATION_CATEGORIES = [
     label: 'Accreditation & Data',
     icon: FileSpreadsheet,
     items: [
-      { id: 'nptel-certifications', label: 'NPTEL & MOOC Certifications', icon: GraduationCap, badge: 'NPTEL' },
-      { id: 'naac-portal', label: 'NAAC SSR Documentation', icon: Award, badge: 'A+' },
+      { id: 'nptel-certifications', label: 'NPTEL & MOOC Certifications', icon: GraduationCap },
+      { id: 'naac-portal', label: 'NAAC SSR Documentation', icon: Award },
       { id: 'nba-tier1', label: 'NBA Tier-1 Compliance', icon: FileText },
       { id: 'nirf-data', label: 'NIRF Data Repository', icon: BarChart3 },
       { id: 'export-hub', label: 'Compliance Data Exports', icon: Download }
@@ -112,7 +112,7 @@ export const NAVIGATION_CATEGORIES = [
     label: 'Administration & IAM',
     icon: Sliders,
     items: [
-      { id: 'iam-users', label: 'User Directory & Roles', icon: UserCheck, badge: 'IAM' },
+      { id: 'iam-users', label: 'User Directory & Roles', icon: UserCheck },
       { id: 'iam-matrix', label: 'Permissions Matrix', icon: Grid },
       { id: 'iam-sessions', label: 'Active Sessions & Devices', icon: Smartphone },
       { id: 'iam-settings', label: 'Auth & OTP Policies', icon: Sliders },

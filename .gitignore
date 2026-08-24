@@ -15,6 +15,8 @@ dist-ssr
 .env.*
 !.env.example
 .portal_sessions.json
+.portal_otp_challenges.json
+.portal_audit_logs.json
 *service-account*.json
 !*service-account*.example.json
 

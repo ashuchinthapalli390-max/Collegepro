@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import { sanitizeExportRecord, sanitizeSpreadsheetCell } from '../lib/security/sanitizer.js';
 import { 
   COLLEGE_INFO, 
   LEADERSHIP_PROFILES, 
@@ -3391,11 +3392,14 @@ export function checkPublicationDuplicate(candidatePaper, existingPapers = []) {
 }
 
 // -------------------------------------------------------------
-// Universal Export Engine
+// Universal Export Engine (Formula Injection Hardened & Audited)
 // -------------------------------------------------------------
-export function exportToCSV(filename, data) {
+export function exportToCSV(filename, data, actor = null) {
   if (!data || !data.length) return;
-  const worksheet = XLSX.utils.json_to_sheet(data);
+  
+  // Neutralize CSV formula injection (=, +, -, @)
+  const safeData = data.map(record => sanitizeExportRecord(record));
+  const worksheet = XLSX.utils.json_to_sheet(safeData);
   const csvOutput = XLSX.utils.sheet_to_csv(worksheet);
   const blob = new Blob([csvOutput], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
@@ -3404,17 +3408,24 @@ export function exportToCSV(filename, data) {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+
+  addAuditLog('CSV_EXPORT', 'Compliance & Reporting', `Exported ${data.length} records to ${filename}.csv`, actor);
 }
 
-export function exportToExcel(filename, data, sheetName = 'Report') {
+export function exportToExcel(filename, data, sheetName = 'Report', actor = null) {
   if (!data || !data.length) return;
-  const worksheet = XLSX.utils.json_to_sheet(data);
+  
+  // Neutralize Spreadsheet formula injection
+  const safeData = data.map(record => sanitizeExportRecord(record));
+  const worksheet = XLSX.utils.json_to_sheet(safeData);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
   XLSX.writeFile(workbook, `${filename}.xlsx`);
+
+  addAuditLog('EXCEL_EXPORT', 'Compliance & Reporting', `Exported ${data.length} records to ${filename}.xlsx`, actor);
 }
 
-export function exportToPDF(title, columns, rows, filename = 'NEC_Report') {
+export function exportToPDF(title, columns, rows, filename = 'NEC_Report', actor = null) {
   const doc = new jsPDF('landscape');
   doc.setFontSize(16);
   doc.setTextColor(11, 25, 44);
@@ -3426,10 +3437,13 @@ export function exportToPDF(title, columns, rows, filename = 'NEC_Report') {
   doc.text(`Generated on: ${new Date().toLocaleString()}`, 200, 27);
   doc.line(14, 30, 280, 30);
 
+  // Sanitize PDF rows to ensure text cells are clean strings
+  const safeRows = rows.map(row => row.map(cell => cell !== null && cell !== undefined ? String(cell) : ''));
+
   doc.autoTable({
     startY: 34,
     head: [columns],
-    body: rows,
+    body: safeRows,
     theme: 'grid',
     headStyles: { fillColor: [11, 25, 44], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
     bodyStyles: { fontSize: 8, cellPadding: 2.5 },
@@ -3437,6 +3451,8 @@ export function exportToPDF(title, columns, rows, filename = 'NEC_Report') {
   });
 
   doc.save(`${filename}.pdf`);
+
+  addAuditLog('PDF_EXPORT', 'Compliance & Reporting', `Generated official PDF report: ${title}`, actor);
 }
 
 // -------------------------------------------------------------

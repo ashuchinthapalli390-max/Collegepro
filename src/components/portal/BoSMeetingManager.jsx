@@ -91,9 +91,12 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
   const [reviewComments, setReviewComments] = useState('');
   const [reviewError, setReviewError] = useState('');
 
-  // Toast & Delete Modal States
+  // Toast & Action Modal States
   const [toastMessage, setToastMessage] = useState(null);
   const [deleteDraftMeeting, setDeleteDraftMeeting] = useState(null);
+  const [archiveModalMeeting, setArchiveModalMeeting] = useState(null);
+  const [openActionMenuId, setOpenActionMenuId] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -107,18 +110,20 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
   const refreshMeetings = () => {
     const data = getBoSMeetings();
     setMeetings(data);
+    if (onDataChange) onDataChange();
   };
 
   useEffect(() => {
     refreshMeetings();
   }, []);
 
-  // Role Permissions
+  // Role & Granular Permissions
   const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN';
   const isAdmin = currentUser?.role === 'ADMIN';
   const isHOD = currentUser?.role === 'HOD';
   const canCreate = isSuperAdmin || isAdmin || isHOD;
   const canApprove = isSuperAdmin || isAdmin;
+  const hasBosDeletePerm = isSuperAdmin || isAdmin || (currentUser?.permissions?.includes('bos.delete')) || (isHOD && currentUser?.permissions?.includes('bos.delete'));
 
   const canEditRecord = (meeting) => {
     if (isSuperAdmin || isAdmin) return true;
@@ -126,6 +131,21 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
       return ['DRAFT', 'NEEDS_REVISION'].includes(meeting.workflowStatus);
     }
     return false;
+  };
+
+  const canDeleteRecord = (meeting) => {
+    if (isSuperAdmin) return true;
+    if (meeting.workflowStatus === 'DRAFT') {
+      if (isAdmin) return true;
+      if (isHOD && meeting.department === currentUser?.dept) return true;
+      return Boolean(currentUser?.permissions?.includes('bos.delete'));
+    }
+    return false;
+  };
+
+  const canArchiveRecord = (meeting) => {
+    if (meeting.workflowStatus === 'ARCHIVED') return false;
+    return isSuperAdmin || isAdmin || (isHOD && meeting.department === currentUser?.dept);
   };
 
   // Filtered Meetings List
@@ -535,7 +555,7 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
                         </span>
                       </td>
 
-                      <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
+                      <td style={{ padding: '0.85rem 1rem', textAlign: 'right', position: 'relative' }}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
                           <button
                             type="button"
@@ -562,6 +582,7 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
                             </button>
                           )}
 
+                          {/* Quick Review Button for Approvers */}
                           {canApprove && ['SUBMITTED', 'UNDER_REVIEW', 'NEEDS_REVISION'].includes(meeting.workflowStatus) && (
                             <button
                               type="button"
@@ -578,17 +599,97 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
                             </button>
                           )}
 
-                          {meeting.workflowStatus === 'DRAFT' && canEdit && (
+                          {/* More Options / Lifecycle Menu Toggle */}
+                          <div style={{ position: 'relative' }}>
                             <button
                               type="button"
-                              title="Delete Draft"
-                              onClick={() => handleDeleteDraft(meeting)}
-                              style={{ background: 'rgba(220, 38, 38, 0.08)', border: '1px solid rgba(220, 38, 38, 0.2)', color: '#DC2626', padding: '0.3rem 0.45rem', borderRadius: '6px', cursor: 'pointer' }}
-                              className="hover:bg-red-100"
+                              title="More actions"
+                              onClick={() => setOpenActionMenuId(openActionMenuId === meeting.id ? null : meeting.id)}
+                              style={{
+                                background: openActionMenuId === meeting.id ? '#0F172A' : 'transparent',
+                                border: '1px solid #CBD5E1',
+                                color: openActionMenuId === meeting.id ? '#FFFFFF' : '#334155',
+                                padding: '0.3rem 0.45rem',
+                                borderRadius: '6px',
+                                cursor: 'pointer'
+                              }}
                             >
-                              <Trash2 size={13} />
+                              ⋯
                             </button>
-                          )}
+
+                            {openActionMenuId === meeting.id && (
+                              <div style={{
+                                position: 'absolute',
+                                right: 0,
+                                top: 'calc(100% + 4px)',
+                                background: '#FFFFFF',
+                                border: '1px solid #E2E8F0',
+                                borderRadius: '8px',
+                                boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+                                zIndex: 200,
+                                minWidth: '150px',
+                                padding: '0.35rem',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '0.2rem'
+                              }}>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenActionMenuId(null);
+                                    setDetailModalMeeting(meeting);
+                                    setActiveDetailTab('overview');
+                                  }}
+                                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', padding: '0.4rem 0.6rem', border: 'none', background: 'transparent', color: '#334155', fontSize: '0.75rem', fontWeight: 600, textAlign: 'left', borderRadius: '4px', cursor: 'pointer' }}
+                                  className="hover:bg-slate-50"
+                                >
+                                  <Eye size={12} /> View Dossier
+                                </button>
+
+                                {canEdit && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenActionMenuId(null);
+                                      handleOpenEdit(meeting);
+                                    }}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', padding: '0.4rem 0.6rem', border: 'none', background: 'transparent', color: '#334155', fontSize: '0.75rem', fontWeight: 600, textAlign: 'left', borderRadius: '4px', cursor: 'pointer' }}
+                                    className="hover:bg-slate-50"
+                                  >
+                                    <Edit3 size={12} /> Edit Record
+                                  </button>
+                                )}
+
+                                {canArchiveRecord(meeting) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenActionMenuId(null);
+                                      setArchiveModalMeeting(meeting);
+                                    }}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', padding: '0.4rem 0.6rem', border: 'none', background: 'transparent', color: '#475569', fontSize: '0.75rem', fontWeight: 600, textAlign: 'left', borderRadius: '4px', cursor: 'pointer' }}
+                                    className="hover:bg-slate-50"
+                                  >
+                                    <Archive size={12} /> Archive Record
+                                  </button>
+                                )}
+
+                                {canDeleteRecord(meeting) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenActionMenuId(null);
+                                      setDeleteDraftMeeting(meeting);
+                                    }}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', padding: '0.4rem 0.6rem', border: 'none', background: '#FEF2F2', color: '#DC2626', fontSize: '0.75rem', fontWeight: 700, textAlign: 'left', borderRadius: '4px', cursor: 'pointer' }}
+                                    className="hover:bg-red-100"
+                                  >
+                                    <Trash2 size={12} /> Delete Record
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -913,50 +1014,181 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
         </div>
       )}
 
-      {/* 8. Delete Draft Confirmation Modal */}
+      {/* 8. Custom NEC Danger Delete Confirmation Modal */}
       {deleteDraftMeeting && (
         <div style={{
           position: 'fixed',
           inset: 0,
           background: 'rgba(7, 15, 30, 0.85)',
+          backdropFilter: 'blur(6px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           padding: '1.5rem',
           zIndex: 7000
         }}>
-          <div style={{
-            background: '#FFFFFF',
-            borderRadius: '16px',
-            padding: '1.8rem',
-            maxWidth: '420px',
-            textAlign: 'center',
-            boxShadow: '0 20px 50px rgba(0,0,0,0.4)'
-          }}>
-            <AlertCircle size={36} style={{ color: '#DC2626', margin: '0 auto 0.6rem' }} />
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.4rem 0' }}>
-              Delete Draft Record?
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              padding: '2rem',
+              maxWidth: '460px',
+              width: '100%',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
+              border: '1px solid #FECACA'
+            }}
+          >
+            <div style={{
+              width: '52px',
+              height: '52px',
+              borderRadius: '50%',
+              background: '#FEF2F2',
+              color: '#DC2626',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1rem'
+            }}>
+              <Trash2 size={26} />
+            </div>
+
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A', textAlign: 'center', margin: '0 0 0.5rem 0', fontFamily: 'Cinzel, Georgia, serif' }}>
+              Delete BoS Record?
             </h3>
-            <p style={{ fontSize: '0.84rem', color: '#64748B', marginBottom: '1.4rem', lineHeight: 1.5 }}>
-              Are you sure you want to delete draft <strong>{deleteDraftMeeting.bosNumber}</strong>? It will be moved to the Recycle Bin.
+            
+            <div style={{ background: '#F8FAFC', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid #E2E8F0', margin: '0.85rem 0 1.2rem' }}>
+              <div style={{ fontFamily: 'monospace', fontWeight: 800, color: '#D4AF37', fontSize: '0.9rem' }}>
+                {deleteDraftMeeting.bosNumber}
+              </div>
+              <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.84rem', marginTop: '0.25rem' }}>
+                {deleteDraftMeeting.title || `${deleteDraftMeeting.department} BoS Meeting`}
+              </div>
+              <div style={{ fontSize: '0.74rem', color: '#64748B', marginTop: '0.2rem' }}>
+                {deleteDraftMeeting.department} • Academic Year {deleteDraftMeeting.academicYear}
+              </div>
+            </div>
+
+            <p style={{ fontSize: '0.82rem', color: '#64748B', textAlign: 'center', margin: '0 0 1.5rem', lineHeight: 1.5 }}>
+              This action will remove the record and associated draft data from the active roster. The deletion event will be permanently recorded in the institutional audit trail.
             </p>
+
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
               <button
                 type="button"
+                disabled={isDeleting}
                 onClick={() => setDeleteDraftMeeting(null)}
-                style={{ padding: '0.6rem 1.25rem', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#FFFFFF', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}
+                style={{ flex: 1, padding: '0.65rem 1rem', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#FFFFFF', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
               >
                 Cancel
               </button>
               <button
                 type="button"
-                onClick={handleConfirmDeleteDraft}
-                style={{ padding: '0.6rem 1.4rem', borderRadius: '8px', border: 'none', background: '#DC2626', color: '#FFFFFF', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
+                disabled={isDeleting}
+                onClick={async () => {
+                  setIsDeleting(true);
+                  try {
+                    softDeleteBoSMeeting(deleteDraftMeeting.id, currentUser);
+                    const num = deleteDraftMeeting.bosNumber;
+                    setDeleteDraftMeeting(null);
+                    refreshMeetings();
+                    showToast(`BoS record ${num} deleted successfully.`);
+                  } catch (err) {
+                    showToast(err.message);
+                  } finally {
+                    setIsDeleting(false);
+                  }
+                }}
+                style={{ flex: 1, padding: '0.65rem 1.25rem', borderRadius: '8px', border: 'none', background: '#DC2626', color: '#FFFFFF', fontSize: '0.82rem', fontWeight: 800, cursor: isDeleting ? 'not-allowed' : 'pointer' }}
               >
-                Delete Draft
+                {isDeleting ? 'Deleting...' : 'Delete Record'}
               </button>
             </div>
-          </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* 9. Custom Archive Confirmation Modal */}
+      {archiveModalMeeting && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(7, 15, 30, 0.85)',
+          backdropFilter: 'blur(6px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1.5rem',
+          zIndex: 7000
+        }}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              padding: '2rem',
+              maxWidth: '460px',
+              width: '100%',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
+              border: '1px solid #E2E8F0'
+            }}
+          >
+            <div style={{
+              width: '52px',
+              height: '52px',
+              borderRadius: '50%',
+              background: '#F1F5F9',
+              color: '#475569',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1rem'
+            }}>
+              <Archive size={26} />
+            </div>
+
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A', textAlign: 'center', margin: '0 0 0.5rem 0', fontFamily: 'Cinzel, Georgia, serif' }}>
+              Archive BoS Meeting Record?
+            </h3>
+            
+            <div style={{ background: '#F8FAFC', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid #E2E8F0', margin: '0.85rem 0 1.2rem' }}>
+              <div style={{ fontFamily: 'monospace', fontWeight: 800, color: '#D4AF37', fontSize: '0.9rem' }}>
+                {archiveModalMeeting.bosNumber}
+              </div>
+              <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.84rem', marginTop: '0.25rem' }}>
+                {archiveModalMeeting.title}
+              </div>
+            </div>
+
+            <p style={{ fontSize: '0.82rem', color: '#64748B', textAlign: 'center', margin: '0 0 1.5rem', lineHeight: 1.5 }}>
+              This record will be preserved in the historical governance archive for compliance and statutory auditing.
+            </p>
+
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+              <button
+                type="button"
+                onClick={() => setArchiveModalMeeting(null)}
+                style={{ flex: 1, padding: '0.65rem 1rem', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#FFFFFF', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  archiveBoSMeeting(archiveModalMeeting.id, currentUser);
+                  const num = archiveModalMeeting.bosNumber;
+                  setArchiveModalMeeting(null);
+                  refreshMeetings();
+                  showToast(`BoS Record ${num} moved to Historical Archives.`);
+                }}
+                style={{ flex: 1, padding: '0.65rem 1.25rem', borderRadius: '8px', border: 'none', background: '#0F172A', color: '#FFFFFF', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer' }}
+              >
+                Archive Record
+              </button>
+            </div>
+          </motion.div>
         </div>
       )}
     </MotionPage>

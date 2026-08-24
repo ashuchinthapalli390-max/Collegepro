@@ -80,6 +80,7 @@ export async function parseSafeJsonResponse(response) {
 export async function safeAuthFetch(url, options = {}) {
   const headers = {
     'Accept': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
     ...(options.headers || {})
   };
 
@@ -90,6 +91,7 @@ export async function safeAuthFetch(url, options = {}) {
 
   try {
     const response = await fetch(url, {
+      credentials: 'same-origin',
       ...options,
       headers
     });

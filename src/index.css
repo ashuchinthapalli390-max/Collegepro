@@ -10,6 +10,10 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  --portal-shell-x: 14px;
+  --portal-shell-y: 16px;
+  --portal-sidebar-main-gap: 16px;
 }
 
 *, *::before, *::after {
@@ -25,6 +29,7 @@ html, body {
   padding: 0;
   background-color: #F8FAFC;
   color: #0F172A;
+  overflow-x: hidden;
 }
 
 #root {
@@ -32,4 +37,69 @@ html, body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
+}
+
+/* ==========================================================
+   RESPONSIVE LAYOUT UTILITIES (< 1024px vs >= 1024px)
+   ========================================================== */
+
+@media (max-width: 1023px) {
+  :root {
+    --portal-shell-x: 12px;
+    --portal-shell-y: 12px;
+    --portal-sidebar-main-gap: 0px;
+  }
+
+  .desktop-only {
+    display: none !important;
+  }
+
+  .mobile-only {
+    display: block !important;
+  }
+
+  .mobile-flex {
+    display: flex !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .mobile-only {
+    display: none !important;
+  }
+
+  .desktop-only {
+    display: block !important;
+  }
+
+  .desktop-flex {
+    display: flex !important;
+  }
+}
+
+/* Responsive Table & Container Helpers */
+.responsive-table-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Accessible Touch Targets (min 44x44px) */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Reduced Motion Override */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

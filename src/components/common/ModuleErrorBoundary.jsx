@@ -89,8 +89,8 @@ export default class ModuleErrorBoundary extends React.Component {
             </p>
           </div>
 
-          {/* Development error details */}
-          {process.env.NODE_ENV !== 'production' && this.state.error && (
+          {/* Development-only error details */}
+          {(typeof import.meta !== 'undefined' && import.meta.env?.DEV) && this.state.error && (
             <div style={{
               background: '#F8FAFC',
               border: '1px solid #CBD5E1',

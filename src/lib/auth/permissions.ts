@@ -54,6 +54,7 @@ export const ALL_PERMISSIONS = [
   { id: 'bos.approve', label: 'Approve BoS Minutes', category: 'Board of Studies' },
   { id: 'bos.publish', label: 'Publish BoS Records', category: 'Board of Studies' },
   { id: 'bos.archive', label: 'Archive / Restore BoS Records', category: 'Board of Studies' },
+  { id: 'bos.delete', label: 'Delete / Trash Draft BoS Records', category: 'Board of Studies' },
 
   // Research & Madam 12 Modules
   { id: 'publications.manage', label: 'Manage Research Publications & Sync', category: 'Research & Academics' },
@@ -68,11 +69,11 @@ export const ROLE_DEFAULT_PERMISSIONS = {
   SUPER_ADMIN: ALL_PERMISSIONS.map(p => p.id),
   ADMIN: [
     'users.view', 'users.create', 'users.bulk_import', 'sessions.revoke', 'audit.view',
-    'bos.view', 'bos.create', 'bos.edit', 'bos.approve', 'bos.publish',
+    'bos.view', 'bos.create', 'bos.edit', 'bos.approve', 'bos.publish', 'bos.archive', 'bos.delete',
     'publications.manage', 'patents.manage', 'mous.manage', 'student_data.manage', 'fdp.manage', 'reports.export'
   ],
   HOD: [
-    'bos.view', 'bos.create', 'bos.edit',
+    'bos.view', 'bos.create', 'bos.edit', 'bos.archive', 'bos.delete',
     'publications.manage', 'patents.manage', 'mous.manage', 'student_data.manage', 'fdp.manage', 'reports.export'
   ],
   FACULTY: [
