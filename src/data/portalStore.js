@@ -3137,9 +3137,44 @@ export function executeUniversalBulkImport(jobId, selectedRowIds, moduleKey, res
     const norm = row.normalizedPayload || row;
     const recId = `${moduleKey.substring(0, 3)}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     
-    // Construct database entity with complete provenance
+    // Construct database entity with complete provenance & schema normalization
+    let entitySpecificFields = {};
+    if (moduleKey === 'academic_events') {
+      const dCode = (norm.department_codes || norm.departmentCodes || norm.department || 'ALL').replace(/[^A-Z0-9]/gi, '').slice(0, 4) || 'ALL';
+      const yCode = (norm.academic_year || norm.academicYear || '2026-27').slice(0, 4);
+      const seq = String(existingRecords.length + importedRecords.length + 1).padStart(4, '0');
+      const autoNum = `EVT-${dCode}-${yCode}-${seq}`;
+
+      entitySpecificFields = {
+        title: norm.title || norm.name || 'Academic Event',
+        name: norm.title || norm.name || 'Academic Event',
+        eventType: norm.event_type || norm.eventType || 'Workshop',
+        type: norm.event_type || norm.eventType || 'Workshop',
+        department: norm.department_codes || norm.departmentCodes || norm.department || 'ALL',
+        departmentCodes: norm.department_codes || norm.departmentCodes || norm.department || 'ALL',
+        academicYear: norm.academic_year || norm.academicYear || '2026-27',
+        startDate: norm.start_date || norm.startDate || '',
+        endDate: norm.end_date || norm.endDate || norm.start_date || norm.startDate || '',
+        participantsTotal: norm.participants_total !== undefined && norm.participants_total !== '' ? Number(norm.participants_total) : null,
+        actualParticipants: norm.participants_total !== undefined && norm.participants_total !== '' ? Number(norm.participants_total) : 0,
+        participantsBreakdown: norm.participants_breakdown || '',
+        audienceYears: norm.audience_years || norm.targetYear || '',
+        targetYear: norm.audience_years || norm.targetYear || 'All Years',
+        venue: norm.venue ? String(norm.venue) : '',
+        mode: norm.mode || null,
+        resourcePersonDetails: norm.resource_person_details || '',
+        organizedBy: norm.organized_by || '',
+        mouPartner: norm.mou_partner || '',
+        amount: norm.amount !== undefined && norm.amount !== '' ? norm.amount : null,
+        invoiceDate: norm.invoice_date || null,
+        sourceReference: norm.source_reference || row.sourceReference || '',
+        eventNumber: norm.event_number || autoNum
+      };
+    }
+
     const newRecord = {
       ...norm,
+      ...entitySpecificFields,
       id: recId,
       workflowStatus: norm.workflowStatus || defaultWorkflowStatus,
       status: norm.status || 'Draft',

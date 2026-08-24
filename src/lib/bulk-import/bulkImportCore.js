@@ -140,15 +140,23 @@ export async function parseUploadedDataFile(file) {
     const buffer = await file.arrayBuffer();
     const workbook = XLSX.read(buffer, { type: 'array', cellDates: false, raw: true });
     
-    // Pick the first non-instruction sheet or sheet named after module
-    const firstSheetName = workbook.SheetNames.find(n => !n.toLowerCase().includes('instruction')) || workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[firstSheetName];
+    // Priority: 'Website Import' -> sheet with 'import' or 'data' -> non-instruction/non-review sheet -> first sheet
+    const targetSheetName = 
+      workbook.SheetNames.find(n => n.toLowerCase().trim() === 'website import') ||
+      workbook.SheetNames.find(n => n.toLowerCase().includes('website import')) ||
+      workbook.SheetNames.find(n => n.toLowerCase().includes('import') && !n.toLowerCase().includes('review')) ||
+      workbook.SheetNames.find(n => n.toLowerCase().includes('data') && !n.toLowerCase().includes('review')) ||
+      workbook.SheetNames.find(n => !n.toLowerCase().includes('instruction') && !n.toLowerCase().includes('review')) ||
+      workbook.SheetNames[0];
+
+    const worksheet = workbook.Sheets[targetSheetName];
     
     // Convert worksheet to raw array of rows
     const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
     return {
       format: 'XLSX',
-      sheetName: firstSheetName,
+      sheetName: targetSheetName,
+      availableSheets: workbook.SheetNames,
       rawRows: rawRows.filter(r => Array.isArray(r) && r.some(c => String(c).trim().length > 0))
     };
   } else {
