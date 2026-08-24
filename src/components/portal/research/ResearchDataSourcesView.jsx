@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { 
   Database, 
   Layers, 
@@ -30,7 +30,8 @@ import {
   Shield,
   Lightbulb,
   CheckSquare,
-  Building2
+  Building2,
+  Loader2
 } from 'lucide-react';
 import { 
   getPublications, 
@@ -61,11 +62,16 @@ import {
   MotionKpiCard, 
   MotionTable, 
   MotionTableRow, 
-  MotionEmptyState,
-  MotionButton 
+  MotionEmptyState, 
+  MotionButton,
+  MotionNumber
 } from '../../motion/index.js';
 
 export default function ResearchDataSourcesView({ currentUser }) {
+  const shouldReduce = useReducedMotion();
+  const universalSearchRef = useRef(null);
+  const tabStripRef = useRef(null);
+
   // Navigation tabs
   const [activeTab, setActiveTab] = useState('DATASETS'); // 'DATASETS' | 'EXPLORER' | 'PUBLICATIONS' | 'RESEARCHERS' | 'PATENTS' | 'INGESTION' | 'REVIEW_QUEUE'
   
@@ -73,6 +79,7 @@ export default function ResearchDataSourcesView({ currentUser }) {
   const [dataVersion, setDataVersion] = useState(0);
   const [copiedId, setCopiedId] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -122,7 +129,23 @@ export default function ResearchDataSourcesView({ currentUser }) {
   const matchReviewQueue = useMemo(() => getMatchReviewQueue(), [dataVersion, publications]);
 
   const refreshAll = () => {
-    setDataVersion(v => v + 1);
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    requestAnimationFrame(() => {
+      try {
+        getPublications();
+        getPatents();
+        getFacultyResearchProfiles();
+        getDatasetVersions();
+        getMatchReviewQueue();
+        setDataVersion(v => v + 1);
+        showToast('Research data refreshed.');
+      } catch (err) {
+        showToast('Failed to refresh data: ' + err.message);
+      } finally {
+        setIsRefreshing(false);
+      }
+    });
   };
 
   // Compute Overall Real Institutional Metrics
@@ -362,6 +385,27 @@ export default function ResearchDataSourcesView({ currentUser }) {
     }
   };
 
+  useEffect(() => {
+    const activeBtn = document.getElementById(`research-tab-${activeTab}`);
+    if (activeBtn) {
+      activeBtn.scrollIntoView({
+        behavior: shouldReduce ? 'auto' : 'smooth',
+        block: 'nearest',
+        inline: 'center'
+      });
+    }
+  }, [activeTab, shouldReduce]);
+
+  const tabs = [
+    { id: 'DATASETS', label: 'Dataset Snapshots', icon: Database, badge: datasetVersions.length },
+    { id: 'EXPLORER', label: 'Dataset Record Explorer', icon: Search, badge: explorerResults.length },
+    { id: 'PUBLICATIONS', label: 'Canonical Publications', icon: BookOpen, badge: publications.length },
+    { id: 'RESEARCHERS', label: 'Researchers & IDs', icon: Users, badge: researcherProfiles.length },
+    { id: 'PATENTS', label: 'Patents & IPR', icon: Lightbulb, badge: patents.length },
+    { id: 'INGESTION', label: 'Authorized File Import', icon: UploadCloud },
+    { id: 'REVIEW_QUEUE', label: 'Match Review Queue', icon: AlertTriangle, badge: matchReviewQueue.length, alert: matchReviewQueue.length > 0 }
+  ];
+
   return (
     <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', maxWidth: '1600px', margin: '0 auto' }}>
       
@@ -369,9 +413,10 @@ export default function ResearchDataSourcesView({ currentUser }) {
       <AnimatePresence>
         {toastMessage && (
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
             style={{
               position: 'fixed',
               top: '20px',
@@ -391,25 +436,30 @@ export default function ResearchDataSourcesView({ currentUser }) {
             }}
           >
             <Sparkles size={16} color="#F1C40F" />
-            {toastMessage}
+            <span>{toastMessage}</span>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Top Institutional Header */}
-      <div style={{
-        background: 'linear-gradient(135deg, #070F1E 0%, #0B192C 60%, #122846 100%)',
-        borderRadius: '16px',
-        padding: '1.75rem 2rem',
-        color: '#FFFFFF',
-        border: '1px solid #D4AF37',
-        boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '1.2rem'
-      }}>
+      <motion.div 
+        initial={shouldReduce ? false : { opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.28 }}
+        style={{
+          background: 'linear-gradient(135deg, #070F1E 0%, #0B192C 60%, #122846 100%)',
+          borderRadius: '16px',
+          padding: '1.75rem 2rem',
+          color: '#FFFFFF',
+          border: '1px solid #D4AF37',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '1.2rem'
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
           <div style={{
             width: '52px',
@@ -443,11 +493,20 @@ export default function ResearchDataSourcesView({ currentUser }) {
         </div>
 
         <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
-          <button
+          <motion.button
+            type="button"
             onClick={() => {
               setExplorerSourceFilter('ALL');
+              setExplorerTypeFilter('ALL');
               setActiveTab('EXPLORER');
+              requestAnimationFrame(() => {
+                universalSearchRef.current?.focus();
+                universalSearchRef.current?.scrollIntoView({ behavior: shouldReduce ? 'auto' : 'smooth', block: 'center' });
+              });
             }}
+            whileHover={shouldReduce ? undefined : { y: -2, scale: 1.015 }}
+            whileTap={shouldReduce ? undefined : { scale: 0.97 }}
+            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
             style={{
               padding: '0.6rem 1rem',
               borderRadius: '8px',
@@ -460,14 +519,22 @@ export default function ResearchDataSourcesView({ currentUser }) {
               display: 'flex',
               alignItems: 'center',
               gap: '0.4rem',
-              transition: 'all 0.2s'
+              outline: 'none'
             }}
           >
             <Search size={15} />
-            Universal Search
-          </button>
-          <button
+            <span>Universal Search</span>
+          </motion.button>
+
+          <motion.button
+            type="button"
+            disabled={isRefreshing}
+            aria-busy={isRefreshing}
+            aria-disabled={isRefreshing}
             onClick={refreshAll}
+            whileHover={shouldReduce || isRefreshing ? undefined : { y: -2, scale: 1.015 }}
+            whileTap={shouldReduce || isRefreshing ? undefined : { scale: 0.97 }}
+            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
             style={{
               padding: '0.6rem 0.9rem',
               borderRadius: '8px',
@@ -476,93 +543,191 @@ export default function ResearchDataSourcesView({ currentUser }) {
               color: '#070F1E',
               fontSize: '0.8rem',
               fontWeight: 800,
-              cursor: 'pointer',
+              cursor: isRefreshing ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.4rem'
+              gap: '0.4rem',
+              opacity: isRefreshing ? 0.75 : 1,
+              outline: 'none'
             }}
           >
-            <RefreshCw size={15} />
-            Refresh Store
-          </button>
+            <motion.div
+              animate={isRefreshing ? { rotate: 360 } : { rotate: 0 }}
+              transition={isRefreshing ? { duration: 0.8, repeat: Infinity, ease: "linear" } : { duration: 0.2 }}
+              style={{ display: 'flex' }}
+            >
+              <RefreshCw size={15} />
+            </motion.div>
+            <span>{isRefreshing ? 'Refreshing...' : 'Refresh Store'}</span>
+          </motion.button>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Real Aggregate Institutional KPIs */}
+      {/* Real Aggregate Institutional KPIs (Interactive Links to Respective Tabs) */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-        <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '1.1rem', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+        {/* KPI 1: Publications */}
+        <motion.div
+          initial={shouldReduce ? false : { opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.26, delay: 0 }}
+          whileHover={shouldReduce ? undefined : { y: -3 }}
+          whileTap={shouldReduce ? undefined : { scale: 0.985 }}
+          onClick={() => setActiveTab('PUBLICATIONS')}
+          role="button"
+          tabIndex={0}
+          aria-label="View Verified Publications"
+          style={{
+            background: '#FFFFFF',
+            borderRadius: '12px',
+            padding: '1.1rem',
+            border: '1px solid #E2E8F0',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            cursor: 'pointer',
+            outline: 'none'
+          }}
+        >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Verified Publications</span>
             <BookOpen size={18} color="#2563EB" />
           </div>
-          <div style={{ fontSize: '1.7rem', fontWeight: 800, color: '#0F172A' }}>{summaryKpis.verifiedPubs}</div>
+          <div style={{ fontSize: '1.7rem', fontWeight: 800, color: '#0F172A', fontFamily: 'Cinzel, serif' }}>
+            <MotionNumber value={summaryKpis.verifiedPubs} />
+          </div>
           <div style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 600, marginTop: '0.2rem' }}>
             {summaryKpis.scopusWosPubs} Scopus / WoS indexed
           </div>
-        </div>
+        </motion.div>
 
-        <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '1.1rem', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+        {/* KPI 2: Patents */}
+        <motion.div
+          initial={shouldReduce ? false : { opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.26, delay: shouldReduce ? 0 : 0.045 }}
+          whileHover={shouldReduce ? undefined : { y: -3 }}
+          whileTap={shouldReduce ? undefined : { scale: 0.985 }}
+          onClick={() => setActiveTab('PATENTS')}
+          role="button"
+          tabIndex={0}
+          aria-label="View Institutional Patents"
+          style={{
+            background: '#FFFFFF',
+            borderRadius: '12px',
+            padding: '1.1rem',
+            border: '1px solid #E2E8F0',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            cursor: 'pointer',
+            outline: 'none'
+          }}
+        >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Institutional Patents</span>
             <Lightbulb size={18} color="#D97706" />
           </div>
-          <div style={{ fontSize: '1.7rem', fontWeight: 800, color: '#0F172A' }}>{summaryKpis.totalPatents}</div>
+          <div style={{ fontSize: '1.7rem', fontWeight: 800, color: '#0F172A', fontFamily: 'Cinzel, serif' }}>
+            <MotionNumber value={summaryKpis.totalPatents} />
+          </div>
           <div style={{ fontSize: '0.72rem', color: '#D97706', fontWeight: 600, marginTop: '0.2rem' }}>
             {summaryKpis.grantedPatents} Granted by Indian Patent Office
           </div>
-        </div>
+        </motion.div>
 
-        <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '1.1rem', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+        {/* KPI 3: Researchers */}
+        <motion.div
+          initial={shouldReduce ? false : { opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.26, delay: shouldReduce ? 0 : 0.09 }}
+          whileHover={shouldReduce ? undefined : { y: -3 }}
+          whileTap={shouldReduce ? undefined : { scale: 0.985 }}
+          onClick={() => setActiveTab('RESEARCHERS')}
+          role="button"
+          tabIndex={0}
+          aria-label="View Researchers with IDs"
+          style={{
+            background: '#FFFFFF',
+            borderRadius: '12px',
+            padding: '1.1rem',
+            border: '1px solid #E2E8F0',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            cursor: 'pointer',
+            outline: 'none'
+          }}
+        >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Researchers with IDs</span>
             <Users size={18} color="#7C3AED" />
           </div>
-          <div style={{ fontSize: '1.7rem', fontWeight: 800, color: '#0F172A' }}>{summaryKpis.researchersWithOrcid}</div>
+          <div style={{ fontSize: '1.7rem', fontWeight: 800, color: '#0F172A', fontFamily: 'Cinzel, serif' }}>
+            <MotionNumber value={summaryKpis.researchersWithOrcid} />
+          </div>
           <div style={{ fontSize: '0.72rem', color: '#7C3AED', fontWeight: 600, marginTop: '0.2rem' }}>
             {summaryKpis.researchersWithScopus} with Scopus Author IDs
           </div>
-        </div>
+        </motion.div>
 
-        <div 
+        {/* KPI 4: Match Review Queue */}
+        <motion.div 
+          initial={shouldReduce ? false : { opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.26, delay: shouldReduce ? 0 : 0.135 }}
+          whileHover={shouldReduce ? undefined : { y: -3 }}
+          whileTap={shouldReduce ? undefined : { scale: 0.985 }}
           onClick={() => setActiveTab('REVIEW_QUEUE')}
+          role="button"
+          tabIndex={0}
+          aria-label="View Match Review Queue"
           style={{ 
             background: summaryKpis.pendingReviews > 0 ? '#FEF2F2' : '#FFFFFF', 
             borderRadius: '12px', 
             padding: '1.1rem', 
             border: summaryKpis.pendingReviews > 0 ? '1px solid #FCA5A5' : '1px solid #E2E8F0', 
             boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            outline: 'none'
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: summaryKpis.pendingReviews > 0 ? '#DC2626' : '#64748B', textTransform: 'uppercase' }}>Match Review Queue</span>
             <AlertTriangle size={18} color={summaryKpis.pendingReviews > 0 ? '#DC2626' : '#94A3B8'} />
           </div>
-          <div style={{ fontSize: '1.7rem', fontWeight: 800, color: summaryKpis.pendingReviews > 0 ? '#DC2626' : '#0F172A' }}>{summaryKpis.pendingReviews}</div>
-          <div style={{ fontSize: '0.72rem', color: summaryKpis.pendingReviews > 0 ? '#B91C1C' : '#64748B', fontWeight: 600, marginTop: '0.2rem' }}>
-            Click to resolve author linkages
+          <div style={{ fontSize: '1.7rem', fontWeight: 800, color: summaryKpis.pendingReviews > 0 ? '#DC2626' : '#0F172A', fontFamily: 'Cinzel, serif' }}>
+            <MotionNumber value={summaryKpis.pendingReviews} />
           </div>
-        </div>
+          <div style={{ fontSize: '0.72rem', color: summaryKpis.pendingReviews > 0 ? '#B91C1C' : '#64748B', fontWeight: 600, marginTop: '0.2rem' }}>
+            {summaryKpis.pendingReviews > 0 ? 'Click to resolve author linkages' : 'All match linkages verified'}
+          </div>
+        </motion.div>
       </div>
 
       {/* Main Tab Navigation */}
-      <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '2px solid #E2E8F0', paddingBottom: '0.5rem', overflowX: 'auto' }}>
-        {[
-          { id: 'DATASETS', label: 'Dataset Snapshots', icon: Database, badge: datasetVersions.length },
-          { id: 'EXPLORER', label: 'Dataset Record Explorer', icon: Search, badge: explorerResults.length },
-          { id: 'PUBLICATIONS', label: 'Canonical Publications', icon: BookOpen, badge: publications.length },
-          { id: 'RESEARCHERS', label: 'Researchers & IDs', icon: Users, badge: researcherProfiles.length },
-          { id: 'PATENTS', label: 'Patents & IPR', icon: Lightbulb, badge: patents.length },
-          { id: 'INGESTION', label: 'Authorized File Import', icon: UploadCloud },
-          { id: 'REVIEW_QUEUE', label: 'Match Review Queue', icon: AlertTriangle, badge: matchReviewQueue.length, alert: matchReviewQueue.length > 0 }
-        ].map(tab => {
+      <div 
+        ref={tabStripRef}
+        role="tablist"
+        style={{ 
+          display: 'flex', 
+          gap: '0.5rem', 
+          borderBottom: '2px solid #E2E8F0', 
+          paddingBottom: '0.5rem', 
+          overflowX: 'auto',
+          scrollbarWidth: 'thin',
+          scrollSnapType: 'x proximity'
+        }}
+      >
+        {tabs.map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
           return (
-            <button
+            <motion.button
               key={tab.id}
+              id={`research-tab-${tab.id}`}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
               onClick={() => setActiveTab(tab.id)}
+              whileHover={shouldReduce ? undefined : { y: -1 }}
+              whileTap={shouldReduce ? undefined : { scale: 0.97 }}
+              transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
               style={{
+                position: 'relative',
                 padding: '0.65rem 1.1rem',
                 borderRadius: '8px',
                 border: 'none',
@@ -574,12 +739,20 @@ export default function ResearchDataSourcesView({ currentUser }) {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.5rem',
-                transition: 'all 0.15s',
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
+                minWidth: 'max-content',
+                scrollSnapAlign: 'start',
+                outline: 'none'
               }}
             >
-              <Icon size={16} color={isActive ? '#D4AF37' : 'currentColor'} />
-              {tab.label}
+              <motion.div
+                animate={shouldReduce ? undefined : { scale: isActive ? 1.05 : 1 }}
+                transition={{ duration: 0.2 }}
+                style={{ display: 'flex', alignItems: 'center' }}
+              >
+                <Icon size={16} color={isActive ? '#D4AF37' : 'currentColor'} />
+              </motion.div>
+              <span>{tab.label}</span>
               {tab.badge !== undefined && (
                 <span style={{
                   fontSize: '0.7rem',
@@ -592,10 +765,40 @@ export default function ResearchDataSourcesView({ currentUser }) {
                   {tab.badge}
                 </span>
               )}
-            </button>
+
+              {/* Active Tab Floating Underline Indicator */}
+              {isActive && (
+                <motion.div
+                  layoutId={shouldReduce ? undefined : "research-active-tab"}
+                  style={{
+                    position: 'absolute',
+                    bottom: '-0.55rem',
+                    left: '10%',
+                    right: '10%',
+                    height: '3px',
+                    background: '#D4AF37',
+                    borderRadius: '3px 3px 0 0'
+                  }}
+                  transition={{ type: "spring", stiffness: 450, damping: 32 }}
+                />
+              )}
+            </motion.button>
           );
         })}
       </div>
+
+      {/* Tab Panels with AnimatePresence */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          role="tabpanel"
+          aria-labelledby={`research-tab-${activeTab}`}
+          initial={shouldReduce ? false : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={shouldReduce ? false : { opacity: 0, y: -4 }}
+          transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+          style={{ width: '100%' }}
+        >
 
       {/* ───────────────────────────────────────────────────────────── */}
       {/* TAB 1: DATASET SNAPSHOT CARDS */}
@@ -995,6 +1198,7 @@ export default function ResearchDataSourcesView({ currentUser }) {
             <div style={{ position: 'relative', width: '100%' }}>
               <Search size={18} color="#94A3B8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
               <input
+                ref={universalSearchRef}
                 type="text"
                 placeholder="Universal Search: Title, Author, DOI, ORCID, Scopus EID, WoS UID, OpenAlex ID, Patent Application No..."
                 value={explorerSearch}
@@ -2201,6 +2405,8 @@ export default function ResearchDataSourcesView({ currentUser }) {
           )}
         </div>
       )}
+        </motion.div>
+      </AnimatePresence>
 
       {/* ───────────────────────────────────────────────────────────── */}
       {/* PUBLICATION DOSSIER MODAL */}

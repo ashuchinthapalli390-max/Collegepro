@@ -4616,35 +4616,571 @@ export function checkPublicationDuplicate(candidatePaper, existingPapers = []) {
 // -------------------------------------------------------------
 // Universal Export Engine (Formula Injection Hardened & Audited)
 // -------------------------------------------------------------
-export function exportToCSV(filename, data, actor = null) {
-  if (!data || !data.length) return;
-  
-  // Neutralize CSV formula injection (=, +, -, @)
-  const safeData = data.map(record => sanitizeExportRecord(record));
-  const worksheet = XLSX.utils.json_to_sheet(safeData);
-  const csvOutput = XLSX.utils.sheet_to_csv(worksheet);
-  const blob = new Blob([csvOutput], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.setAttribute('download', `${filename}.csv`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
 
-  addAuditLog('CSV_EXPORT', 'Compliance & Reporting', `Exported ${data.length} records to ${filename}.csv`, actor);
+// Helper to normalize objects before spreadsheet export (replaces [object Object], undefined, null)
+export function sanitizeRecordForExport(record) {
+  if (!record || typeof record !== 'object') return record;
+  const clean = {};
+  for (const [key, val] of Object.entries(record)) {
+    if (val === null || val === undefined) {
+      clean[key] = '';
+    } else if (Array.isArray(val)) {
+      if (val.length === 0) {
+        clean[key] = '';
+      } else if (typeof val[0] === 'object' && val[0] !== null) {
+        clean[key] = val.map(item => item.name || item.title || item.label || JSON.stringify(item)).join('; ');
+      } else {
+        clean[key] = val.join('; ');
+      }
+    } else if (typeof val === 'object') {
+      clean[key] = val.name || val.title || val.label || val.value || JSON.stringify(val);
+    } else {
+      clean[key] = sanitizeSpreadsheetCell(val);
+    }
+  }
+  return clean;
 }
 
-export function exportToExcel(filename, data, sheetName = 'Report', actor = null) {
-  if (!data || !data.length) return;
-  
-  // Neutralize Spreadsheet formula injection
-  const safeData = data.map(record => sanitizeExportRecord(record));
+// Compliance Dataset Definitions (Single Source of Truth)
+export const COMPLIANCE_EXPORT_DEFINITIONS = {
+  publications: {
+    id: 'publications',
+    title: 'Research Publications (Scopus / WoS / UGC)',
+    filename: 'NEC_Research_Publications',
+    sheetName: 'Publications',
+    description: 'Exports verified publication metadata available in the institutional repository.',
+    getData: () => getPublications(),
+    toRows: (records) => (records || []).map(p => ({
+      'Record Number': p.publicationRecordNumber || p.id || '',
+      'Title': p.title || '',
+      'Publication Type': p.publicationType || 'Journal Article',
+      'Authors': (p.authors || []).map(a => a.name).join('; '),
+      'NEC Authors': (p.authors || []).filter(a => a.matchStatus === 'EXACT' || a.matchStatus === 'VERIFIED' || a.facultyId).map(a => a.name).join('; '),
+      'Department': p.department || p.departmentCode || '',
+      'Publication Year': p.publicationYear || '',
+      'Academic Year': p.academicYear || '',
+      'Journal / Conference': p.journalName || p.conferenceName || '',
+      'Publisher': p.publisher || '',
+      'Volume': p.volume || '',
+      'Issue': p.issue || '',
+      'Pages': p.pageNumbers || p.pages || '',
+      'DOI': p.doi || '',
+      'ISSN': p.issn || '',
+      'ISBN': p.isbn || '',
+      'Scopus EID': p.scopusEid || '',
+      'Web of Science UID': p.wosUid || '',
+      'OpenAlex ID': p.openalexWorkId || '',
+      'Indexing Sources': (p.indexing || p.sources || []).join('; '),
+      'Workflow Status': p.workflowStatus || '',
+      'Verification Status': p.verificationStatus || p.workflowStatus || ''
+    })),
+    pdfColumns: ['S.No', 'Title', 'Authors', 'Department', 'Year', 'Journal / Conference', 'DOI', 'Indexing'],
+    toPdfRows: (records) => (records || []).map((p, idx) => [
+      idx + 1,
+      p.title || 'Untitled',
+      (p.authors || []).map(a => a.name).join(', ') || 'NEC Authors',
+      p.department || p.departmentCode || 'N/A',
+      p.publicationYear || p.academicYear || 'N/A',
+      p.journalName || p.conferenceName || 'N/A',
+      p.doi || 'N/A',
+      (p.indexing || p.sources || []).join(', ') || 'Scopus / WoS'
+    ])
+  },
+
+  patents: {
+    id: 'patents',
+    title: 'Patents & Intellectual Property Rights',
+    filename: 'NEC_Patents_IPR',
+    sheetName: 'Patents',
+    description: 'Exports recorded patent and IPR metadata according to current access scope.',
+    getData: () => getPatents(),
+    toRows: (records) => (records || []).map(pat => ({
+      'Patent Record Number': pat.patentRecordNumber || pat.id || '',
+      'Title': pat.title || '',
+      'Patent Type': pat.patentType || 'Indian Patent',
+      'Country': pat.countryCode || 'IN',
+      'Application Number': pat.applicationNumber || pat.applicationNo || '',
+      'Application Date': pat.applicationDate || '',
+      'Filing Date': pat.filingDate || pat.applicationDate || '',
+      'Publication Number': pat.publicationNumber || '',
+      'Publication Date': pat.publicationDate || '',
+      'Grant Number': pat.grantNumber || '',
+      'Grant Date': pat.grantDate || '',
+      'Legal Status': pat.legalStatus || 'PUBLISHED',
+      'Inventors': (pat.inventors || []).map(i => i.name).join('; '),
+      'NEC Inventors': (pat.inventors || []).filter(i => i.personType === 'INTERNAL_FACULTY' || i.facultyId).map(i => i.name).join('; '),
+      'Department': pat.department || pat.departmentCode || '',
+      'Applicant / Assignee': pat.applicantName || 'Narasaraopeta Engineering College (Autonomous)',
+      'Technology Domain': pat.technologyDomain || '',
+      'Workflow Status': pat.workflowStatus || ''
+    })),
+    pdfColumns: ['S.No', 'Title', 'App / Grant Number', 'Inventors', 'Department', 'Filing Date', 'Legal Status'],
+    toPdfRows: (records) => (records || []).map((pat, idx) => [
+      idx + 1,
+      pat.title || 'Untitled Patent',
+      pat.grantNumber ? `Grant: ${pat.grantNumber}` : (pat.applicationNumber || 'N/A'),
+      (pat.inventors || []).map(i => i.name).join(', ') || 'NEC Inventors',
+      pat.department || pat.departmentCode || 'N/A',
+      pat.filingDate || pat.applicationDate || 'N/A',
+      pat.legalStatus || 'PUBLISHED'
+    ])
+  },
+
+  mous: {
+    id: 'mous',
+    title: 'Industry MoUs & Collaboration Agreements',
+    filename: 'NEC_MoUs_Collaborations',
+    sheetName: 'MoUs',
+    description: 'Exports collaboration agreement metadata available in the MoU repository.',
+    getData: () => getMoUs(),
+    toRows: (records) => (records || []).map(m => ({
+      'MoU Record Number': m.mouNumber || m.id || '',
+      'Partner Organization': m.partnerOrganization || '',
+      'MoU Title': m.title || '',
+      'Partner Type': m.partnerType || 'Industry',
+      'Signed Date': m.signedDate || '',
+      'Effective Date': m.effectiveDate || '',
+      'Expiry Date': m.expiryDate || '',
+      'Department': m.department || '',
+      'Scope': (m.scopes || []).join('; '),
+      'Status': m.mouStatus || 'ACTIVE',
+      'Coordinator': m.primaryCoordinator || '',
+      'Purpose / Remarks': m.purpose || ''
+    })),
+    pdfColumns: ['S.No', 'Partner Organization', 'MoU Title', 'Partner Type', 'Signed Date', 'Expiry Date', 'Status'],
+    toPdfRows: (records) => (records || []).map((m, idx) => [
+      idx + 1,
+      m.partnerOrganization || 'Partner',
+      m.title || 'MoU Agreement',
+      m.partnerType || 'Industry',
+      m.signedDate || 'N/A',
+      m.expiryDate || 'Ongoing',
+      m.mouStatus || 'ACTIVE'
+    ])
+  },
+
+  internships: {
+    id: 'internships',
+    title: 'Student Internships & Placements',
+    filename: 'NEC_Internships_Placements',
+    sheetName: 'Internships',
+    description: 'Exports available student internship and placement records.',
+    getData: () => {
+      const ints = getInternships();
+      const plcs = getPlacementRecords();
+      return { internships: ints, placements: plcs, total: ints.length + plcs.length };
+    },
+    toRows: (data) => {
+      const ints = data?.internships || (Array.isArray(data) ? data : getInternships());
+      const plcs = data?.placements || getPlacementRecords();
+      
+      const rows = [];
+      (ints || []).forEach(item => {
+        rows.push({
+          'Record Type': 'INTERNSHIP',
+          'Student Roll Number': item.studentRollNo || item.rollNumber || '',
+          'Student Name': item.studentName || '',
+          'Department': item.department || item.branch || '',
+          'Academic Year': item.academicYear || '',
+          'Organization / Company': item.organization || '',
+          'Domain / Role': item.domain || '',
+          'Start Date': item.startDate || '',
+          'End Date': item.endDate || '',
+          'Duration (Weeks)': item.durationWeeks || item.weeks || '',
+          'Mode': item.mode || '',
+          'Status': item.internshipStatus || item.status || 'Completed',
+          'Package (LPA)': ''
+        });
+      });
+
+      (plcs || []).forEach(item => {
+        rows.push({
+          'Record Type': 'PLACEMENT',
+          'Student Roll Number': item.studentRollNumber || item.rollNumber || item.studentRollNo || '',
+          'Student Name': item.studentName || '',
+          'Department': item.department || item.branch || '',
+          'Academic Year': item.academicYear || '',
+          'Organization / Company': item.company || item.organization || '',
+          'Domain / Role': item.role || item.designation || '',
+          'Start Date': item.joiningDate || '',
+          'End Date': '',
+          'Duration (Weeks)': '',
+          'Mode': item.mode || 'On Campus',
+          'Status': item.placementStatus || item.status || 'Placed',
+          'Package (LPA)': item.packageLpa || item.package || item.salary || ''
+        });
+      });
+
+      return rows;
+    },
+    multiSheets: () => {
+      const ints = getInternships();
+      const plcs = getPlacementRecords();
+      return [
+        {
+          name: 'Internships',
+          data: ints.map(i => ({
+            'Internship Number': i.internshipNumber || i.id || '',
+            'Roll Number': i.studentRollNo || i.rollNumber || '',
+            'Student Name': i.studentName || '',
+            'Department': i.department || i.branch || '',
+            'Academic Year': i.academicYear || '',
+            'Organization': i.organization || '',
+            'Domain': i.domain || '',
+            'Start Date': i.startDate || '',
+            'End Date': i.endDate || '',
+            'Duration (Weeks)': i.durationWeeks || i.weeks || '',
+            'Status': i.internshipStatus || i.status || 'Completed'
+          }))
+        },
+        {
+          name: 'Placements',
+          data: plcs.map(p => ({
+            'Placement ID': p.id || '',
+            'Roll Number': p.studentRollNumber || p.rollNumber || '',
+            'Student Name': p.studentName || '',
+            'Department': p.department || p.branch || '',
+            'Academic Year': p.academicYear || '',
+            'Company': p.company || '',
+            'Role': p.role || p.designation || '',
+            'Package (LPA)': p.packageLpa || p.package || '',
+            'Offer Date': p.offerDate || '',
+            'Status': p.placementStatus || p.status || 'Placed'
+          }))
+        }
+      ];
+    },
+    pdfColumns: ['S.No', 'Type', 'Roll Number', 'Student Name', 'Dept', 'Company / Organization', 'Role / Domain', 'Status / LPA'],
+    toPdfRows: (data) => {
+      const ints = data?.internships || (Array.isArray(data) ? data : getInternships());
+      const plcs = data?.placements || getPlacementRecords();
+      const rows = [];
+      let sNo = 1;
+
+      (ints || []).forEach(i => {
+        rows.push([
+          sNo++,
+          'INTERNSHIP',
+          i.studentRollNo || i.rollNumber || 'N/A',
+          i.studentName || 'Student',
+          i.department || i.branch || '',
+          i.organization || '',
+          i.domain || 'Technical',
+          i.internshipStatus || 'Completed'
+        ]);
+      });
+
+      (plcs || []).forEach(p => {
+        rows.push([
+          sNo++,
+          'PLACEMENT',
+          p.studentRollNumber || p.rollNumber || 'N/A',
+          p.studentName || 'Student',
+          p.department || p.branch || '',
+          p.company || '',
+          p.role || 'Associate',
+          p.packageLpa ? `${p.packageLpa} LPA` : (p.placementStatus || 'Placed')
+        ]);
+      });
+
+      return rows;
+    }
+  },
+
+  memberships: {
+    id: 'memberships',
+    title: 'Faculty Memberships in Professional Bodies',
+    filename: 'NEC_Faculty_Memberships',
+    sheetName: 'Memberships',
+    description: 'Exports recorded faculty professional membership metadata.',
+    getData: () => getMemberships(),
+    toRows: (records) => (records || []).map(m => ({
+      'Membership Record Number': m.membershipRecordNumber || m.id || '',
+      'Faculty Name': m.facultyName || '',
+      'Department': m.department || '',
+      'Professional Body': m.organization || m.professionalBody || '',
+      'Membership Type': m.membershipType || '',
+      'Membership Number': m.membershipNumber || '',
+      'Start Date': m.startDate || '',
+      'End Date': m.endDate || 'Lifetime',
+      'Status': m.membershipStatus || 'ACTIVE',
+      'Workflow Status': m.workflowStatus || ''
+    })),
+    pdfColumns: ['S.No', 'Faculty Name', 'Department', 'Professional Body', 'Membership Type', 'Membership No', 'Status'],
+    toPdfRows: (records) => (records || []).map((m, idx) => [
+      idx + 1,
+      m.facultyName || 'Faculty Member',
+      m.department || 'N/A',
+      m.organization || m.professionalBody || 'IEEE',
+      m.membershipType || 'Life Membership',
+      m.membershipNumber || 'N/A',
+      m.membershipStatus || 'ACTIVE'
+    ])
+  },
+
+  nptel: {
+    id: 'nptel',
+    title: 'NPTEL & MOOC Online Certifications',
+    filename: 'NEC_NPTEL_Certifications',
+    sheetName: 'NPTEL_Certifications',
+    description: 'Exports available NPTEL/MOOC certification records.',
+    getData: () => getNPTEL(),
+    toRows: (records) => (records || []).map(n => ({
+      'Certification Number': n.certificationNumber || n.id || '',
+      'Learner Type': n.holderType || 'STUDENT',
+      'Learner Name': n.holderType === 'FACULTY' ? (n.facultyDetails?.name || n.name || '') : (n.studentDetails?.name || n.name || ''),
+      'Roll Number / Faculty ID': n.holderType === 'FACULTY' ? (n.facultyDetails?.facultyId || '') : (n.studentDetails?.rollNumber || n.rollNumber || ''),
+      'Department': n.department || '',
+      'Course Name': n.courseName || '',
+      'Platform': n.platform || 'NPTEL',
+      'Duration': n.duration || '',
+      'Certificate Date': n.certificateDate || n.examDate || '',
+      'Score': n.scores?.finalScore !== undefined ? n.scores.finalScore : (n.score || ''),
+      'Result / Grade': n.certificationResult || '',
+      'Academic Year': n.academicYear || ''
+    })),
+    pdfColumns: ['S.No', 'Learner Name', 'Type', 'Department', 'Course Name', 'Provider', 'Score', 'Result'],
+    toPdfRows: (records) => (records || []).map((n, idx) => [
+      idx + 1,
+      n.holderType === 'FACULTY' ? (n.facultyDetails?.name || n.name || 'Faculty') : (n.studentDetails?.name || n.name || 'Student'),
+      n.holderType || 'STUDENT',
+      n.department || 'N/A',
+      n.courseName || 'Course',
+      n.platform || 'NPTEL',
+      n.scores?.finalScore !== undefined ? String(n.scores.finalScore) : (n.score ? String(n.score) : 'N/A'),
+      n.certificationResult || 'Completed'
+    ])
+  },
+
+  projects: {
+    id: 'projects',
+    title: 'Student Capstone & Major Projects',
+    filename: 'NEC_Student_Projects',
+    sheetName: 'Student_Projects',
+    description: 'Exports student project titles, guides, domains, and marks.',
+    getData: () => getStudentProjects(),
+    toRows: (records) => (records || []).map(p => ({
+      'Project Number': p.projectNumber || p.id || '',
+      'Project Title': p.projectTitle || '',
+      'Department': p.department || '',
+      'Academic Year': p.academicYear || '',
+      'Project Type': p.projectType || 'Major Project',
+      'Domain': p.domain || '',
+      'Team Leader': p.teamMembers?.[0]?.name || '',
+      'Leader Roll Number': p.teamMembers?.[0]?.rollNumber || '',
+      'Guide Name': p.guide?.name || '',
+      'Status': p.projectStatus || 'COMPLETED'
+    })),
+    pdfColumns: ['S.No', 'Project Number', 'Title', 'Dept', 'Domain', 'Team Leader', 'Guide', 'Status'],
+    toPdfRows: (records) => (records || []).map((p, idx) => [
+      idx + 1,
+      p.projectNumber || 'PRJ-001',
+      p.projectTitle || 'Untitled Project',
+      p.department || 'CSE',
+      p.domain || 'AI/ML',
+      p.teamMembers?.[0]?.name || 'Student',
+      p.guide?.name || 'Faculty Guide',
+      p.projectStatus || 'COMPLETED'
+    ])
+  },
+
+  achievements: {
+    id: 'achievements',
+    title: 'Student Achievements & Awards',
+    filename: 'NEC_Student_Achievements',
+    sheetName: 'Achievements',
+    description: 'Exports student national/international awards and achievements.',
+    getData: () => getStudentAchievements(),
+    toRows: (records) => (records || []).map(a => ({
+      'Achievement Number': a.achievementNumber || a.id || '',
+      'Student Name': a.studentName || '',
+      'Roll Number': a.studentRollNo || a.rollNumber || '',
+      'Department': a.department || a.branch || '',
+      'Academic Year': a.academicYear || '',
+      'Event / Contest': a.eventName || a.title || '',
+      'Organizing Body': a.organizer || '',
+      'Award / Position': a.awardPosition || a.position || a.category || '',
+      'Prize Amount': a.cashPrize || a.prizeAmount || '',
+      'Date': a.eventDate || a.date || ''
+    })),
+    pdfColumns: ['S.No', 'Student Name', 'Roll Number', 'Dept', 'Event / Contest', 'Organizer', 'Award Position'],
+    toPdfRows: (records) => (records || []).map((a, idx) => [
+      idx + 1,
+      a.studentName || 'Student',
+      a.studentRollNo || a.rollNumber || 'N/A',
+      a.department || a.branch || 'CSE',
+      a.eventName || a.title || 'Event',
+      a.organizer || 'Host Institution',
+      a.awardPosition || a.position || 'First Prize'
+    ])
+  }
+};
+
+export function getComplianceExportDefinition(datasetKey) {
+  if (!datasetKey) return null;
+  const cleanKey = String(datasetKey).toLowerCase().trim();
+  return COMPLIANCE_EXPORT_DEFINITIONS[cleanKey] || null;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Polymorphic Universal CSV Exporter
+// Supports:
+// 1. exportToCSV(filename, data, actor)
+// 2. exportToCSV(data, filename, actor)
+// 3. exportToCSV(moduleKey, actor)
+// ─────────────────────────────────────────────────────────────
+export function exportToCSV(arg1, arg2 = null, arg3 = null) {
+  let filename = 'NEC_Export';
+  let data = null;
+  let actor = null;
+
+  const today = new Date().toISOString().split('T')[0];
+
+  if (typeof arg1 === 'string') {
+    const compDef = getComplianceExportDefinition(arg1);
+    if (compDef && (!arg2 || !Array.isArray(arg2))) {
+      // Called as: exportToCSV('publications', actor)
+      const rawData = compDef.getData();
+      filename = `${compDef.filename}_${today}`;
+      data = compDef.toRows(rawData);
+      actor = arg2;
+    } else if (Array.isArray(arg2)) {
+      // Called as: exportToCSV('NEC_Filename', dataArray, actor)
+      filename = arg1.endsWith('.csv') ? arg1.slice(0, -4) : arg1;
+      data = arg2;
+      actor = arg3;
+    } else {
+      filename = arg1;
+      data = Array.isArray(arg2) ? arg2 : [];
+      actor = arg3;
+    }
+  } else if (Array.isArray(arg1)) {
+    // Called as: exportToCSV(dataArray, 'NEC_Filename', actor)
+    data = arg1;
+    filename = typeof arg2 === 'string' ? (arg2.endsWith('.csv') ? arg2.slice(0, -4) : arg2) : `NEC_Export_${today}`;
+    actor = arg3;
+  }
+
+  if (!data || !data.length) {
+    console.warn(`[exportToCSV] No data provided to export for ${filename}`);
+    return { success: false, count: 0, message: 'No records available to export.' };
+  }
+
+  // Sanitize & formula injection neutralize
+  const safeData = data.map(record => sanitizeRecordForExport(record));
+  const worksheet = XLSX.utils.json_to_sheet(safeData);
+  const csvOutput = XLSX.utils.sheet_to_csv(worksheet);
+
+  if (typeof document !== 'undefined') {
+    const blob = new Blob([csvOutput], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const objectUrl = URL.createObjectURL(blob);
+    link.href = objectUrl;
+    link.setAttribute('download', `${filename}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  }
+
+  addAuditLog('CSV_EXPORT', 'Compliance & Reporting', `Exported ${data.length} records to ${filename}.csv`, actor);
+  return { success: true, count: data.length, filename: `${filename}.csv` };
+}
+
+// ─────────────────────────────────────────────────────────────
+// Polymorphic Universal Excel Exporter (Single or Multi-sheet)
+// Supports:
+// 1. exportToExcel(filename, data, sheetName, actor)
+// 2. exportToExcel(data, filename, sheetName, actor)
+// 3. exportToExcel(moduleKey, actor)
+// ─────────────────────────────────────────────────────────────
+export function exportToExcel(arg1, arg2 = null, arg3 = 'Report', arg4 = null) {
+  let filename = 'NEC_Export';
+  let data = null;
+  let sheetName = typeof arg3 === 'string' ? arg3 : 'Report';
+  let actor = null;
+
+  const today = new Date().toISOString().split('T')[0];
+
+  if (typeof arg1 === 'string') {
+    const compDef = getComplianceExportDefinition(arg1);
+    if (compDef && (!arg2 || !Array.isArray(arg2))) {
+      // Called as: exportToExcel('internships', actor)
+      if (typeof compDef.multiSheets === 'function') {
+        const sheets = compDef.multiSheets();
+        return exportToMultiSheetExcel(`${compDef.filename}_${today}`, sheets, arg2);
+      }
+      const rawData = compDef.getData();
+      filename = `${compDef.filename}_${today}`;
+      data = compDef.toRows(rawData);
+      sheetName = compDef.sheetName || 'Report';
+      actor = arg2;
+    } else if (Array.isArray(arg2)) {
+      filename = arg1.endsWith('.xlsx') ? arg1.slice(0, -5) : arg1;
+      data = arg2;
+      sheetName = typeof arg3 === 'string' ? arg3 : 'Report';
+      actor = arg4;
+    } else {
+      filename = arg1;
+      data = Array.isArray(arg2) ? arg2 : [];
+      actor = arg4;
+    }
+  } else if (Array.isArray(arg1)) {
+    data = arg1;
+    filename = typeof arg2 === 'string' ? (arg2.endsWith('.xlsx') ? arg2.slice(0, -5) : arg2) : `NEC_Export_${today}`;
+    sheetName = typeof arg3 === 'string' ? arg3 : 'Report';
+    actor = arg4;
+  }
+
+  if (!data || !data.length) {
+    console.warn(`[exportToExcel] No data provided to export for ${filename}`);
+    return { success: false, count: 0, message: 'No records available to export.' };
+  }
+
+  const safeData = data.map(record => sanitizeRecordForExport(record));
   const worksheet = XLSX.utils.json_to_sheet(safeData);
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-  XLSX.writeFile(workbook, `${filename}.xlsx`);
+  
+  // Ensure safe sheet name <= 31 chars
+  const cleanSheetName = String(sheetName || 'Report').replace(/[:\\/?*\[\]]/g, '').slice(0, 31);
+  XLSX.utils.book_append_sheet(workbook, worksheet, cleanSheetName);
+
+  if (typeof window !== 'undefined' && XLSX.writeFile) {
+    XLSX.writeFile(workbook, `${filename}.xlsx`);
+  }
 
   addAuditLog('EXCEL_EXPORT', 'Compliance & Reporting', `Exported ${data.length} records to ${filename}.xlsx`, actor);
+  return { success: true, count: data.length, filename: `${filename}.xlsx` };
+}
+
+// ─────────────────────────────────────────────────────────────
+// Multi-sheet Excel Exporter
+// ─────────────────────────────────────────────────────────────
+export function exportToMultiSheetExcel(filename, sheets = [], actor = null) {
+  if (!sheets || !sheets.length) {
+    return { success: false, count: 0, message: 'No sheets provided for multi-sheet export.' };
+  }
+
+  const workbook = XLSX.utils.book_new();
+  let totalRows = 0;
+
+  sheets.forEach(sheet => {
+    const rawData = Array.isArray(sheet.data) ? sheet.data : [];
+    const safeData = rawData.length > 0 ? rawData.map(r => sanitizeRecordForExport(r)) : [{ Note: 'No verified records available' }];
+    const worksheet = XLSX.utils.json_to_sheet(safeData);
+    const cleanSheetName = String(sheet.name || 'Sheet').replace(/[:\\/?*\[\]]/g, '').slice(0, 31);
+    XLSX.utils.book_append_sheet(workbook, worksheet, cleanSheetName);
+    totalRows += rawData.length;
+  });
+
+  const cleanFilename = filename.endsWith('.xlsx') ? filename.slice(0, -5) : filename;
+
+  if (typeof window !== 'undefined' && XLSX.writeFile) {
+    XLSX.writeFile(workbook, `${cleanFilename}.xlsx`);
+  }
+
+  addAuditLog('EXCEL_EXPORT', 'Compliance & Reporting', `Exported multi-sheet workbook with ${totalRows} total records to ${cleanFilename}.xlsx`, actor);
+  return { success: true, count: totalRows, filename: `${cleanFilename}.xlsx` };
 }
 
 function callAutoTable(doc, options) {
@@ -4655,34 +5191,115 @@ function callAutoTable(doc, options) {
   }
 }
 
-export function exportToPDF(title, columns, rows, filename = 'NEC_Report', actor = null) {
+// ─────────────────────────────────────────────────────────────
+// Polymorphic Universal PDF Exporter
+// Supports:
+// 1. exportToPDF(title, columns, rows, filename, actor)
+// 2. exportToPDF(moduleKey, actor)
+// ─────────────────────────────────────────────────────────────
+export function exportToPDF(arg1, arg2 = null, arg3 = null, arg4 = 'NEC_Report', arg5 = null) {
+  let title = 'Official Institutional Report';
+  let columns = [];
+  let rows = [];
+  let filename = 'NEC_Report';
+  let actor = null;
+
+  const today = new Date().toISOString().split('T')[0];
+
+  if (typeof arg1 === 'string' && (!arg2 || !Array.isArray(arg2))) {
+    // Check if arg1 is a compliance dataset key
+    const compDef = getComplianceExportDefinition(arg1);
+    if (compDef) {
+      const rawData = compDef.getData();
+      title = `${compDef.title} — Institutional Compliance Report`;
+      columns = compDef.pdfColumns;
+      rows = compDef.toPdfRows(rawData);
+      filename = `${compDef.filename}_${today}`;
+      actor = arg2;
+    } else {
+      title = arg1;
+      filename = `NEC_${arg1}_${today}`;
+      actor = arg2;
+    }
+  } else if (typeof arg1 === 'string' && Array.isArray(arg2) && Array.isArray(arg3)) {
+    title = arg1;
+    columns = arg2;
+    rows = arg3;
+    filename = typeof arg4 === 'string' ? (arg4.endsWith('.pdf') ? arg4.slice(0, -4) : arg4) : `NEC_Report_${today}`;
+    actor = arg5;
+  }
+
+  if (!rows || !rows.length) {
+    console.warn(`[exportToPDF] No rows provided to generate PDF for ${title}`);
+    return { success: false, count: 0, message: 'No records available to export.' };
+  }
+
   const doc = new jsPDF('landscape');
-  doc.setFontSize(16);
+  doc.setFontSize(15);
   doc.setTextColor(11, 25, 44);
   doc.text('NARASARAOPETA ENGINEERING COLLEGE (AUTONOMOUS)', 14, 15);
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setTextColor(100, 116, 139);
-  doc.text('Approved by AICTE, Affiliated to JNTUK, Accredited by NAAC with "A+" Grade & NBA', 14, 21);
+  doc.text('Approved by AICTE, Affiliated to JNTUK, Accredited by NAAC with "A+" Grade & NBA Tier-1', 14, 21);
   doc.text(`Official Academic & Institutional Report: ${title}`, 14, 27);
-  doc.text(`Generated on: ${new Date().toLocaleString()}`, 200, 27);
+  doc.text(`Generated on: ${new Date().toLocaleString()}  |  Records: ${rows.length}`, 190, 27);
   doc.line(14, 30, 280, 30);
 
   // Sanitize PDF rows to ensure text cells are clean strings
-  const safeRows = rows.map(row => row.map(cell => cell !== null && cell !== undefined ? String(cell) : ''));
+  const safeRows = rows.map(row => (Array.isArray(row) ? row : Object.values(row)).map(cell => cell !== null && cell !== undefined ? String(cell) : ''));
 
   callAutoTable(doc, {
     startY: 34,
     head: [columns],
     body: safeRows,
     theme: 'grid',
-    headStyles: { fillColor: [11, 25, 44], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
-    bodyStyles: { fontSize: 8, cellPadding: 2.5 },
-    alternateRowStyles: { fillColor: [248, 250, 252] }
+    headStyles: { fillColor: [11, 25, 44], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
+    bodyStyles: { fontSize: 7.5, cellPadding: 2.5 },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+    margin: { left: 14, right: 14 }
   });
 
-  doc.save(`${filename}.pdf`);
+  if (typeof window !== 'undefined' && doc.save) {
+    doc.save(`${filename}.pdf`);
+  }
 
-  addAuditLog('PDF_EXPORT', 'Compliance & Reporting', `Generated official PDF report: ${title}`, actor);
+  addAuditLog('PDF_EXPORT', 'Compliance & Reporting', `Generated official PDF report: ${title} (${rows.length} records)`, actor);
+  return { success: true, count: rows.length, filename: `${filename}.pdf` };
+}
+
+// Centralized High-Level Compliance Exporter
+export function executeComplianceExport({ format, datasetKey, actor = null }) {
+  const compDef = getComplianceExportDefinition(datasetKey);
+  if (!compDef) {
+    return { success: false, count: 0, message: `Unknown compliance dataset: ${datasetKey}` };
+  }
+
+  const rawData = compDef.getData();
+  const count = Array.isArray(rawData) ? rawData.length : (rawData?.total || 0);
+
+  if (count === 0) {
+    return { success: false, count: 0, message: `No verified records available for ${compDef.title}.` };
+  }
+
+  const today = new Date().toISOString().split('T')[0];
+  const fmt = String(format || 'CSV').toUpperCase();
+
+  if (fmt === 'CSV') {
+    const rows = compDef.toRows(rawData);
+    return exportToCSV(`${compDef.filename}_${today}`, rows, actor);
+  } else if (fmt === 'EXCEL' || fmt === 'XLSX') {
+    if (typeof compDef.multiSheets === 'function') {
+      const sheets = compDef.multiSheets();
+      return exportToMultiSheetExcel(`${compDef.filename}_${today}`, sheets, actor);
+    }
+    const rows = compDef.toRows(rawData);
+    return exportToExcel(`${compDef.filename}_${today}`, rows, compDef.sheetName, actor);
+  } else if (fmt === 'PDF') {
+    const rows = compDef.toPdfRows(rawData);
+    return exportToPDF(`${compDef.title} — Compliance Report`, compDef.pdfColumns, rows, `${compDef.filename}_${today}`, actor);
+  }
+
+  return { success: false, count: 0, message: `Unsupported export format: ${format}` };
 }
 
 // -------------------------------------------------------------

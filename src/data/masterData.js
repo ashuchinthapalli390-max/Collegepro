@@ -11870,11 +11870,265 @@ export const INITIAL_BOS = [
     "updatedAt": "2026-08-24T06:54:38.230Z"
   }
 ];
-export const INITIAL_STUDENT_ACHIEVEMENTS = [];
-export const INITIAL_INTERNSHIPS = [];
-export const INITIAL_STUDENT_PROJECTS = [];
-export const INITIAL_FDPS = [];
-export const INITIAL_FACULTY_ACHIEVEMENTS = [];
+
+export const INITIAL_STUDENT_ACHIEVEMENTS = [
+  {
+    "id": "ach_2026_001",
+    "achievementNumber": "ACH-CSE-2026-0001",
+    "studentName": "K. Venkata Sai",
+    "studentRollNo": "22471A0501",
+    "department": "CSE",
+    "branch": "CSE",
+    "academicYear": "2025-26",
+    "eventName": "Smart India Hackathon (SIH 2025)",
+    "title": "Smart India Hackathon (SIH 2025) National Winner",
+    "organizer": "Ministry of Education & AICTE",
+    "awardPosition": "1st Prize (Winner)",
+    "position": "1st Prize",
+    "prizeAmount": "1,00,000 INR",
+    "cashPrize": "1,00,000 INR",
+    "eventDate": "2025-12-20",
+    "category": "National Hackathon",
+    "workflowStatus": "APPROVED",
+    "visibilityStatus": "Published",
+    "isDeleted": false
+  },
+  {
+    "id": "ach_2026_002",
+    "achievementNumber": "ACH-ECE-2026-0002",
+    "studentName": "P. Divya Sri",
+    "studentRollNo": "22471A0415",
+    "department": "ECE",
+    "branch": "ECE",
+    "academicYear": "2025-26",
+    "eventName": "IEEE Hyderabad Section Student Paper Contest",
+    "title": "Best Technical Paper Award in VLSI Systems",
+    "organizer": "IEEE Hyderabad Section",
+    "awardPosition": "Best Paper Award",
+    "position": "Best Paper",
+    "prizeAmount": "15,000 INR",
+    "cashPrize": "15,000 INR",
+    "eventDate": "2026-01-18",
+    "category": "Conference Presentation",
+    "workflowStatus": "APPROVED",
+    "visibilityStatus": "Published",
+    "isDeleted": false
+  },
+  {
+    "id": "ach_2026_003",
+    "achievementNumber": "ACH-MECH-2026-0003",
+    "studentName": "M. Rajesh Kumar",
+    "studentRollNo": "22471A0308",
+    "department": "MECH",
+    "branch": "MECH",
+    "academicYear": "2025-26",
+    "eventName": "SAE India BAJA All-Terrain Vehicle Competition",
+    "title": "SAE India BAJA 2025 Endurance Run Finalist",
+    "organizer": "Society of Automotive Engineers (SAE INDIA)",
+    "awardPosition": "National Finalist",
+    "position": "Finalist",
+    "prizeAmount": "25,000 INR",
+    "cashPrize": "25,000 INR",
+    "eventDate": "2026-02-10",
+    "category": "Design Competition",
+    "workflowStatus": "APPROVED",
+    "visibilityStatus": "Published",
+    "isDeleted": false
+  }
+];
+
+export const INITIAL_INTERNSHIPS = [
+  {
+    "id": "int_2026_001",
+    "internshipNumber": "INT-CSE-2026-0001",
+    "studentName": "V. Anusha",
+    "studentRollNo": "22471A0512",
+    "rollNumber": "22471A0512",
+    "department": "CSE",
+    "branch": "CSE",
+    "academicYear": "2025-26",
+    "organization": "Tata Consultancy Services (TCS)",
+    "domain": "Full Stack Cloud Development",
+    "startDate": "2025-06-01",
+    "endDate": "2025-08-31",
+    "durationWeeks": 12,
+    "weeks": 12,
+    "durationDays": 92,
+    "mode": "Hybrid",
+    "stipend": "15,000 INR/Month",
+    "internshipStatus": "Completed",
+    "status": "Completed",
+    "workflowStatus": "APPROVED",
+    "isDeleted": false
+  },
+  {
+    "id": "int_2026_002",
+    "internshipNumber": "INT-ECE-2026-0002",
+    "studentName": "G. Tarun",
+    "studentRollNo": "22471A0423",
+    "rollNumber": "22471A0423",
+    "department": "ECE",
+    "branch": "ECE",
+    "academicYear": "2025-26",
+    "organization": "Qualcomm India Pvt Ltd",
+    "domain": "Embedded Firmware & 5G IoT",
+    "startDate": "2025-05-15",
+    "endDate": "2025-08-15",
+    "durationWeeks": 12,
+    "weeks": 12,
+    "durationDays": 93,
+    "mode": "On-Site",
+    "stipend": "30,000 INR/Month",
+    "internshipStatus": "Completed",
+    "status": "Completed",
+    "workflowStatus": "APPROVED",
+    "isDeleted": false
+  },
+  {
+    "id": "int_2026_003",
+    "internshipNumber": "INT-IT-2026-0003",
+    "studentName": "B. Rahul",
+    "studentRollNo": "22471A1208",
+    "rollNumber": "22471A1208",
+    "department": "IT",
+    "branch": "IT",
+    "academicYear": "2025-26",
+    "organization": "Infosys Springboard Internship",
+    "domain": "Artificial Intelligence & Data Analytics",
+    "startDate": "2025-06-15",
+    "endDate": "2025-08-15",
+    "durationWeeks": 8,
+    "weeks": 8,
+    "durationDays": 62,
+    "mode": "Virtual",
+    "stipend": "10,000 INR/Month",
+    "internshipStatus": "Completed",
+    "status": "Completed",
+    "workflowStatus": "APPROVED",
+    "isDeleted": false
+  },
+  {
+    "id": "int_2026_004",
+    "internshipNumber": "INT-EEE-2026-0004",
+    "studentName": "Ch. Sai Kiran",
+    "studentRollNo": "22471A0211",
+    "rollNumber": "22471A0211",
+    "department": "EEE",
+    "branch": "EEE",
+    "academicYear": "2025-26",
+    "organization": "Schneider Electric",
+    "domain": "Smart Grid & PLC Automation",
+    "startDate": "2025-06-01",
+    "endDate": "2025-07-31",
+    "durationWeeks": 8,
+    "weeks": 8,
+    "durationDays": 61,
+    "mode": "On-Site",
+    "stipend": "12,000 INR/Month",
+    "internshipStatus": "Completed",
+    "status": "Completed",
+    "workflowStatus": "APPROVED",
+    "isDeleted": false
+  }
+];
+
+export const INITIAL_STUDENT_PROJECTS = [
+  {
+    "id": "prj_2026_001",
+    "projectNumber": "PRJ-CSE-2026-0001",
+    "projectTitle": "Smart Autonomous Edge-AI Surveillance Platform for Rural Border Zones",
+    "title": "Smart Autonomous Edge-AI Surveillance Platform for Rural Border Zones",
+    "department": "CSE",
+    "academicYear": "2025-26",
+    "batch": "2022-2026",
+    "year": "IV Year",
+    "semester": "II Sem",
+    "projectType": "Major Project",
+    "domain": "Artificial Intelligence / Edge Computing",
+    "domains": ["Artificial Intelligence", "Edge Computing", "Computer Vision"],
+    "studentRollNo": "22471A0501",
+    "studentName": "K. Venkata Sai",
+    "teamLeader": "K. Venkata Sai",
+    "teamMembers": [
+      { "rollNumber": "22471A0501", "name": "K. Venkata Sai", "department": "CSE", "year": "IV Year", "isLeader": true },
+      { "rollNumber": "22471A0502", "name": "M. Likhitha", "department": "CSE", "year": "IV Year", "isLeader": false },
+      { "rollNumber": "22471A0503", "name": "S. Charan", "department": "CSE", "year": "IV Year", "isLeader": false }
+    ],
+    "guide": {
+      "facultyId": "NEC-FAC-0142",
+      "name": "Dr. S. Venkateswarlu",
+      "department": "CSE",
+      "designation": "Professor & Dean R&D"
+    },
+    "projectStatus": "COMPLETED",
+    "status": "Completed",
+    "workflowStatus": "APPROVED",
+    "isDeleted": false
+  },
+  {
+    "id": "prj_2026_002",
+    "projectNumber": "PRJ-ECE-2026-0002",
+    "projectTitle": "LoRaWAN-Enabled Solar Battery Health Telemetry & Micro-Inverter Controller",
+    "title": "LoRaWAN-Enabled Solar Battery Health Telemetry & Micro-Inverter Controller",
+    "department": "ECE",
+    "academicYear": "2025-26",
+    "batch": "2022-2026",
+    "year": "IV Year",
+    "semester": "II Sem",
+    "projectType": "Major Project",
+    "domain": "IoT & Embedded Systems",
+    "domains": ["IoT", "Embedded Systems", "Renewable Energy"],
+    "studentRollNo": "22471A0415",
+    "studentName": "P. Divya Sri",
+    "teamLeader": "P. Divya Sri",
+    "teamMembers": [
+      { "rollNumber": "22471A0415", "name": "P. Divya Sri", "department": "ECE", "year": "IV Year", "isLeader": true },
+      { "rollNumber": "22471A0416", "name": "K. Harish", "department": "ECE", "year": "IV Year", "isLeader": false }
+    ],
+    "guide": {
+      "facultyId": "NEC-FAC-0089",
+      "name": "Dr. B. Raghava Rao",
+      "department": "ECE",
+      "designation": "Professor"
+    },
+    "projectStatus": "COMPLETED",
+    "status": "Completed",
+    "workflowStatus": "APPROVED",
+    "isDeleted": false
+  }
+];
+
+export const INITIAL_FDPS = [
+  {
+    "id": "fdp_2026_001",
+    "fdpNumber": "FDP-CSE-2026-0001",
+    "title": "AICTE ATAL Faculty Development Programme on Generative AI & Large Language Models",
+    "facultyName": "Dr. S. Venkateswarlu",
+    "department": "CSE",
+    "organizer": "IIT Hyderabad (AICTE ATAL Sponsored)",
+    "startDate": "2025-11-10",
+    "endDate": "2025-11-15",
+    "durationDays": 6,
+    "mode": "On-Site",
+    "status": "Completed",
+    "workflowStatus": "APPROVED",
+    "isDeleted": false
+  }
+];
+
+export const INITIAL_FACULTY_ACHIEVEMENTS = [
+  {
+    "id": "fach_2026_001",
+    "facultyName": "Dr. S. V. N. Sreenivasu",
+    "department": "CSE",
+    "awardName": "Outstanding Researcher in AI & Autonomous Systems Award",
+    "awardingBody": "Institution of Engineers (India) - IEI",
+    "date": "2026-01-26",
+    "workflowStatus": "APPROVED",
+    "isDeleted": false
+  }
+];
+
 export const INITIAL_EVENTS = [
   {
     "id": "evt_2026_27_001",
@@ -12361,9 +12615,217 @@ export const INITIAL_EVENTS = [
     "createdAt": "2026-08-24T00:00:00.000Z"
   }
 ];
-export const INITIAL_MEMBERSHIPS = [];
-export const INITIAL_MOUS = [];
-export const INITIAL_NPTEL = [];
+
+export const INITIAL_MEMBERSHIPS = [
+  {
+    "id": "mem_2026_001",
+    "membershipRecordNumber": "MEM-CSE-2026-0001",
+    "facultyId": "NEC-FAC-0142",
+    "facultyName": "Dr. S. Venkateswarlu",
+    "department": "CSE",
+    "organization": "IEEE (Institute of Electrical and Electronics Engineers)",
+    "professionalBody": "IEEE",
+    "membershipType": "Senior Member",
+    "membershipNumber": "IEEE-SM-93821045",
+    "startDate": "2018-04-10",
+    "endDate": "2030-12-31",
+    "membershipStatus": "ACTIVE",
+    "workflowStatus": "APPROVED",
+    "isDeleted": false
+  },
+  {
+    "id": "mem_2026_002",
+    "membershipRecordNumber": "MEM-ECE-2026-0002",
+    "facultyId": "NEC-FAC-0089",
+    "facultyName": "Dr. B. Raghava Rao",
+    "department": "ECE",
+    "organization": "Institution of Electronics and Telecommunication Engineers (IETE)",
+    "professionalBody": "IETE",
+    "membershipType": "Fellow (FIETE)",
+    "membershipNumber": "IETE-F-218490",
+    "startDate": "2016-08-15",
+    "endDate": "2035-12-31",
+    "membershipStatus": "ACTIVE",
+    "workflowStatus": "APPROVED",
+    "isDeleted": false
+  },
+  {
+    "id": "mem_2026_003",
+    "membershipRecordNumber": "MEM-MECH-2026-0003",
+    "facultyId": "NEC-FAC-0054",
+    "facultyName": "Dr. D. Suneel",
+    "department": "MECH",
+    "organization": "Indian Society for Technical Education (ISTE)",
+    "professionalBody": "ISTE",
+    "membershipType": "Life Member",
+    "membershipNumber": "ISTE-LM-64821",
+    "startDate": "2012-05-20",
+    "endDate": "Lifetime",
+    "membershipStatus": "ACTIVE",
+    "workflowStatus": "APPROVED",
+    "isDeleted": false
+  },
+  {
+    "id": "mem_2026_004",
+    "membershipRecordNumber": "MEM-CSE-2026-0004",
+    "facultyId": "NEC-FAC-0112",
+    "facultyName": "Dr. S. V. N. Sreenivasu",
+    "department": "CSE",
+    "organization": "Computer Society of India (CSI)",
+    "professionalBody": "CSI",
+    "membershipType": "Life Member",
+    "membershipNumber": "CSI-LM-0104829",
+    "startDate": "2014-03-12",
+    "endDate": "Lifetime",
+    "membershipStatus": "ACTIVE",
+    "workflowStatus": "APPROVED",
+    "isDeleted": false
+  }
+];
+
+export const INITIAL_MOUS = [
+  {
+    "id": "mou_2026_001",
+    "mouNumber": "MOU-NEC-2026-0001",
+    "partnerOrganization": "Infosys Springboard",
+    "title": "MoU for Digital Skills Acceleration & Industry Certifications",
+    "partnerType": "Industry",
+    "department": "CSE, IT, AI&DS",
+    "signedDate": "2024-06-15",
+    "effectiveDate": "2024-06-15",
+    "expiryDate": "2027-06-14",
+    "durationYears": 3,
+    "primaryCoordinator": "Dr. S. Venkateswarlu",
+    "scopes": ["Internships", "Curriculum Alignment", "Faculty Enablement", "Certifications"],
+    "mouStatus": "ACTIVE",
+    "workflowStatus": "APPROVED",
+    "purpose": "Comprehensive digital curriculum integration, student internships, and faculty development modules.",
+    "isDeleted": false
+  },
+  {
+    "id": "mou_2026_002",
+    "mouNumber": "MOU-NEC-2026-0002",
+    "partnerOrganization": "Cisco Networking Academy",
+    "title": "MoU for Advanced Networking, Cybersecurity & CCNA Academy Support",
+    "partnerType": "Industry",
+    "department": "ECE, CSE, CYS",
+    "signedDate": "2023-08-10",
+    "effectiveDate": "2023-08-10",
+    "expiryDate": "2026-08-09",
+    "durationYears": 3,
+    "primaryCoordinator": "Dr. B. Raghava Rao",
+    "scopes": ["Skill Development", "Laboratory Support", "Industry Certifications"],
+    "mouStatus": "ACTIVE",
+    "workflowStatus": "APPROVED",
+    "purpose": "Hands-on CCNA/DevNet training labs, instructor authorization, and student discount certifications.",
+    "isDeleted": false
+  },
+  {
+    "id": "mou_2026_003",
+    "mouNumber": "MOU-NEC-2026-0003",
+    "partnerOrganization": "Texas Instruments & EdGate Technologies",
+    "title": "MoU for TI Embedded Systems & IoT Center of Excellence",
+    "partnerType": "Industry",
+    "department": "ECE, EEE",
+    "signedDate": "2024-01-20",
+    "effectiveDate": "2024-01-20",
+    "expiryDate": "2027-01-19",
+    "durationYears": 3,
+    "primaryCoordinator": "Dr. M. Babu Rao",
+    "scopes": ["Hardware R&D", "Joint Projects", "Industrial Training"],
+    "mouStatus": "ACTIVE",
+    "workflowStatus": "APPROVED",
+    "purpose": "Establishment of TI Embedded University Program hardware kits and robotics platforms.",
+    "isDeleted": false
+  },
+  {
+    "id": "mou_2026_004",
+    "mouNumber": "MOU-NEC-2026-0004",
+    "partnerOrganization": "National Highways Authority of India (NHAI)",
+    "title": "Institutional Collaboration for Highway Engineering & Geotechnical Studies",
+    "partnerType": "Government / Industry",
+    "department": "CIVIL",
+    "signedDate": "2023-11-05",
+    "effectiveDate": "2023-11-05",
+    "expiryDate": "2026-11-04",
+    "durationYears": 3,
+    "primaryCoordinator": "Dr. P. Nageswara Rao",
+    "scopes": ["Field Internships", "Live Infrastructure Projects", "Material Testing"],
+    "mouStatus": "ACTIVE",
+    "workflowStatus": "APPROVED",
+    "purpose": "Undergraduate student site internships on NH-544D expansion and asphalt pavement durability testing.",
+    "isDeleted": false
+  }
+];
+
+export const INITIAL_NPTEL = [
+  {
+    "id": "nptel_2026_001",
+    "certificationNumber": "NPTEL-2026-CSE-0001",
+    "holderType": "STUDENT",
+    "name": "K. Venkata Sai",
+    "rollNumber": "22471A0501",
+    "studentDetails": {
+      "name": "K. Venkata Sai",
+      "rollNumber": "22471A0501"
+    },
+    "department": "CSE",
+    "courseName": "Deep Learning for Computer Vision",
+    "platform": "NPTEL",
+    "duration": "12 Weeks",
+    "certificateDate": "2025-11-20",
+    "score": 92,
+    "scores": { "finalScore": 92, "assignmentScore": 96, "examScore": 90 },
+    "certificationResult": "Elite + Gold",
+    "academicYear": "2025-26",
+    "workflowStatus": "APPROVED",
+    "isDeleted": false
+  },
+  {
+    "id": "nptel_2026_002",
+    "certificationNumber": "NPTEL-2026-FAC-0002",
+    "holderType": "FACULTY",
+    "name": "Dr. S. Venkateswarlu",
+    "facultyDetails": {
+      "name": "Dr. S. Venkateswarlu",
+      "facultyId": "NEC-FAC-0142"
+    },
+    "department": "CSE",
+    "courseName": "Cloud Computing and Distributed Systems",
+    "platform": "NPTEL",
+    "duration": "8 Weeks",
+    "certificateDate": "2025-10-15",
+    "score": 88,
+    "scores": { "finalScore": 88, "assignmentScore": 94, "examScore": 86 },
+    "certificationResult": "Elite + Silver (Top 5%)",
+    "academicYear": "2025-26",
+    "workflowStatus": "APPROVED",
+    "isDeleted": false
+  },
+  {
+    "id": "nptel_2026_003",
+    "certificationNumber": "NPTEL-2026-STU-0003",
+    "holderType": "STUDENT",
+    "name": "P. Divya Sri",
+    "rollNumber": "22471A0415",
+    "studentDetails": {
+      "name": "P. Divya Sri",
+      "rollNumber": "22471A0415"
+    },
+    "department": "ECE",
+    "courseName": "CMOS Digital VLSI Design",
+    "platform": "NPTEL",
+    "duration": "12 Weeks",
+    "certificateDate": "2025-11-25",
+    "score": 84,
+    "scores": { "finalScore": 84, "assignmentScore": 90, "examScore": 82 },
+    "certificationResult": "Elite + Silver",
+    "academicYear": "2025-26",
+    "workflowStatus": "APPROVED",
+    "isDeleted": false
+  }
+];
+
 export const INITIAL_PLACEMENTS = {
   "statistics": [
     {
@@ -12447,7 +12909,92 @@ export const INITIAL_PLACEMENTS = {
       "offers": 122
     }
   ],
-  "records": []
+  "records": [
+    {
+      "id": "plc_2026_001",
+      "studentRollNumber": "21471A0501",
+      "rollNumber": "21471A0501",
+      "studentRollNo": "21471A0501",
+      "studentName": "K. Sai Praneeth",
+      "department": "CSE",
+      "branch": "CSE",
+      "academicYear": "2024-25",
+      "company": "Amazon Web Services (AWS)",
+      "role": "Cloud Support Associate",
+      "designation": "Cloud Support Associate",
+      "packageLpa": 24.0,
+      "package": "24.0 LPA",
+      "offerDate": "2024-11-15",
+      "joiningDate": "2025-07-01",
+      "mode": "On Campus",
+      "placementStatus": "Placed",
+      "status": "Placed",
+      "isDeleted": false
+    },
+    {
+      "id": "plc_2026_002",
+      "studentRollNumber": "21471A0545",
+      "rollNumber": "21471A0545",
+      "studentRollNo": "21471A0545",
+      "studentName": "M. Swathi",
+      "department": "CSE",
+      "branch": "CSE",
+      "academicYear": "2024-25",
+      "company": "Tata Consultancy Services (TCS Digital)",
+      "role": "Digital Software Engineer",
+      "designation": "Digital Software Engineer",
+      "packageLpa": 7.5,
+      "package": "7.5 LPA",
+      "offerDate": "2024-10-20",
+      "joiningDate": "2025-06-15",
+      "mode": "On Campus",
+      "placementStatus": "Placed",
+      "status": "Placed",
+      "isDeleted": false
+    },
+    {
+      "id": "plc_2026_003",
+      "studentRollNumber": "21471A0412",
+      "rollNumber": "21471A0412",
+      "studentRollNo": "21471A0412",
+      "studentName": "P. Vinay Kumar",
+      "department": "ECE",
+      "branch": "ECE",
+      "academicYear": "2024-25",
+      "company": "Qualcomm India Pvt Ltd",
+      "role": "Associate Hardware Engineer",
+      "designation": "Associate Hardware Engineer",
+      "packageLpa": 18.5,
+      "package": "18.5 LPA",
+      "offerDate": "2024-12-05",
+      "joiningDate": "2025-07-15",
+      "mode": "On Campus",
+      "placementStatus": "Placed",
+      "status": "Placed",
+      "isDeleted": false
+    },
+    {
+      "id": "plc_2026_004",
+      "studentRollNumber": "21471A1218",
+      "rollNumber": "21471A1218",
+      "studentRollNo": "21471A1218",
+      "studentName": "D. Manoj",
+      "department": "IT",
+      "branch": "IT",
+      "academicYear": "2024-25",
+      "company": "Cognizant (GenC Next)",
+      "role": "Full Stack Specialist",
+      "designation": "Full Stack Specialist",
+      "packageLpa": 6.8,
+      "package": "6.8 LPA",
+      "offerDate": "2024-10-28",
+      "joiningDate": "2025-06-20",
+      "mode": "On Campus",
+      "placementStatus": "Placed",
+      "status": "Placed",
+      "isDeleted": false
+    }
+  ]
 };
 
 export const INITIAL_EXAM_NOTIFICATIONS = [
