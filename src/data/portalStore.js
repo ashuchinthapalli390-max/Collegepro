@@ -267,8 +267,20 @@ function loadStore(key, initialData) {
     }
     const parsed = JSON.parse(item);
     if (Array.isArray(initialData)) {
-      if (Array.isArray(parsed)) return parsed;
-      if (parsed && Array.isArray(parsed.records)) return parsed.records;
+      if (Array.isArray(parsed)) {
+        if (parsed.length === 0 && initialData.length > 0) {
+          localStorage.setItem(key, JSON.stringify(initialData));
+          return initialData;
+        }
+        return parsed;
+      }
+      if (parsed && Array.isArray(parsed.records)) {
+        if (parsed.records.length === 0 && initialData.length > 0) {
+          localStorage.setItem(key, JSON.stringify(initialData));
+          return initialData;
+        }
+        return parsed.records;
+      }
       return initialData;
     }
     return parsed;
@@ -2470,20 +2482,23 @@ export function getAcademicEvents(includeDeleted = false) {
 
   const normalized = items.map(item => {
     const title = item.title || item.name || item.eventName || 'Academic Event';
-    const eventType = item.eventType || 'Workshop';
-    const dept = item.department || 'CSE';
-    const ay = item.academicYear || item.yearCode || '2025-26';
-    const start = item.startDate || item.date || '2025-02-14';
-    const end = item.endDate || item.date || start;
+    const eventType = item.eventType || item.event_type || item.type || 'Workshop';
+    const dept = item.department || item.departmentCodes || item.department_codes || 'ALL';
+    const ay = item.academicYear || item.academic_year || item.yearCode || '2026-27';
+    const start = item.startDate || item.start_date || item.date || '2026-06-15';
+    const end = item.endDate || item.end_date || item.date || start;
+    const pTotal = Number(item.participantsTotal || item.participants_total || item.actualParticipants || item.participants || 0);
 
     return {
       ...item,
       id: item.id || 'evt_' + Math.random().toString(36).substr(2, 9),
-      eventNumber: item.eventNumber || item.id,
+      eventNumber: item.eventNumber || item.event_number || item.id,
       title,
       name: title,
       eventType,
+      type: eventType,
       department: dept,
+      departmentCodes: dept,
       academicYear: ay,
       startDate: start,
       endDate: end,
@@ -2496,31 +2511,41 @@ export function getAcademicEvents(includeDeleted = false) {
       description: item.description || '',
       objectives: item.objectives || '',
       targetAudience: item.targetAudience || 'All Students',
-      targetYear: item.targetYear || item.year || 'All Years',
+      targetYear: item.targetYear || item.audienceYears || item.audience_years || item.year || 'All Years',
+      audienceYears: item.audienceYears || item.audience_years || item.targetYear || 'All Years',
       targetSemester: item.targetSemester || item.semester || 'Both Semesters',
       
       // People
       coordinatorName: item.coordinatorName || item.facultyCoordinator || '',
       coCoordinatorName: item.coCoordinatorName || '',
       studentCoordinatorName: item.studentCoordinatorName || '',
-      resourcePersons: item.resourcePersons || (item.resourcePerson ? [{
-        name: item.resourcePerson,
-        designation: 'Expert / Resource Person',
-        organization: item.associatedOrganization || 'Invited Organization',
+      resourcePersonDetails: item.resourcePersonDetails || item.resource_person_details || item.resourcePerson || '',
+      resourcePersons: item.resourcePersons || (item.resourcePersonDetails || item.resourcePerson ? [{
+        name: (item.resourcePersonDetails || item.resourcePerson).split(',')[0],
+        designation: (item.resourcePersonDetails || item.resourcePerson).split(',')[1] || 'Expert Speaker',
+        organization: (item.resourcePersonDetails || item.resourcePerson).split(',')[2] || 'Invited Organization',
         isExternal: true
       }] : []),
       
       // Audience Metrics
-      expectedParticipants: Number(item.expectedParticipants || item.participants || 100),
-      actualParticipants: Number(item.actualParticipants || item.participants || 0),
+      participantsTotal: pTotal,
+      expectedParticipants: Number(item.expectedParticipants || pTotal || 100),
+      actualParticipants: pTotal,
+      participantsBreakdown: item.participantsBreakdown || item.participants_breakdown || '',
       
       // Status
       eventStatus: item.eventStatus || (item.status === 'Completed' ? 'COMPLETED' : 'PLANNED'),
       workflowStatus: item.workflowStatus || (item.status === 'Completed' || item.status === 'Approved' ? 'APPROVED' : 'DRAFT'),
+      status: item.status || 'Completed',
+      publicVisibility: item.publicVisibility || 'PUBLIC',
       
       // Collaboration
-      isMouAssociated: item.isMouAssociated || (item.mouYesNo === 'Yes' ? 'Yes' : 'No'),
-      associatedMoU: item.associatedMoU || item.associatedOrganization || '',
+      organizedBy: item.organizedBy || item.organized_by || 'TechnoElite, ISTE',
+      mouPartner: item.mouPartner || item.mou_partner || item.associatedMoU || '',
+      isMouAssociated: item.isMouAssociated || (item.mouPartner || item.mou_partner || item.mouYesNo === 'Yes' ? 'Yes' : 'No'),
+      associatedMoU: item.mouPartner || item.mou_partner || item.associatedMoU || '',
+      sourceReference: item.sourceReference || item.source_reference || '',
+      sourceType: item.sourceType || 'BULK_IMPORT',
       
       // Event-type specific detail containers
       sessions: item.sessions || [],

@@ -44,6 +44,7 @@ export default function DashboardOverviewView({
   publicationsCount = 0,
   patentsCount = 0,
   mousCount = 0,
+  eventsCount = 0,
   achievementsCount = 0,
   activeSessionsCount = 0,
   onNavigate,
@@ -167,7 +168,7 @@ export default function DashboardOverviewView({
         },
         {
           title: 'Department Events',
-          value: '18',
+          value: eventsCount,
           subtext: 'Workshops & Guest Lectures',
           icon: Calendar,
           color: '#06B6D4',

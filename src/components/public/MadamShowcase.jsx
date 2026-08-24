@@ -528,21 +528,69 @@ export default function MadamShowcase({ onOpenPortal }) {
           )
         )}
 
-        {/* 7. NPTEL */}
-        {activeModuleTab === 'nptel' && (
-          nptelList.length === 0 ? (
+        {/* 8. Workshops, Seminars, Hackathons & Events */}
+        {activeModuleTab === 'events' && (
+          events.length === 0 ? (
             <div style={{ padding: '3.5rem 1.5rem', background: '#F8FAFC', borderRadius: '16px', border: '1px dashed #CBD5E1', textAlign: 'center', color: '#64748B' }}>
-              <div style={{ fontSize: '1rem', fontWeight: 700, color: '#0F172A', marginBottom: '0.35rem' }}>No NPTEL / MOOC Certifications Recorded</div>
-              <div style={{ fontSize: '0.84rem' }}>Faculty and student Elite/Gold SWAYAM-NPTEL course certifications will appear here once verified.</div>
+              <div style={{ fontSize: '1rem', fontWeight: 700, color: '#0F172A', marginBottom: '0.35rem' }}>No Academic Events or Workshops Recorded</div>
+              <div style={{ fontSize: '0.84rem' }}>Institutional workshops, hackathons, and technical seminars will appear here once approved.</div>
             </div>
           ) : (
-            <div className="grid-3" style={{ gap: '1.5rem' }}>
-              {nptelList.map(n => (
-                <div key={n.id} style={{ padding: '1.6rem', background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
-                  <span className="badge badge-gold" style={{ marginBottom: '0.4rem' }}>{n.badge}</span>
-                  <h4 style={{ fontSize: '1.1rem', color: '#0B192C', fontWeight: 800 }}>{n.course}</h4>
-                  <div style={{ color: '#0284C7', fontWeight: 700, fontSize: '0.9rem', margin: '0.3rem 0' }}>{n.name} ({n.participant})</div>
-                  <div style={{ color: '#64748B', fontSize: '0.82rem' }}>Score: <strong style={{ color: '#059669' }}>{n.score}%</strong> • Duration: {n.duration}</div>
+            <div className="grid-2" style={{ gap: '1.5rem' }}>
+              {events.map(evt => (
+                <div
+                  key={evt.id}
+                  style={{
+                    padding: '1.75rem',
+                    background: '#FFFFFF',
+                    borderRadius: '16px',
+                    border: '1px solid #E2E8F0',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem', flexWrap: 'wrap', gap: '0.4rem' }}>
+                      <span className="badge badge-gold" style={{ fontSize: '0.72rem', fontWeight: 800 }}>
+                        {evt.eventType || evt.type || 'Workshop'}
+                      </span>
+                      <span className="badge badge-navy" style={{ fontSize: '0.72rem' }}>
+                        {evt.department || 'ALL'} ({evt.academicYear || '2026-27'})
+                      </span>
+                    </div>
+
+                    <h3 style={{ fontSize: '1.2rem', color: '#0B192C', fontWeight: 800, lineHeight: 1.35, marginBottom: '0.6rem' }}>
+                      {evt.title || evt.name}
+                    </h3>
+
+                    <div style={{ background: '#F8FAFC', padding: '0.85rem 1rem', borderRadius: '10px', fontSize: '0.82rem', color: '#475569', display: 'flex', flexDirection: 'column', gap: '0.35rem', marginBottom: '0.85rem' }}>
+                      {evt.resourcePersonDetails && (
+                        <div><strong>Resource Person / Speaker:</strong> <span style={{ color: '#0F172A' }}>{evt.resourcePersonDetails}</span></div>
+                      )}
+                      {evt.organizedBy && (
+                        <div><strong>Organized By:</strong> {evt.organizedBy}</div>
+                      )}
+                      {evt.venue && (
+                        <div><strong>Venue / Hall:</strong> {evt.venue}</div>
+                      )}
+                      {evt.audienceYears && (
+                        <div><strong>Target Audience:</strong> Year {evt.audienceYears}</div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.75rem', borderTop: '1px solid #F1F5F9', fontSize: '0.78rem' }}>
+                    <div style={{ color: '#0284C7', fontWeight: 700 }}>
+                      📅 {evt.startDate} {evt.endDate && evt.endDate !== evt.startDate ? `to ${evt.endDate}` : ''}
+                    </div>
+                    {evt.participantsTotal ? (
+                      <div style={{ background: '#ECFDF5', color: '#047857', padding: '0.2rem 0.6rem', borderRadius: '9999px', fontWeight: 800, fontSize: '0.74rem' }}>
+                        👥 {evt.participantsTotal} Participants
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
               ))}
             </div>

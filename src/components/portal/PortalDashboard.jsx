@@ -76,7 +76,8 @@ import {
   executeBulkUserImport,
   exportToExcel,
   exportToPDF,
-  exportToCSV
+  exportToCSV,
+  getAcademicEvents
 } from '../../data/portalStore.js';
 import { DEPARTMENTS, BRANDING_LOGOS } from '../../data/masterData.js';
 import MadamModulesCRUD from './MadamModulesCRUD.jsx';
@@ -202,6 +203,7 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
   const publications = getPublications();
   const patents = getPatents();
   const mous = getMoUs();
+  const academicEvents = getAcademicEvents();
   const internships = getInternships();
   const achievements = getStudentAchievements();
   const recycleBin = getRecycleBin();
@@ -467,20 +469,21 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
                 {/* VIEW 1: EXECUTIVE DASHBOARD OVERVIEW */}
                 {/* ────────────────────────────────────────────────────────── */}
                 {activeModule === 'overview' && (
-                <DashboardOverviewView
-              currentUser={currentUser}
-              usersCount={usersList.length}
-              facultyCount={facultyList.length}
-              publicationsCount={publications.length}
-              patentsCount={patents.length}
-              mousCount={mous.length}
-              achievementsCount={achievements.length}
-              activeSessionsCount={activeSessions.length}
-              onNavigate={(mod) => setActiveModule(mod)}
-              onOpenQuickAction={() => setActiveModule('events')}
-              onOpenSync={() => setSyncModalOpen(true)}
-            />
-          )}
+                  <DashboardOverviewView
+                    currentUser={currentUser}
+                    usersCount={usersList.length}
+                    facultyCount={facultyList.length}
+                    publicationsCount={publications.length}
+                    patentsCount={patents.length}
+                    mousCount={mous.length}
+                    eventsCount={academicEvents.length}
+                    achievementsCount={achievements.length}
+                    activeSessionsCount={activeSessions.length}
+                    onNavigate={(mod) => setActiveModule(mod)}
+                    onOpenQuickAction={() => setActiveModule('events')}
+                    onOpenSync={() => setSyncModalOpen(true)}
+                  />
+                )}
 
           {/* ────────────────────────────────────────────────────────── */}
           {/* VIEW 2: UNIFIED ACADEMIC EVENTS SUITE */}

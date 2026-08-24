@@ -98,6 +98,10 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
   const [selectedMode, setSelectedMode] = useState('ALL');
   const [selectedLevel, setSelectedLevel] = useState('ALL');
 
+  useEffect(() => {
+    setSelectedTypeTab(initialTypeFilter);
+  }, [initialTypeFilter]);
+
   const refresh = () => {
     setDataVersion(v => v + 1);
     if (onDataChange) onDataChange();
@@ -130,10 +134,23 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
         (item.speakers && item.speakers.some(s => s.name && s.name.toLowerCase().includes(q))) ||
         (item.coordinators && item.coordinators.some(c => c.name && c.name.toLowerCase().includes(q)));
 
-      const itemDept = item.department || '';
-      const matchDept = selectedDept === 'ALL' || itemDept.toLowerCase().includes(selectedDept.toLowerCase());
+      const itemDept = String(item.department || item.departmentCodes || '').toLowerCase();
+      const matchDept = selectedDept === 'ALL' || 
+        itemDept === 'all' || 
+        itemDept.includes('all') || 
+        itemDept.includes(selectedDept.toLowerCase()) ||
+        (selectedDept === 'CSE' && (itemDept.includes('cys') || itemDept.includes('ai') || itemDept.includes('ds') || itemDept.includes('cs')));
+
       const matchAy = selectedAy === 'ALL' || item.academicYear === selectedAy;
-      const matchType = selectedTypeTab === 'ALL' || item.eventType === selectedTypeTab;
+
+      const itemTypeNorm = String(item.eventType || item.type || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const tabTypeNorm = String(selectedTypeTab || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const matchType = selectedTypeTab === 'ALL' || itemTypeNorm === tabTypeNorm ||
+        (tabTypeNorm === 'codeathon' && itemTypeNorm.includes('code')) ||
+        (tabTypeNorm === 'hackathon' && itemTypeNorm.includes('hack')) ||
+        (tabTypeNorm === 'workshop' && itemTypeNorm.includes('workshop')) ||
+        (tabTypeNorm === 'seminar' && itemTypeNorm.includes('seminar'));
+
       const matchStatus = selectedEventStatus === 'ALL' || item.eventStatus === selectedEventStatus;
       const matchWorkflow = selectedWorkflowStatus === 'ALL' || item.workflowStatus === selectedWorkflowStatus;
       const matchMode = selectedMode === 'ALL' || item.mode === selectedMode;

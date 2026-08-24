@@ -102,8 +102,13 @@ export default function MadamModulesCRUD({ activeModule, currentUser, onDataChan
     const q = searchQuery.toLowerCase();
     const str = JSON.stringify(item).toLowerCase();
     const matchesSearch = str.includes(q);
-    const itemDept = item.department || item.branch || 'All';
-    const matchesDept = selectedDeptFilter === 'All' || itemDept.toLowerCase().includes(selectedDeptFilter.toLowerCase());
+    const itemDept = String(item.department || item.branch || item.departmentCodes || 'All').toLowerCase();
+    const filterDept = selectedDeptFilter.toLowerCase();
+    const matchesDept = selectedDeptFilter === 'All' || 
+      itemDept === 'all' || 
+      itemDept.includes('all') || 
+      itemDept.includes(filterDept) ||
+      (selectedDeptFilter === 'CSE' && (itemDept.includes('cys') || itemDept.includes('ai') || itemDept.includes('ds') || itemDept.includes('cs')));
     return matchesSearch && matchesDept;
   });
 
