@@ -154,6 +154,139 @@ class AuthErrorBoundary extends React.Component {
   }
 }
 
+/**
+ * Dedicated Portal Shell Error Boundary
+ * Confines portal dashboard crashes so authenticated sessions and the public website remain intact.
+ */
+class PortalShellErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('[PORTAL_SHELL_ERROR]', error, errorInfo);
+    try {
+      fetch('/api/telemetry/error', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          module: 'PortalShell',
+          errorName: error?.name,
+          errorMessage: error?.message,
+          timestamp: new Date().toISOString()
+        })
+      }).catch(() => {});
+    } catch {}
+  }
+
+  handleRetry = () => {
+    this.setState({ hasError: false, error: null });
+  };
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          minHeight: '100vh',
+          background: 'linear-gradient(135deg, #070F1E 0%, #0B192C 100%)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#FFFFFF',
+          padding: '2rem',
+          textAlign: 'center'
+        }}>
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(212, 175, 55, 0.3)',
+            borderRadius: '16px',
+            padding: '2.5rem 2rem',
+            maxWidth: '520px',
+            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5)'
+          }}>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              background: 'rgba(239, 68, 68, 0.15)',
+              color: '#EF4444',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1.2rem'
+            }}>
+              <span style={{ fontSize: '24px' }}>⚠️</span>
+            </div>
+            <h2 style={{ fontSize: '1.4rem', color: '#D4AF37', margin: '0 0 0.5rem 0', fontFamily: 'Cinzel, serif' }}>
+              Unable to Load Secure Portal
+            </h2>
+            <p style={{ color: '#94A3B8', fontSize: '0.88rem', lineHeight: 1.6, marginBottom: '1.8rem' }}>
+              A localized display issue occurred while rendering the portal dashboard. Your authenticated session remains intact and safe.
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <button
+                type="button"
+                onClick={this.handleRetry}
+                style={{
+                  background: 'linear-gradient(135deg, #F1C40F 0%, #D4AF37 100%)',
+                  color: '#070F1E',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '0.65rem 1.25rem',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Try Again
+              </button>
+              <button
+                type="button"
+                onClick={this.props.onNavigatePublic}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  color: '#FFFFFF',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '8px',
+                  padding: '0.65rem 1.25rem',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Open Public Website
+              </button>
+              <button
+                type="button"
+                onClick={this.props.onLogout}
+                style={{
+                  background: 'rgba(220, 38, 38, 0.2)',
+                  color: '#FCA5A5',
+                  border: '1px solid rgba(220, 38, 38, 0.4)',
+                  borderRadius: '8px',
+                  padding: '0.65rem 1.25rem',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function App() {
   return (
     <RootFatalErrorBoundary>
@@ -329,11 +462,16 @@ function MainApp() {
   // 3. Authenticated Secure Portal View Mode (Survives Refresh & Public Navigation!)
   if (viewMode === 'portal' && authState === 'authenticated' && currentUser) {
     return (
-      <PortalDashboard
-        currentUser={currentUser}
-        onLogout={handleLogout}
+      <PortalShellErrorBoundary
         onNavigatePublic={handleGoToPublicWebsite}
-      />
+        onLogout={handleLogout}
+      >
+        <PortalDashboard
+          currentUser={currentUser}
+          onLogout={handleLogout}
+          onNavigatePublic={handleGoToPublicWebsite}
+        />
+      </PortalShellErrorBoundary>
     );
   }
 

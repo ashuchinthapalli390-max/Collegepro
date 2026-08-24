@@ -23,13 +23,26 @@ export default class ModuleErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     this.setState({ errorInfo });
-    // Comprehensive developer logging without exposing credentials
     console.error(
       `[MODULE_RENDER_ERROR] Module: "${this.props.moduleName || 'Unknown'}" | ResetKey: "${this.props.resetKey || 'N/A'}"\n`,
       error,
       '\nComponent Stack:\n',
       errorInfo?.componentStack
     );
+
+    // Asynchronously dispatch sanitized error telemetry
+    try {
+      fetch('/api/telemetry/error', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          module: this.props.moduleName || 'UnknownModule',
+          errorName: error?.name,
+          errorMessage: error?.message,
+          timestamp: new Date().toISOString()
+        })
+      }).catch(() => {});
+    } catch {}
   }
 
   componentDidUpdate(prevProps) {

@@ -58,7 +58,7 @@ export default function PortalAuth({ currentUser, onLoginSuccess, onClose }) {
     setTimeout(() => setCardNudge(false), 500);
   };
 
-  // 1. Password Login Handler with Mandatory 2-Step OTP
+  // 1. Password Login Handler with Mandatory 2-Step OTP (Server-Authoritative)
   const handleCredentialsSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
@@ -70,6 +70,31 @@ export default function PortalAuth({ currentUser, onLoginSuccess, onClose }) {
     setIsSubmitting(true);
 
     try {
+      // 1. Try Server-Authoritative Password Endpoint
+      const { ok, data } = await safeAuthFetch('/api/auth/password/start', {
+        method: 'POST',
+        body: {
+          identifier: identifier.trim(),
+          password
+        }
+      });
+
+      if (ok && data?.success) {
+        setOtpChallengeData({ user: data.user, maskedEmail: data.maskedEmail });
+        setAuthState('OTP_CHALLENGE');
+        return;
+      }
+
+      if (data && !data.success) {
+        triggerCardNudge(data.error || 'Invalid email/username or password.');
+        return;
+      }
+    } catch (apiErr) {
+      console.warn('[PASSWORD_AUTH_SERVER_NOTICE] Checking client fallback:', apiErr);
+    }
+
+    // 2. Fallback to store auth for offline mode
+    try {
       const result = authenticateCredentials(identifier.trim(), password);
 
       if (!result.success) {
@@ -77,37 +102,14 @@ export default function PortalAuth({ currentUser, onLoginSuccess, onClose }) {
         return;
       }
 
-      // Check if user requires mandatory first-login password update
       if (result.forcePasswordChange) {
         setOtpChallengeData({ user: result.user, maskedEmail: result.maskedEmail });
         setAuthState('FORCE_PASSWORD_CHANGE');
         return;
       }
 
-      // Dispatch server-side OTP email via safeAuthFetch
-      try {
-        const { ok, data: emailData } = await safeAuthFetch('/api/auth/otp/send', {
-          method: 'POST',
-          body: {
-            email: result.user.email,
-            code: result.challengeCode
-          }
-        });
-
-        if (!ok || (emailData && emailData.success === false)) {
-          triggerCardNudge(emailData?.error || 'Unable to dispatch verification code. Please try again.');
-          return;
-        }
-
-        // On success: open OTP challenge screen
-        setOtpChallengeData({ user: result.user, maskedEmail: result.maskedEmail });
-        setAuthState('OTP_CHALLENGE');
-      } catch (fetchErr) {
-        console.warn('[AUTH_DISPATCH_WARNING]', fetchErr);
-        // If serverless endpoint is offline, still allow user to proceed with OTP screen safely
-        setOtpChallengeData({ user: result.user, maskedEmail: result.maskedEmail });
-        setAuthState('OTP_CHALLENGE');
-      }
+      setOtpChallengeData({ user: result.user, maskedEmail: result.maskedEmail });
+      setAuthState('OTP_CHALLENGE');
     } catch (err) {
       console.error('[AUTH_ERROR]', err);
       triggerCardNudge('Unable to complete sign in. Please try again.');
@@ -116,13 +118,12 @@ export default function PortalAuth({ currentUser, onLoginSuccess, onClose }) {
     }
   };
 
-  // 2. Real Firebase Google Sign-In Popup Handler
+  // 2. Real Firebase Google Sign-In Popup Handler (Server-Authoritative)
   const handleGoogleSignIn = async () => {
     setErrorMessage('');
     setIsSubmitting(true);
 
     try {
-      // Direct Firebase Google OAuth Popup
       const result = await signInWithPopup(firebaseAuth, googleProvider);
       const googleUser = result.user;
       const verifiedEmail = googleUser?.email;
@@ -132,7 +133,31 @@ export default function PortalAuth({ currentUser, onLoginSuccess, onClose }) {
         return;
       }
 
-      // Server-side / Store allowlist check
+      // 1. Try Server-Authoritative Google Endpoint
+      try {
+        const { ok, data } = await safeAuthFetch('/api/auth/google/start', {
+          method: 'POST',
+          body: {
+            email: verifiedEmail,
+            uid: googleUser.uid
+          }
+        });
+
+        if (ok && data?.success) {
+          setOtpChallengeData({ user: data.user, maskedEmail: data.maskedEmail });
+          setAuthState('OTP_CHALLENGE');
+          return;
+        }
+
+        if (data && !data.success) {
+          triggerCardNudge(data.error || 'Access not available for this Google account.');
+          return;
+        }
+      } catch (srvErr) {
+        console.warn('[GOOGLE_AUTH_SERVER_NOTICE] Checking client fallback:', srvErr);
+      }
+
+      // 2. Fallback store check for offline mode
       const authResult = authenticateGoogle(verifiedEmail, googleUser?.uid);
 
       if (!authResult.success) {
@@ -140,29 +165,8 @@ export default function PortalAuth({ currentUser, onLoginSuccess, onClose }) {
         return;
       }
 
-      // Dispatch server-side OTP email via safeAuthFetch
-      try {
-        const { ok, data: emailData } = await safeAuthFetch('/api/auth/otp/send', {
-          method: 'POST',
-          body: {
-            email: authResult.user.email,
-            code: authResult.challengeCode
-          }
-        });
-
-        if (!ok || (emailData && emailData.success === false)) {
-          triggerCardNudge(emailData?.error || 'Unable to dispatch verification code. Please try again.');
-          return;
-        }
-
-        // Proceed to 2-step OTP Verification
-        setOtpChallengeData({ user: authResult.user, maskedEmail: authResult.maskedEmail });
-        setAuthState('OTP_CHALLENGE');
-      } catch (fetchErr) {
-        console.warn('[AUTH_DISPATCH_WARNING]', fetchErr);
-        setOtpChallengeData({ user: authResult.user, maskedEmail: authResult.maskedEmail });
-        setAuthState('OTP_CHALLENGE');
-      }
+      setOtpChallengeData({ user: authResult.user, maskedEmail: authResult.maskedEmail });
+      setAuthState('OTP_CHALLENGE');
     } catch (error) {
       console.error('Firebase Google Sign-In error:', error);
       

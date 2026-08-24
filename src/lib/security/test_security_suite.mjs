@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import { hashPassword, verifyPassword, validatePassphrase } from '../auth/password.ts';
 import { generateOtp, hashOtp, safeCompare } from '../auth/otp.ts';
 import { sanitizeSpreadsheetCell, sanitizeExportRecord, sanitizeHtml, isSafeOutboundUrl } from './sanitizer.js';
@@ -143,6 +145,14 @@ async function runSecurityAuditTests() {
   };
   const csrfResult = validateCsrf(fakeCsrfReq);
   assert(!csrfResult.valid, 'CSRF validator correctly rejected cross-site origin mutation request.');
+
+  // 9. Component Import & Dashboard Integrity Check
+  console.log('\n--- 9. Component & Dashboard Import Integrity ---');
+  const portalDashboardContent = fs.readFileSync(path.resolve(process.cwd(), 'src/components/portal/PortalDashboard.jsx'), 'utf8');
+  assert(portalDashboardContent.includes("import React, { useState, useEffect } from 'react';"), 'PortalDashboard.jsx explicitly imports useEffect from react.');
+
+  const appContent = fs.readFileSync(path.resolve(process.cwd(), 'src/App.jsx'), 'utf8');
+  assert(appContent.includes('class PortalShellErrorBoundary'), 'App.jsx contains PortalShellErrorBoundary for isolated portal crash containment.');
 
   console.log('\n======================================================');
   console.log(`  SUMMARY: ${passed} Passed, ${failed} Failed`);

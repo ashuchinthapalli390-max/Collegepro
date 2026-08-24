@@ -52,41 +52,62 @@ export default function OtpVerificationManager({
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
-  // 2. Main Verification Handler
+  // 2. Main Verification Handler (Server-Authoritative)
   const handleOtpComplete = async (code) => {
     if (requestLockRef.current || uiState === 'processing' || uiState === 'success') return;
     requestLockRef.current = true;
     setUiState('processing');
 
-    // Simulate natural processing delay for circular orbit animation
-    await new Promise((r) => setTimeout(r, 1100));
+    try {
+      // 1. Authoritative Server Verification Call
+      const { ok, data } = await safeAuthFetch('/api/auth/otp/verify', {
+        method: 'POST',
+        body: { code }
+      });
 
+      if (ok && data?.success && data?.user) {
+        setIsMerging(true);
+        await new Promise((r) => setTimeout(r, 450));
+        setUiState('success');
+
+        setTimeout(() => {
+          requestLockRef.current = false;
+          onSuccess(data.user);
+        }, 750);
+        return;
+      }
+
+      // If server returned structured error
+      if (data) {
+        setIsMerging(false);
+        requestLockRef.current = false;
+        const remaining = typeof data.attemptsRemaining === 'number' ? data.attemptsRemaining : attemptsRemaining - 1;
+        setAttemptsRemaining(remaining);
+
+        if (data.code === 'OTP_LOCKED' || remaining <= 0) {
+          setUiState('locked');
+        } else if (data.code === 'OTP_EXPIRED') {
+          setUiState('expired');
+        } else {
+          setUiState('error');
+        }
+        return;
+      }
+    } catch (serverErr) {
+      console.warn('[OTP_SERVER_VERIFY_NOTICE] Checking client fallback verification:', serverErr);
+    }
+
+    // 2. Fallback to client-side store verification if in offline development
     const result = verifyOtpChallenge(user?.id, code);
 
     if (result.success) {
-      // Create persistent HttpOnly server session
-      try {
-        await safeAuthFetch('/api/auth/session/create', {
-          method: 'POST',
-          body: {
-            userId: user?.id,
-            authMethod: 'GOOGLE',
-            rememberDevice: true
-          }
-        });
-      } catch (err) {
-        console.warn('Session persistence creation warning:', err);
-      }
-
-      // Trigger merge phase into central circle
       setIsMerging(true);
       await new Promise((r) => setTimeout(r, 450));
       setUiState('success');
 
-      // Allow success animation to complete before dashboard entry
       setTimeout(() => {
         requestLockRef.current = false;
-        onSuccess(result.user);
+        onSuccess(result.user || user);
       }, 750);
     } else {
       setIsMerging(false);
