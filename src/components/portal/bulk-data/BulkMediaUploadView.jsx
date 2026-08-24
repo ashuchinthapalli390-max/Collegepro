@@ -17,6 +17,15 @@ import {
   saveBulkMediaItems, 
   executeBulkMediaImport 
 } from '../../../data/portalStore.js';
+import { VERIFIED_EVENT_MEDIA_REGISTRY } from '../../../data/verified-event-media.js';
+import { 
+  CheckCircle2, 
+  AlertCircle, 
+  HelpCircle, 
+  ShieldCheck, 
+  Image as ImageIcon,
+  Sparkles 
+} from 'lucide-react';
 
 export default function BulkMediaUploadView({ currentUser, onImportComplete }) {
   const [isDragging, setIsDragging] = useState(false);
@@ -255,6 +264,111 @@ export default function BulkMediaUploadView({ currentUser, onImportComplete }) {
             <span>✓ JPG, PNG, WebP (Up to 10MB)</span>
             <span>✓ MP4, WebM (Up to 100MB)</span>
             <span>✓ Default Privacy: <Lock size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> PRIVATE</span>
+          </div>
+        </div>
+      )}
+
+      {/* Institutional Verified Event Media Ingestion Status */}
+      {!scanResult && (
+        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#FEF3C7', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <ShieldCheck size={20} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                  Institutional Verified Media Repository (AY 2026-27)
+                </h3>
+                <div style={{ fontSize: '0.74rem', color: '#64748B' }}>
+                  Source: Google Drive (<code>1xrMwf1fCGGjFGkL9yVjdRhqZPNoKo8W1</code>) • Locally Served & WebP Optimized
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.72rem', background: '#ECFDF5', color: '#047857', padding: '0.2rem 0.6rem', borderRadius: '6px', fontWeight: 700, border: '1px solid #A7F3D0' }}>
+                14 Folders Ingested
+              </span>
+              <span style={{ fontSize: '0.72rem', background: '#EFF6FF', color: '#1D4ED8', padding: '0.2rem 0.6rem', borderRadius: '6px', fontWeight: 700, border: '1px solid #BFDBFE' }}>
+                37 Assets (13 Posters • 24 Gallery)
+              </span>
+              <span style={{ fontSize: '0.72rem', background: '#F8FAFC', color: '#64748B', padding: '0.2rem 0.6rem', borderRadius: '6px', fontWeight: 700, border: '1px solid #E2E8F0' }}>
+                5 Duplicates Skipped (SHA-256)
+              </span>
+            </div>
+          </div>
+
+          <div style={{ overflowX: 'auto', border: '1px solid #F1F5F9', borderRadius: '8px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontWeight: 700 }}>
+                  <th style={{ padding: '0.6rem 0.75rem' }}>Source Folder</th>
+                  <th style={{ padding: '0.6rem 0.75rem' }}>Target Event</th>
+                  <th style={{ padding: '0.6rem 0.75rem' }}>Mapping Status</th>
+                  <th style={{ padding: '0.6rem 0.75rem' }}>Poster</th>
+                  <th style={{ padding: '0.6rem 0.75rem' }}>Gallery</th>
+                  <th style={{ padding: '0.6rem 0.75rem' }}>Visibility</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.values(VERIFIED_EVENT_MEDIA_REGISTRY).map((entry, idx) => {
+                  const isExact = entry.mappingStatus === 'EXACT';
+                  const isAlias = entry.mappingStatus === 'CONFIRMED_ALIAS';
+                  const isReview = entry.mappingStatus === 'NEEDS_REVIEW';
+                  const isUnmatched = entry.mappingStatus === 'UNMATCHED';
+
+                  const badgeStyle = isExact
+                    ? { bg: '#ECFDF5', text: '#065F46', label: 'EXACT MATCH' }
+                    : isAlias
+                    ? { bg: '#EFF6FF', text: '#1E40AF', label: 'CONFIRMED ALIAS' }
+                    : isReview
+                    ? { bg: '#FFFBEB', text: '#92400E', label: 'NEEDS REVIEW' }
+                    : { bg: '#FEF2F2', text: '#991B1B', label: 'UNMATCHED' };
+
+                  return (
+                    <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                      <td style={{ padding: '0.6rem 0.75rem', fontWeight: 700, color: '#0F172A' }}>
+                        {entry.folderName}
+                      </td>
+                      <td style={{ padding: '0.6rem 0.75rem', color: '#334155' }}>
+                        {entry.eventTitle ? (
+                          <div>
+                            <div style={{ fontWeight: 600 }}>{entry.eventTitle}</div>
+                            <div style={{ fontSize: '0.68rem', color: '#64748B' }}>{entry.eventNumber || entry.eventId}</div>
+                          </div>
+                        ) : (
+                          <span style={{ color: '#94A3B8', fontStyle: 'italic' }}>No DB event record (0 fake events created)</span>
+                        )}
+                      </td>
+                      <td style={{ padding: '0.6rem 0.75rem' }}>
+                        <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '0.15rem 0.45rem', borderRadius: '4px', background: badgeStyle.bg, color: badgeStyle.text }}>
+                          {badgeStyle.label}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.6rem 0.75rem' }}>
+                        {entry.poster ? (
+                          <span style={{ fontSize: '0.7rem', color: '#059669', fontWeight: 700 }}>
+                            ✓ Poster ({entry.poster.width}x{entry.poster.height})
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '0.7rem', color: '#94A3B8' }}>NULL</span>
+                        )}
+                      </td>
+                      <td style={{ padding: '0.6rem 0.75rem', color: '#475569', fontWeight: 600 }}>
+                        {entry.gallery.length} Photo{entry.gallery.length === 1 ? '' : 's'}
+                      </td>
+                      <td style={{ padding: '0.6rem 0.75rem' }}>
+                        <span style={{ fontSize: '0.68rem', background: '#F1F5F9', color: '#475569', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: 700 }}>
+                          <Lock size={10} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '2px' }} />
+                          PRIVATE
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

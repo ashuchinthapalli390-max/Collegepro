@@ -40,12 +40,17 @@ import {
   softDeleteAcademicEvent,
   exportToCSV,
   exportToExcel,
-  exportToPDF
+  exportToPDF,
+  setPrimaryCover,
+  approveMediaPublic,
+  changeMediaRole,
+  removeMediaLink
 } from '../../../data/portalStore.js';
 import AcademicEventWizardModal from './AcademicEventWizardModal.jsx';
 import AcademicEventBulkImportModal from './AcademicEventBulkImportModal.jsx';
 import { downloadBulkImportTemplate } from '../../../lib/events/bulkImportEngine.js';
 import ConfirmDeleteDialog from '../common/ConfirmDeleteDialog.jsx';
+import { NECImage, NECVideo, MediaLightboxModal } from '../../media/index.js';
 import { 
   MotionPage, 
   ModulePageHeader, 
@@ -82,6 +87,17 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
   const [deleteConfirmItem, setDeleteConfirmItem] = useState(null);
   const [bulkImportModalOpen, setBulkImportModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
+  
+  // Media Lightbox State
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxItems, setLightboxItems] = useState([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
+  const openLightbox = (items, index = 0) => {
+    setLightboxItems(items);
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+  };
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -459,12 +475,48 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
 
                   return (
                     <tr key={item.id || idx} style={{ borderBottom: '1px solid #F1F5F9' }} className="hover:bg-slate-50">
-                      <td style={{ padding: '0.85rem 1rem', maxWidth: '260px' }}>
-                        <div style={{ fontSize: '0.7rem', color: '#D4AF37', fontWeight: 800 }}>
-                          {item.eventNumber || item.id}
-                        </div>
-                        <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.82rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                          {item.title || item.name}
+                      <td style={{ padding: '0.85rem 1rem', maxWidth: '300px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                          {(item.coverImageUrl || item.posterUrl) && (
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const allImgs = [
+                                  ...(item.poster ? [{ src: item.poster.src, alt: item.poster.alt || item.title, caption: 'Official Poster' }] : []),
+                                  ...(item.gallery || []).map(g => ({ src: g.src, alt: g.alt || item.title, caption: g.caption }))
+                                ];
+                                if (allImgs.length > 0) openLightbox(allImgs, 0);
+                              }}
+                              title="Click to view verified event poster / media"
+                              style={{
+                                width: '38px',
+                                height: '38px',
+                                borderRadius: '6px',
+                                overflow: 'hidden',
+                                border: '1px solid #E2E8F0',
+                                flexShrink: 0,
+                                cursor: 'pointer',
+                                background: '#F8FAFC'
+                              }}
+                            >
+                              <NECImage
+                                src={item.coverImageUrl || item.posterUrl}
+                                alt={item.title}
+                                width={38}
+                                height={38}
+                                objectFit="cover"
+                                style={{ width: '100%', height: '100%' }}
+                              />
+                            </div>
+                          )}
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ fontSize: '0.7rem', color: '#D4AF37', fontWeight: 800 }}>
+                              {item.eventNumber || item.id}
+                            </div>
+                            <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.82rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                              {item.title || item.name}
+                            </div>
+                          </div>
                         </div>
                       </td>
 
@@ -643,7 +695,8 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
                 { id: 'overview', label: 'Overview' },
                 { id: 'schedule', label: `Sessions (${dossierModalItem.sessions?.length || 0})` },
                 { id: 'speakers', label: `Resource Persons (${dossierModalItem.resourcePersons?.length || 0})` },
-                { id: 'evidence', label: `Evidence (${dossierModalItem.documents?.length || 0})` }
+                { id: 'evidence', label: `Evidence (${dossierModalItem.documents?.length || 0})` },
+                { id: 'media', label: `Media (${(dossierModalItem.poster ? 1 : 0) + (dossierModalItem.gallery?.length || 0)})` }
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -657,7 +710,8 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
                     color: dossierActiveTab === tab.id ? '#F1C40F' : '#64748B',
                     fontSize: '0.76rem',
                     fontWeight: 700,
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap'
                   }}
                 >
                   {tab.label}
@@ -758,6 +812,140 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
                   )}
                 </div>
               )}
+
+              {dossierActiveTab === 'media' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  {/* Poster Card */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <h4 style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0F172A', margin: 0, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <ImageIcon size={14} style={{ color: '#D4AF37' }} />
+                        Official Event Poster
+                      </h4>
+                      {dossierModalItem.poster && (
+                        <span style={{ fontSize: '0.7rem', background: '#ECFDF5', color: '#047857', padding: '0.15rem 0.5rem', borderRadius: '9999px', fontWeight: 700 }}>
+                          Verified WebP • {dossierModalItem.poster.width}x{dossierModalItem.poster.height}
+                        </span>
+                      )}
+                    </div>
+
+                    {dossierModalItem.poster ? (
+                      <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+                        <div
+                          onClick={() => {
+                            const allMedia = [
+                              { src: dossierModalItem.poster.src, alt: dossierModalItem.poster.alt || dossierModalItem.title, caption: 'Official Event Poster' },
+                              ...(dossierModalItem.gallery || []).map(g => ({ src: g.src, alt: g.alt, caption: g.caption }))
+                            ];
+                            openLightbox(allMedia, 0);
+                          }}
+                          style={{ cursor: 'pointer', maxWidth: '380px', width: '100%', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 4px 14px rgba(0,0,0,0.08)', background: '#FFFFFF' }}
+                        >
+                          <NECImage
+                            src={dossierModalItem.poster.src}
+                            alt={dossierModalItem.poster.alt || `Poster for ${dossierModalItem.title}`}
+                            width={dossierModalItem.poster.width || 800}
+                            height={dossierModalItem.poster.height || 1000}
+                            objectFit="contain"
+                            style={{ width: '100%', height: 'auto', maxHeight: '380px', display: 'block' }}
+                          />
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                          Click poster image to expand in full-resolution lightbox viewer.
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ padding: '1.25rem', background: '#F8FAFC', borderRadius: '10px', border: '1px dashed #CBD5E1', textAlign: 'center', color: '#64748B', fontSize: '0.8rem' }}>
+                        No official poster identified for this event.
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Gallery Grid */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <h4 style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0F172A', margin: 0, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <Layers size={14} style={{ color: '#D4AF37' }} />
+                        Event Session Gallery ({dossierModalItem.gallery?.length || 0})
+                      </h4>
+                      <span style={{ fontSize: '0.68rem', color: '#64748B' }}>
+                        Visibility: <strong>INTERNAL / PRIVATE</strong>
+                      </span>
+                    </div>
+
+                    {(!dossierModalItem.gallery || dossierModalItem.gallery.length === 0) ? (
+                      <div style={{ padding: '1.5rem', background: '#F8FAFC', borderRadius: '10px', border: '1px dashed #CBD5E1', textAlign: 'center', color: '#94A3B8', fontSize: '0.8rem' }}>
+                        No verified session photographs have been linked to this event.
+                      </div>
+                    ) : (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.75rem' }}>
+                        {dossierModalItem.gallery.map((photo, pIdx) => (
+                          <div
+                            key={photo.id || pIdx}
+                            style={{
+                              background: '#FFFFFF',
+                              border: '1px solid #E2E8F0',
+                              borderRadius: '8px',
+                              overflow: 'hidden',
+                              boxShadow: '0 2px 4px rgba(0,0,0,0.03)',
+                              display: 'flex',
+                              flexDirection: 'column'
+                            }}
+                          >
+                            <div
+                              onClick={() => {
+                                const allMedia = [
+                                  ...(dossierModalItem.poster ? [{ src: dossierModalItem.poster.src, alt: dossierModalItem.poster.alt || dossierModalItem.title, caption: 'Official Poster' }] : []),
+                                  ...(dossierModalItem.gallery || []).map(g => ({ src: g.src, alt: g.alt, caption: g.caption }))
+                                ];
+                                const targetIdx = dossierModalItem.poster ? pIdx + 1 : pIdx;
+                                openLightbox(allMedia, targetIdx);
+                              }}
+                              style={{ height: '120px', background: '#070F1E', cursor: 'pointer', overflow: 'hidden', position: 'relative' }}
+                            >
+                              <NECImage
+                                src={photo.src}
+                                alt={photo.alt || `Session Photo ${pIdx + 1}`}
+                                width={photo.width || 400}
+                                height={photo.height || 300}
+                                objectFit="cover"
+                                style={{ width: '100%', height: '100%' }}
+                              />
+                              <div style={{ position: 'absolute', bottom: '4px', right: '4px', background: 'rgba(0,0,0,0.65)', color: '#FFFFFF', fontSize: '0.62rem', padding: '0.05rem 0.3rem', borderRadius: '3px' }}>
+                                #{pIdx + 1}
+                              </div>
+                            </div>
+
+                            <div style={{ padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.3rem', flex: 1 }}>
+                              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0F172A', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                                {photo.caption || `Photograph ${pIdx + 1}`}
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
+                                <span style={{ fontSize: '0.62rem', background: '#F1F5F9', color: '#475569', padding: '0.05rem 0.35rem', borderRadius: '3px' }}>
+                                  {photo.width}x{photo.height}
+                                </span>
+                                {canReview && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setPrimaryCover(dossierModalItem.id, photo.src, currentUser);
+                                      showToast('Primary cover image updated.');
+                                      refresh();
+                                    }}
+                                    style={{ fontSize: '0.65rem', color: '#0284C7', background: '#E0F2FE', border: 'none', padding: '0.1rem 0.4rem', borderRadius: '3px', fontWeight: 700, cursor: 'pointer' }}
+                                  >
+                                    Set Cover
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div style={{ padding: '1rem 1.5rem', background: '#F8FAFC', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end' }}>
@@ -819,6 +1007,15 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
         itemType="event record"
         onConfirm={handleConfirmDelete}
         onClose={() => setDeleteConfirmItem(null)}
+      />
+
+      {/* Media Fullscreen Lightbox Modal */}
+      <MediaLightboxModal
+        isOpen={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+        items={lightboxItems}
+        currentIndex={lightboxIndex}
+        onNavigate={(newIdx) => setLightboxIndex(newIdx)}
       />
     </MotionPage>
   );

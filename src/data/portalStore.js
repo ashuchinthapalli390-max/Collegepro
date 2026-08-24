@@ -43,6 +43,12 @@ import {
   INDEXED_NEC_WORKS, 
   INDEXED_CROSSREF_METADATA 
 } from '../lib/research/localIndex/datasetStore.js';
+import { 
+  VERIFIED_EVENT_MEDIA_REGISTRY,
+  INGESTED_MEDIA_ASSETS,
+  RECORD_MEDIA_LINKS,
+  getVerifiedMediaForEvent
+} from './verified-event-media.js';
 
 // -------------------------------------------------------------
 // Storage Keys & Security Core (v3 Production Clean)
@@ -88,6 +94,8 @@ export const STORAGE_KEYS = {
   BULK_MEDIA_JOBS: 'nec_portal_bulk_media_jobs_v3',
   BULK_MEDIA_FOLDERS: 'nec_portal_bulk_media_folders_v3',
   BULK_MEDIA_ITEMS: 'nec_portal_bulk_media_items_v3',
+  MEDIA_ASSETS: 'nec_portal_media_assets_v3',
+  RECORD_MEDIA_LINKS: 'nec_portal_record_media_links_v3',
   STUDENTS: 'nec_portal_students_v3',
   STUDENT_GUARDIANS: 'nec_portal_student_guardians_v3',
   ATTENDANCE_IMPORT_JOBS: 'nec_portal_attendance_import_jobs_v3',
@@ -2847,6 +2855,40 @@ export function getAcademicEvents(includeDeleted = false) {
       photos: item.photos || [],
       winners: item.winners || [],
       
+      // Verified Ingested Media
+      ...(() => {
+        const vMedia = getVerifiedMediaForEvent(item.id || item.eventNumber || title);
+        const isConfirmed = vMedia && (vMedia.mappingStatus === 'EXACT' || vMedia.mappingStatus === 'CONFIRMED_ALIAS');
+        const posterUrl = item.posterUrl || (isConfirmed && vMedia?.poster?.src) || null;
+        const gallery = (Array.isArray(item.gallery) && item.gallery.length > 0)
+          ? item.gallery
+          : (isConfirmed && vMedia?.gallery ? vMedia.gallery : []);
+        const coverImageUrl = item.coverImageUrl || posterUrl || (gallery.length > 0 ? gallery[0]?.src : null);
+        const photosPayload = (Array.isArray(item.photosPayload) && item.photosPayload.length > 0)
+          ? item.photosPayload
+          : gallery.map(g => ({
+              id: g.id,
+              url: g.src,
+              src: g.src,
+              alt: g.alt,
+              caption: g.caption,
+              role: 'GALLERY',
+              type: 'IMAGE',
+              visibility: 'PRIVATE',
+              uploadedAt: item.createdAt || new Date().toISOString()
+            }));
+
+        return {
+          posterUrl,
+          poster: isConfirmed && vMedia?.poster ? vMedia.poster : null,
+          gallery,
+          coverImageUrl,
+          photosPayload,
+          verifiedMediaBundle: isConfirmed ? vMedia : null,
+          mediaMappingStatus: vMedia ? vMedia.mappingStatus : 'UNMAPPED'
+        };
+      })(),
+
       // Outcome
       outcomeSummary: item.outcomeSummary || '',
       feedbackSummary: item.feedbackSummary || '',
@@ -3874,6 +3916,113 @@ export function executeBulkMediaImport(jobId, selectedFolderIds, currentUser) {
     job: updatedJob
   };
 }
+
+// ─────────────────────────────────────────────────────────────
+// CANONICAL MEDIA ASSETS & RECORD MEDIA LINKS STORE
+// ─────────────────────────────────────────────────────────────
+
+export function getMediaAssets() {
+  return loadStore(STORAGE_KEYS.MEDIA_ASSETS, INGESTED_MEDIA_ASSETS || []);
+}
+
+export function saveMediaAsset(asset, user) {
+  const assets = getMediaAssets();
+  const index = assets.findIndex(a => a.id === asset.id);
+  let updated;
+  if (index >= 0) {
+    updated = [...assets];
+    updated[index] = { ...updated[index], ...asset, updatedAt: new Date().toISOString() };
+  } else {
+    updated = [asset, ...assets];
+  }
+  saveStore(STORAGE_KEYS.MEDIA_ASSETS, updated);
+  addAuditLog('MEDIA_ASSET_SAVED', 'Media Management', `Saved media asset "${asset.safeFilename || asset.originalFilename}".`, user);
+  return asset;
+}
+
+export function getRecordMediaLinks(eventId = null) {
+  const links = loadStore(STORAGE_KEYS.RECORD_MEDIA_LINKS, RECORD_MEDIA_LINKS || []);
+  if (!eventId) return links;
+  return links.filter(l => l.eventId === eventId || l.eventNumber === eventId);
+}
+
+export function saveRecordMediaLink(link, user) {
+  const links = getRecordMediaLinks();
+  const index = links.findIndex(l => l.id === link.id);
+  let updated;
+  if (index >= 0) {
+    updated = [...links];
+    updated[index] = { ...updated[index], ...link, updatedAt: new Date().toISOString() };
+  } else {
+    updated = [...links, link];
+  }
+  saveStore(STORAGE_KEYS.RECORD_MEDIA_LINKS, updated);
+  addAuditLog('EVENT_MEDIA_LINKED', 'Media & Events', `Linked media asset "${link.mediaAssetId}" to event "${link.eventId}" as ${link.role}.`, user);
+  return link;
+}
+
+export function approveMediaPublic(mediaAssetId, user) {
+  const assets = getMediaAssets();
+  const assetIdx = assets.findIndex(a => a.id === mediaAssetId);
+  if (assetIdx >= 0) {
+    const updatedAssets = [...assets];
+    updatedAssets[assetIdx] = { ...updatedAssets[assetIdx], visibility: 'APPROVED_PUBLIC', approvedBy: user?.name, approvedAt: new Date().toISOString() };
+    saveStore(STORAGE_KEYS.MEDIA_ASSETS, updatedAssets);
+  }
+
+  // Also update corresponding links
+  const links = getRecordMediaLinks();
+  const updatedLinks = links.map(l => l.mediaAssetId === mediaAssetId ? { ...l, visibility: 'APPROVED_PUBLIC' } : l);
+  saveStore(STORAGE_KEYS.RECORD_MEDIA_LINKS, updatedLinks);
+
+  addAuditLog('EVENT_MEDIA_APPROVED_PUBLIC', 'Media Management', `Approved media asset "${mediaAssetId}" for public display.`, user);
+  return { success: true };
+}
+
+export function changeMediaRole(mediaAssetId, newRole, user) {
+  const assets = getMediaAssets();
+  const assetIdx = assets.findIndex(a => a.id === mediaAssetId);
+  if (assetIdx >= 0) {
+    const updatedAssets = [...assets];
+    updatedAssets[assetIdx] = { ...updatedAssets[assetIdx], mediaRole: newRole, updatedAt: new Date().toISOString() };
+    saveStore(STORAGE_KEYS.MEDIA_ASSETS, updatedAssets);
+  }
+
+  const links = getRecordMediaLinks();
+  const updatedLinks = links.map(l => l.mediaAssetId === mediaAssetId ? { ...l, role: newRole } : l);
+  saveStore(STORAGE_KEYS.RECORD_MEDIA_LINKS, updatedLinks);
+
+  addAuditLog('EVENT_MEDIA_ROLE_CHANGED', 'Media Management', `Changed role of media "${mediaAssetId}" to "${newRole}".`, user);
+  return { success: true };
+}
+
+export function removeMediaLink(mediaLinkId, user) {
+  const links = getRecordMediaLinks();
+  const linkToRemove = links.find(l => l.id === mediaLinkId);
+  const updatedLinks = links.filter(l => l.id !== mediaLinkId);
+  saveStore(STORAGE_KEYS.RECORD_MEDIA_LINKS, updatedLinks);
+
+  addAuditLog('EVENT_MEDIA_REMOVED', 'Media & Events', `Removed media link "${mediaLinkId}" from event "${linkToRemove?.eventId}".`, user);
+  return { success: true };
+}
+
+export function setPrimaryCover(eventId, mediaUrlOrAssetId, user) {
+  const events = getAcademicEvents();
+  const index = events.findIndex(e => e.id === eventId || e.eventNumber === eventId);
+  if (index >= 0) {
+    const updatedEvents = [...events];
+    updatedEvents[index] = {
+      ...updatedEvents[index],
+      coverImageUrl: mediaUrlOrAssetId,
+      updatedAt: new Date().toISOString()
+    };
+    saveStore(STORAGE_KEYS.EVENTS, updatedEvents);
+    addAuditLog('EVENT_COVER_CHANGED', 'Media & Events', `Set primary cover image for event "${events[index].title}".`, user);
+    return { success: true, event: updatedEvents[index] };
+  }
+  return { success: false, message: 'Event not found' };
+}
+
 
 
 // ─────────────────────────────────────────────────────────────

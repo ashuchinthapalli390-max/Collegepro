@@ -1,0 +1,205 @@
+{
+  "generatedAt": "2026-08-24T09:34:49.423Z",
+  "sourceRoot": "D:\\nec portal\\data\\NEC Assets",
+  "sourceRootFolderId": "1xrMwf1fCGGjFGkL9yVjdRhqZPNoKo8W1",
+  "topLevelFoldersCount": 14,
+  "scannedFilesCount": 42,
+  "uniqueFilesCount": 37,
+  "duplicateFilesCount": 5,
+  "postersCount": 13,
+  "galleryImagesCount": 24,
+  "videosCount": 0,
+  "exactMatches": 7,
+  "confirmedAliasMatches": 5,
+  "needsReviewCount": 1,
+  "unmatchedCount": 1,
+  "eventsWithNoMediaCount": 2,
+  "duplicateGroups": [
+    {
+      "duplicatePath": "Code-A-Thon/Advance Robotics With AI/594a1b18-4515-42e7-b7f5-6e5c1c41d44a.jpg",
+      "canonicalPath": "Advance Robotics With AI/594a1b18-4515-42e7-b7f5-6e5c1c41d44a.jpg",
+      "sha256": "39d2a3bb7d910bb14f5aaf91660cc9ded0864f98bcf49596cc0cfee6178caa06",
+      "sizeBytes": 67991
+    },
+    {
+      "duplicatePath": "Code-A-Thon/Advance Robotics With AI/98cf138e-87b1-4360-87f7-f1998d1678cf.jpg",
+      "canonicalPath": "Advance Robotics With AI/98cf138e-87b1-4360-87f7-f1998d1678cf.jpg",
+      "sha256": "ec14e6e04b105e77d3d9f6be534322c8889659610561e4acc3c444dc13662a6c",
+      "sizeBytes": 121245
+    },
+    {
+      "duplicatePath": "Code-A-Thon/Advance Robotics With AI/a1b6e417-6489-49c9-9d20-3ce428f71943.jpg",
+      "canonicalPath": "Advance Robotics With AI/a1b6e417-6489-49c9-9d20-3ce428f71943.jpg",
+      "sha256": "40082207a6a4bb332abee1576710e69ccd7d937c7ca7362bc1af9a02b7500ca3",
+      "sizeBytes": 153175
+    },
+    {
+      "duplicatePath": "Code-A-Thon/Advance Robotics With AI/d091afbd-20a9-472e-a639-34f14da4a5f5.jpg",
+      "canonicalPath": "Advance Robotics With AI/d091afbd-20a9-472e-a639-34f14da4a5f5.jpg",
+      "sha256": "164a1e1eb033249a8895f28c8ec7df388ed1f01dbc7e83eb76ef89fc1ecca6ad",
+      "sizeBytes": 104142
+    },
+    {
+      "duplicatePath": "Code-A-Thon/Advance Robotics With AI/Poster.jpg",
+      "canonicalPath": "Advance Robotics With AI/Poster.jpg",
+      "sha256": "c5c1e5f9cd08856e1c4f2884d7f43e0324a9a9d8c6570e8b7443cb9318b1bd2b",
+      "sizeBytes": 504357
+    }
+  ],
+  "foldersSummary": [
+    {
+      "folderName": "Advance Robotics With AI",
+      "slug": "advanced-robotics-with-ai",
+      "mappingStatus": "EXACT",
+      "matchedEventId": "evt_2026_27_047",
+      "matchedEventNumber": "EVT-CYSA-2026-0047",
+      "matchedEventTitle": "Advanced Robotics With AI",
+      "hasPoster": true,
+      "galleryCount": 4,
+      "videoCount": 0
+    },
+    {
+      "folderName": "Claude Architecture",
+      "slug": "claude-architecture",
+      "mappingStatus": "EXACT",
+      "matchedEventId": "evt_2026_27_006",
+      "matchedEventNumber": "EVT-CYSA-2026-0006",
+      "matchedEventTitle": "Claude Architecture",
+      "hasPoster": true,
+      "galleryCount": 1,
+      "videoCount": 0
+    },
+    {
+      "folderName": "Code-A-Thon",
+      "slug": "code-a-thon",
+      "mappingStatus": "EXACT",
+      "matchedEventId": "evt_2026_27_001",
+      "matchedEventNumber": "EVT-CYSA-2026-0001",
+      "matchedEventTitle": "Code-a-thon",
+      "hasPoster": true,
+      "galleryCount": 1,
+      "videoCount": 0
+    },
+    {
+      "folderName": "Data Science Accelerator",
+      "slug": "data-science-accelerator",
+      "mappingStatus": "EXACT",
+      "matchedEventId": "evt_2026_27_002",
+      "matchedEventNumber": "EVT-DS-2026-0002",
+      "matchedEventTitle": "Data Science Accelerator",
+      "hasPoster": true,
+      "galleryCount": 1,
+      "videoCount": 0
+    },
+    {
+      "folderName": "Data Structures & Algorithm and Placements Guidance",
+      "slug": "dsa-placement-guidance",
+      "mappingStatus": "CONFIRMED_ALIAS",
+      "matchedEventId": "evt_2026_27_003",
+      "matchedEventNumber": "EVT-CYSA-2026-0003",
+      "matchedEventTitle": "Alumni Talk on Data Structures & Algorithms (DSA) and Placement Guidance",
+      "hasPoster": true,
+      "galleryCount": 1,
+      "videoCount": 0
+    },
+    {
+      "folderName": "End to End Data Tools and AI Applications",
+      "slug": "end-to-end-data-tools",
+      "mappingStatus": "CONFIRMED_ALIAS",
+      "matchedEventId": "evt_2026_27_012",
+      "matchedEventNumber": "EVT-AI-2026-0012",
+      "matchedEventTitle": "End To End Data Tools and AI Application Tools",
+      "hasPoster": true,
+      "galleryCount": 2,
+      "videoCount": 0
+    },
+    {
+      "folderName": "Ethical Hacking",
+      "slug": "ethical-hacking",
+      "mappingStatus": "EXACT",
+      "matchedEventId": "evt_2026_27_004",
+      "matchedEventNumber": "EVT-CYS-2026-0004",
+      "matchedEventTitle": "Ethical Hacking",
+      "hasPoster": true,
+      "galleryCount": 3,
+      "videoCount": 0
+    },
+    {
+      "folderName": "Flutter Development",
+      "slug": "flutter-development",
+      "mappingStatus": "EXACT",
+      "matchedEventId": "evt_2026_27_009",
+      "matchedEventNumber": "EVT-CYSA-2026-0009",
+      "matchedEventTitle": "Flutter Development",
+      "hasPoster": true,
+      "galleryCount": 1,
+      "videoCount": 0
+    },
+    {
+      "folderName": "Git & Github",
+      "slug": "git-github",
+      "mappingStatus": "CONFIRMED_ALIAS",
+      "matchedEventId": "evt_2026_27_011",
+      "matchedEventNumber": "EVT-AIML-2026-0011",
+      "matchedEventTitle": "Git & GitHub Technologies",
+      "hasPoster": true,
+      "galleryCount": 1,
+      "videoCount": 0
+    },
+    {
+      "folderName": "Ideathon 2k26",
+      "slug": "ideathon-2k26",
+      "mappingStatus": "UNMATCHED",
+      "matchedEventId": null,
+      "matchedEventNumber": null,
+      "matchedEventTitle": null,
+      "hasPoster": true,
+      "galleryCount": 1,
+      "videoCount": 0
+    },
+    {
+      "folderName": "Microsoft Fabric",
+      "slug": "microsoft-fabric",
+      "mappingStatus": "EXACT",
+      "matchedEventId": "evt_2026_27_008",
+      "matchedEventNumber": "EVT-CYSA-2026-0008",
+      "matchedEventTitle": "Microsoft Fabric",
+      "hasPoster": true,
+      "galleryCount": 1,
+      "videoCount": 0
+    },
+    {
+      "folderName": "Power BI",
+      "slug": "power-bi",
+      "mappingStatus": "CONFIRMED_ALIAS",
+      "matchedEventId": "evt_2026_27_007",
+      "matchedEventNumber": "EVT-CYSA-2026-0007",
+      "matchedEventTitle": "PowerBI",
+      "hasPoster": true,
+      "galleryCount": 2,
+      "videoCount": 0
+    },
+    {
+      "folderName": "Swecha One Day Seminar",
+      "slug": "swecha-one-day-seminar",
+      "mappingStatus": "NEEDS_REVIEW",
+      "matchedEventId": "evt_2026_27_014",
+      "matchedEventNumber": "EVT-SWET-2026-0014",
+      "matchedEventTitle": "Swetcah Orientation Program",
+      "hasPoster": false,
+      "galleryCount": 2,
+      "videoCount": 0
+    },
+    {
+      "folderName": "VibeCoding BootCamp",
+      "slug": "vibecoding-bootcamp",
+      "mappingStatus": "CONFIRMED_ALIAS",
+      "matchedEventId": "evt_2026_27_010",
+      "matchedEventNumber": "EVT-CYSA-2026-0010",
+      "matchedEventTitle": "Vibe Coding",
+      "hasPoster": true,
+      "galleryCount": 3,
+      "videoCount": 0
+    }
+  ]
+}
