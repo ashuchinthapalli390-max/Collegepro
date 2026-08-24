@@ -682,5 +682,160 @@ export const researchImportRows = pgTable('research_import_rows', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
 });
 
+// ─────────────────────────────────────────────────────────────
+// STUDENT MASTER & ATTENDANCE RISK MONITORING SUITE
+// ─────────────────────────────────────────────────────────────
+
+// 24. Verified Student Master Directory
+export const students = pgTable('students', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  rollNumber: text('roll_number').notNull().unique(), // e.g. 23CYS001, 23CSE012
+  registrationNumber: text('registration_number').unique(),
+  fullName: text('full_name').notNull(),
+  departmentCode: text('department_code').notNull(), // 'CYS', 'CSE', 'AI', 'ECE', 'EEE', 'IT', 'MECH', 'CIVIL'
+  program: text('program').default('B.Tech').notNull(),
+  year: text('year').notNull(), // 'I', 'II', 'III', 'IV'
+  semester: text('semester').notNull(), // 'I', 'II', 'III-I', 'III-II', etc.
+  section: text('section').default('A').notNull(),
+  batch: text('batch').notNull(), // e.g. '2023-2027'
+  mentorFacultyId: text('mentor_faculty_id'), // Linked to FACULTY_DATA ID
+  mentorName: text('mentor_name'),
+  studentEmail: text('student_email'),
+  studentPhone: text('student_phone'),
+  studentStatus: text('student_status').default('ACTIVE').notNull(), // 'ACTIVE' | 'DETAINED' | 'DISCONTINUED' | 'GRADUATED'
+  isDeleted: boolean('is_deleted').default(false).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+// 25. Verified Student Guardians / Parent Contact Directory
+export const studentGuardians = pgTable('student_guardians', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  studentId: uuid('student_id').notNull().references(() => students.id, { onDelete: 'cascade' }),
+  rollNumber: text('roll_number').notNull(),
+  guardianName: text('guardian_name').notNull(),
+  relationship: text('relationship').default('Father').notNull(), // 'Father' | 'Mother' | 'Guardian' | 'Other'
+  primaryPhone: text('primary_phone').notNull(),
+  alternatePhone: text('alternate_phone'),
+  email: text('email'),
+  address: text('address'),
+  isPrimary: boolean('is_primary').default(true).notNull(),
+  verifiedAt: timestamp('verified_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+// 26. Attendance Import Jobs Ledger
+export const attendanceImportJobs = pgTable('attendance_import_jobs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  originalFilename: text('original_filename').notNull(),
+  sha256: text('sha256').notNull(),
+  academicYear: text('academic_year').notNull(), // '2026-27'
+  semester: text('semester').notNull(), // 'III-I'
+  departmentCode: text('department_code').notNull(), // 'CYS'
+  section: text('section').default('A').notNull(),
+  uploadedBy: text('uploaded_by').notNull(),
+  totalRows: integer('total_rows').default(0).notNull(),
+  matchedRows: integer('matched_rows').default(0).notNull(),
+  unmatchedRows: integer('unmatched_rows').default(0).notNull(),
+  lowAttendanceCount: integer('low_attendance_count').default(0).notNull(),
+  thresholdPercentage: numeric('threshold_percentage', { precision: 5, scale: 2 }).default('65.00').notNull(),
+  status: text('status').default('COMPLETED').notNull(), // 'STAGED' | 'VALIDATED' | 'COMPLETED' | 'FAILED'
+  importNotes: text('import_notes'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  completedAt: timestamp('completed_at', { withTimezone: true })
+});
+
+// 27. Attendance Import Raw Rows
+export const attendanceImportRows = pgTable('attendance_import_rows', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  importJobId: uuid('import_job_id').notNull().references(() => attendanceImportJobs.id, { onDelete: 'cascade' }),
+  sourceRowNumber: integer('source_row_number').notNull(),
+  rawRollNumber: text('raw_roll_number'),
+  rawStudentName: text('raw_student_name'),
+  subjectCode: text('subject_code'),
+  subjectName: text('subject_name'),
+  classesConducted: integer('classes_conducted'),
+  classesAttended: integer('classes_attended'),
+  attendancePercentage: numeric('attendance_percentage', { precision: 5, scale: 2 }),
+  matchStatus: text('match_status').default('UNMATCHED').notNull(), // 'MATCHED' | 'UNMATCHED' | 'AMBIGUOUS' | 'INVALID'
+  studentId: uuid('student_id'),
+  validationErrors: jsonb('validation_errors'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+// 28. Cohort Attendance Snapshots
+export const attendanceSnapshots = pgTable('attendance_snapshots', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  studentId: uuid('student_id').notNull().references(() => students.id, { onDelete: 'cascade' }),
+  rollNumber: text('roll_number').notNull(),
+  importJobId: uuid('import_job_id').references(() => attendanceImportJobs.id, { onDelete: 'set null' }),
+  academicYear: text('academic_year').notNull(),
+  semester: text('semester').notNull(),
+  section: text('section').notNull(),
+  departmentCode: text('department_code').notNull(),
+  classesConducted: integer('classes_conducted').default(0).notNull(),
+  classesAttended: integer('classes_attended').default(0).notNull(),
+  attendancePercentage: numeric('attendance_percentage', { precision: 5, scale: 2 }).notNull(),
+  thresholdPercentage: numeric('threshold_percentage', { precision: 5, scale: 2 }).default('65.00').notNull(),
+  isBelowThreshold: boolean('is_below_threshold').default(false).notNull(),
+  riskSeverity: text('risk_severity').default('NORMAL').notNull(), // 'NORMAL' | 'LOW_ATTENDANCE' | 'HIGH_RISK' | 'CRITICAL'
+  recordedAt: timestamp('recorded_at', { withTimezone: true }).defaultNow().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+// 29. Subject-wise Attendance Breakdown
+export const attendanceSubjectRecords = pgTable('attendance_subject_records', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  attendanceSnapshotId: uuid('attendance_snapshot_id').notNull().references(() => attendanceSnapshots.id, { onDelete: 'cascade' }),
+  studentId: uuid('student_id').notNull().references(() => students.id, { onDelete: 'cascade' }),
+  rollNumber: text('roll_number').notNull(),
+  subjectCode: text('subject_code').notNull(),
+  subjectName: text('subject_name').notNull(),
+  classesConducted: integer('classes_conducted').default(0).notNull(),
+  classesAttended: integer('classes_attended').default(0).notNull(),
+  attendancePercentage: numeric('attendance_percentage', { precision: 5, scale: 2 }).notNull(),
+  isBelowThreshold: boolean('is_below_threshold').default(false).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+// 30. Attendance Risk Alerts
+export const attendanceAlerts = pgTable('attendance_alerts', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  studentId: uuid('student_id').notNull().references(() => students.id, { onDelete: 'cascade' }),
+  rollNumber: text('roll_number').notNull(),
+  attendanceSnapshotId: uuid('attendance_snapshot_id').notNull().references(() => attendanceSnapshots.id, { onDelete: 'cascade' }),
+  academicYear: text('academic_year').notNull(),
+  semester: text('semester').notNull(),
+  departmentCode: text('department_code').notNull(),
+  section: text('section').notNull(),
+  alertType: text('alert_type').default('LOW_ATTENDANCE').notNull(),
+  threshold: numeric('threshold', { precision: 5, scale: 2 }).default('65.00').notNull(),
+  attendancePercentage: numeric('attendance_percentage', { precision: 5, scale: 2 }).notNull(),
+  riskSeverity: text('risk_severity').default('LOW_ATTENDANCE').notNull(), // 'LOW_ATTENDANCE' | 'HIGH_RISK' | 'CRITICAL'
+  status: text('status').default('OPEN').notNull(), // 'OPEN' | 'PARENT_CONTACTED' | 'FOLLOW_UP' | 'RESOLVED'
+  lastContactedAt: timestamp('last_contacted_at', { withTimezone: true }),
+  lastContactStatus: text('last_contact_status'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  resolvedAt: timestamp('resolved_at', { withTimezone: true })
+});
+
+// 31. Parent Contact Tracking Ledger
+export const attendanceParentContacts = pgTable('attendance_parent_contacts', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  alertId: uuid('alert_id').notNull().references(() => attendanceAlerts.id, { onDelete: 'cascade' }),
+  studentId: uuid('student_id').notNull().references(() => students.id, { onDelete: 'cascade' }),
+  rollNumber: text('roll_number').notNull(),
+  guardianName: text('guardian_name'),
+  phoneContacted: text('phone_contacted'), // Masked in public audits
+  contactedBy: text('contacted_by').notNull(),
+  contactMethod: text('contact_method').default('PHONE').notNull(), // 'PHONE' | 'EMAIL' | 'IN_PERSON' | 'OTHER'
+  contactStatus: text('contact_status').default('CONTACTED').notNull(), // 'CONTACTED' | 'NO_ANSWER' | 'WRONG_NUMBER' | 'CALLBACK_REQUIRED' | 'MEETING_REQUESTED' | 'RESOLVED'
+  notes: text('notes'),
+  followUpDate: text('follow_up_date'),
+  contactedAt: timestamp('contacted_at', { withTimezone: true }).defaultNow().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+});
+
 
 

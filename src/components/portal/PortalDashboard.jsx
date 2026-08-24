@@ -103,6 +103,7 @@ import MembershipsManager from './memberships/MembershipsManager.jsx';
 import MousManager from './mous/MousManager.jsx';
 import StudentProjectsManager from './projects/StudentProjectsManager.jsx';
 import NptelCertificationsManager from './nptel/NptelCertificationsManager.jsx';
+import AttendanceRiskManager from './attendance/AttendanceRiskManager.jsx';
 
 // Dedicated Governance, Intelligence & Compliance Suites
 import AnalyticsView from './dashboard/AnalyticsView.jsx';
@@ -741,6 +742,13 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
           {/* ────────────────────────────────────────────────────────── */}
           {(activeModule === 'bos' || activeModule === 'bos-meetings') && (
             <BoSMeetingManager currentUser={currentUser} onDataChange={refreshData} />
+          )}
+
+          {/* ────────────────────────────────────────────────────────── */}
+          {/* VIEW 5.5: ATTENDANCE RISK & PARENT CONTACT SUITE */}
+          {/* ────────────────────────────────────────────────────────── */}
+          {(activeModule === 'attendance-risk' || activeModule === 'attendance') && (
+            <AttendanceRiskManager currentUser={currentUser} />
           )}
 
           {/* ────────────────────────────────────────────────────────── */}

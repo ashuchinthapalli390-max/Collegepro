@@ -67,6 +67,17 @@ export const ALL_PERMISSIONS = [
   { id: 'events.update', label: 'Edit Academic Event', category: 'Academic Events' },
   { id: 'events.bulk_import', label: 'Bulk CSV Import Academic Events', category: 'Academic Events' },
   { id: 'events.review', label: 'Review & Verify Academic Events', category: 'Academic Events' },
+
+  // Attendance Risk Monitoring & Parent Contact
+  { id: 'attendance.view', label: 'View Attendance Risk Monitoring', category: 'Academic Monitoring' },
+  { id: 'attendance.import', label: 'Upload Attendance CSV/XLSX', category: 'Academic Monitoring' },
+  { id: 'attendance.review', label: 'Review & Resolve Attendance Alerts', category: 'Academic Monitoring' },
+  { id: 'attendance.contact_parent', label: 'Access Guardian Details & Log Contact', category: 'Academic Monitoring' },
+  { id: 'attendance.export', label: 'Export Attendance Risk Reports', category: 'Academic Monitoring' },
+  { id: 'attendance.export_sensitive', label: 'Export Unmasked Parent Contact Sheet', category: 'Academic Monitoring' },
+  { id: 'students.view', label: 'View Student Master Directory', category: 'Student Records' },
+  { id: 'students.guardian.view', label: 'View Student Guardian Profiles', category: 'Student Records' },
+
   // Bulk Data Center & Media Ingestion
   { id: 'bulk_import.view', label: 'Access Bulk Data Center', category: 'Bulk Data & Migration' },
   { id: 'bulk_import.upload', label: 'Upload CSV/XLSX Institutional Datasets', category: 'Bulk Data & Migration' },
@@ -89,6 +100,8 @@ export const ROLE_DEFAULT_PERMISSIONS = {
     'bos.view', 'bos.create', 'bos.edit', 'bos.approve', 'bos.publish', 'bos.archive', 'bos.delete',
     'publications.manage', 'patents.manage', 'mous.manage', 'student_data.manage', 'fdp.manage',
     'events.view', 'events.create', 'events.update', 'events.bulk_import', 'events.review', 'events.approve',
+    'attendance.view', 'attendance.import', 'attendance.review', 'attendance.contact_parent', 'attendance.export', 'attendance.export_sensitive',
+    'students.view', 'students.guardian.view',
     'bulk_import.view', 'bulk_import.upload', 'bulk_import.validate', 'bulk_import.commit', 'bulk_import.rollback',
     'bulk_import.download_template', 'bulk_import.download_errors', 'bulk_import.view_history', 'bulk_import.manage_mappings',
     'media.bulk_upload', 'media.approve_public',
@@ -98,27 +111,27 @@ export const ROLE_DEFAULT_PERMISSIONS = {
     'bos.view', 'bos.create', 'bos.edit', 'bos.archive', 'bos.delete',
     'publications.manage', 'patents.manage', 'mous.manage', 'student_data.manage', 'fdp.manage',
     'events.view', 'events.create', 'events.update', 'events.bulk_import', 'events.review',
-    'bulk_import.view', 'bulk_import.upload', 'bulk_import.validate', 'bulk_import.commit',
-    'bulk_import.download_template', 'bulk_import.download_errors', 'bulk_import.view_history',
-    'media.bulk_upload',
+    'attendance.view', 'attendance.import', 'attendance.review', 'attendance.contact_parent', 'attendance.export',
+    'students.view', 'students.guardian.view',
+    'bulk_import.view', 'bulk_import.upload', 'bulk_import.validate', 'bulk_import.download_template',
     'reports.export'
   ],
   FACULTY: [
-    'publications.manage', 'patents.manage', 'student_data.manage',
+    'publications.manage', 'patents.manage', 'student_data.manage', 'fdp.manage',
     'events.view', 'events.create', 'events.update',
-    'bulk_import.download_template',
+    'attendance.view', 'attendance.contact_parent', 'students.view',
     'reports.export'
   ],
   DATA_ENTRY: [
-    'publications.manage', 'patents.manage', 'student_data.manage', 'fdp.manage',
-    'events.view', 'events.create',
-    'bulk_import.view', 'bulk_import.upload', 'bulk_import.validate', 'bulk_import.commit',
-    'bulk_import.download_template', 'bulk_import.download_errors',
-    'media.bulk_upload'
+    'events.view', 'events.create', 'events.bulk_import',
+    'attendance.view', 'attendance.import', 'students.view',
+    'bulk_import.view', 'bulk_import.upload', 'bulk_import.validate', 'bulk_import.download_template'
   ],
   AUDITOR: [
-    'users.view', 'audit.view', 'bos.view', 'events.view',
-    'bulk_import.view', 'bulk_import.view_history', 'bulk_import.download_errors',
+    'users.view', 'audit.view', 'bos.view',
+    'publications.manage', 'patents.manage', 'mous.manage', 'student_data.manage', 'fdp.manage',
+    'events.view', 'attendance.view', 'students.view',
+    'bulk_import.view', 'bulk_import.view_history',
     'reports.export'
   ]
 };

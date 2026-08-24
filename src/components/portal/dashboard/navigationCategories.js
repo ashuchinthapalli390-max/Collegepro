@@ -25,7 +25,8 @@ import {
   Trash2, 
   ShieldAlert, 
   Sparkles,
-  Database
+  Database,
+  AlertTriangle
 } from 'lucide-react';
 
 export const NAVIGATION_CATEGORIES = [
@@ -68,6 +69,7 @@ export const NAVIGATION_CATEGORIES = [
     label: 'Student Development',
     icon: Trophy,
     items: [
+      { id: 'attendance-risk', label: 'Attendance Risk & Parent Contact', icon: AlertTriangle },
       { id: 'student-projects', label: 'Student Projects & Capstone', icon: Code },
       { id: 'student-achievements', label: 'Student Achievements & Honors', icon: Trophy },
       { id: 'internships', label: 'Student Internships & Training', icon: Briefcase }

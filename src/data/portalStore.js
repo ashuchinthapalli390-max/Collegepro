@@ -30,7 +30,12 @@ import {
   INITIAL_PLACEMENT_RECORDS,
   INITIAL_PLACEMENTS,
   INITIAL_EXAM_NOTIFICATIONS,
-  INITIAL_NEWS
+  INITIAL_NEWS,
+  INITIAL_STUDENTS,
+  INITIAL_STUDENT_GUARDIANS,
+  INITIAL_ATTENDANCE_SNAPSHOTS,
+  INITIAL_ATTENDANCE_ALERTS,
+  INITIAL_ATTENDANCE_PARENT_CONTACTS
 } from './masterData.js';
 import { 
   INITIAL_DATASET_VERSIONS, 
@@ -82,7 +87,15 @@ export const STORAGE_KEYS = {
   BULK_IMPORT_ALIAS_MAPPINGS: 'nec_portal_bulk_import_alias_mappings_v3',
   BULK_MEDIA_JOBS: 'nec_portal_bulk_media_jobs_v3',
   BULK_MEDIA_FOLDERS: 'nec_portal_bulk_media_folders_v3',
-  BULK_MEDIA_ITEMS: 'nec_portal_bulk_media_items_v3'
+  BULK_MEDIA_ITEMS: 'nec_portal_bulk_media_items_v3',
+  STUDENTS: 'nec_portal_students_v3',
+  STUDENT_GUARDIANS: 'nec_portal_student_guardians_v3',
+  ATTENDANCE_IMPORT_JOBS: 'nec_portal_attendance_import_jobs_v3',
+  ATTENDANCE_IMPORT_ROWS: 'nec_portal_attendance_import_rows_v3',
+  ATTENDANCE_SNAPSHOTS: 'nec_portal_attendance_snapshots_v3',
+  ATTENDANCE_SUBJECT_RECORDS: 'nec_portal_attendance_subject_records_v3',
+  ATTENDANCE_ALERTS: 'nec_portal_attendance_alerts_v3',
+  ATTENDANCE_PARENT_CONTACTS: 'nec_portal_attendance_parent_contacts_v3'
 };
 
 // Automatic one-time cleanup of obsolete legacy demo caches
@@ -366,6 +379,14 @@ export const ALL_PERMISSIONS = [
   { key: 'events.bulk_import', module: 'Events', label: 'Bulk CSV Import Academic Events' },
   { key: 'events.review', module: 'Events', label: 'Review & Verify Academic Events' },
   { key: 'events.approve', module: 'Events', label: 'Approve & Publish Academic Events' },
+  { key: 'attendance.view', module: 'Attendance Monitoring', label: 'View Attendance Risk Monitoring' },
+  { key: 'attendance.import', module: 'Attendance Monitoring', label: 'Upload Attendance CSV/XLSX' },
+  { key: 'attendance.review', module: 'Attendance Monitoring', label: 'Review & Resolve Attendance Alerts' },
+  { key: 'attendance.contact_parent', module: 'Attendance Monitoring', label: 'Access Guardian Details & Log Contact' },
+  { key: 'attendance.export', module: 'Attendance Monitoring', label: 'Export Attendance Risk Reports' },
+  { key: 'attendance.export_sensitive', module: 'Attendance Monitoring', label: 'Export Unmasked Parent Contact Sheet' },
+  { key: 'students.view', module: 'Student Records', label: 'View Student Master Directory' },
+  { key: 'students.guardian.view', module: 'Student Records', label: 'View Student Guardian Profiles' },
   { key: 'bulk_import.view', module: 'Bulk Data', label: 'Access Bulk Data Center' },
   { key: 'bulk_import.upload', module: 'Bulk Data', label: 'Upload CSV/XLSX Datasets' },
   { key: 'bulk_import.validate', module: 'Bulk Data', label: 'Validate Staged Records' },
@@ -391,6 +412,8 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     'internships.view', 'internships.manage',
     'achievements.view', 'achievements.approve',
     'events.view', 'events.create', 'events.update', 'events.bulk_import', 'events.review', 'events.approve',
+    'attendance.view', 'attendance.import', 'attendance.review', 'attendance.contact_parent', 'attendance.export', 'attendance.export_sensitive',
+    'students.view', 'students.guardian.view',
     'bulk_import.view', 'bulk_import.upload', 'bulk_import.validate', 'bulk_import.commit', 'bulk_import.rollback',
     'bulk_import.download_template', 'bulk_import.download_errors', 'bulk_import.view_history', 'bulk_import.manage_mappings',
     'media.bulk_upload', 'media.approve_public',
@@ -405,6 +428,8 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     'internships.view', 'internships.manage',
     'achievements.view', 'achievements.approve',
     'events.view', 'events.create', 'events.update', 'events.bulk_import', 'events.review',
+    'attendance.view', 'attendance.import', 'attendance.review', 'attendance.contact_parent', 'attendance.export',
+    'students.view', 'students.guardian.view',
     'bulk_import.view', 'bulk_import.upload', 'bulk_import.validate', 'bulk_import.commit',
     'bulk_import.download_template', 'bulk_import.download_errors', 'bulk_import.view_history',
     'media.bulk_upload',
@@ -417,6 +442,7 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     'bos.view',
     'achievements.view',
     'events.view', 'events.create', 'events.update',
+    'attendance.view', 'attendance.contact_parent', 'students.view',
     'bulk_import.download_template',
     'reports.export'
   ],
@@ -427,15 +453,17 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     'internships.view', 'internships.create',
     'achievements.view', 'achievements.create',
     'events.view', 'events.create',
+    'attendance.view', 'attendance.import', 'students.view',
     'bulk_import.view', 'bulk_import.upload', 'bulk_import.validate', 'bulk_import.commit',
     'bulk_import.download_template', 'bulk_import.download_errors',
     'media.bulk_upload'
   ],
   AUDITOR: [
-    'faculty.view', 'publications.view', 'patents.view', 'bos.view',
-    'internships.view', 'achievements.view', 'events.view',
-    'bulk_import.view', 'bulk_import.view_history', 'bulk_import.download_errors',
-    'reports.export', 'audit.view'
+    'users.view', 'audit.view', 'bos.view',
+    'publications.manage', 'patents.manage', 'mous.manage', 'student_data.manage', 'fdp.manage',
+    'events.view', 'attendance.view', 'students.view',
+    'bulk_import.view', 'bulk_import.view_history',
+    'reports.export'
   ]
 };
 
@@ -5719,4 +5747,836 @@ export function deleteStaffProfile(staffId, actorUser) {
   addAuditLog('DELETE', 'Staff Profiles', `Deleted staff record for ${target.name}`, actorUser);
   return { success: true };
 }
+
+// ─────────────────────────────────────────────────────────────
+// STUDENT MASTER DIRECTORY & GUARDIAN PROFILE FUNCTIONS
+// ─────────────────────────────────────────────────────────────
+
+export function getStudents(filters = {}) {
+  const students = loadStore(STORAGE_KEYS.STUDENTS, INITIAL_STUDENTS);
+  let list = students.filter(s => !s.isDeleted);
+
+  if (filters.department && filters.department !== 'ALL') {
+    list = list.filter(s => (s.departmentCode || s.department || '').toUpperCase() === filters.department.toUpperCase());
+  }
+  if (filters.year && filters.year !== 'ALL') {
+    list = list.filter(s => s.year === filters.year);
+  }
+  if (filters.semester && filters.semester !== 'ALL') {
+    list = list.filter(s => s.semester === filters.semester);
+  }
+  if (filters.section && filters.section !== 'ALL') {
+    list = list.filter(s => s.section === filters.section);
+  }
+  if (filters.search) {
+    const q = filters.search.toLowerCase().trim();
+    list = list.filter(s => 
+      (s.rollNumber || '').toLowerCase().includes(q) ||
+      (s.registrationNumber || '').toLowerCase().includes(q) ||
+      (s.fullName || '').toLowerCase().includes(q) ||
+      (s.mentorName || '').toLowerCase().includes(q)
+    );
+  }
+
+  return list;
+}
+
+export function getStudentByRollNumber(rollNumber) {
+  if (!rollNumber) return null;
+  const q = rollNumber.toString().trim().toLowerCase();
+  const students = loadStore(STORAGE_KEYS.STUDENTS, INITIAL_STUDENTS);
+  return students.find(s => !s.isDeleted && (
+    (s.rollNumber || '').toLowerCase().trim() === q ||
+    (s.registrationNumber || '').toLowerCase().trim() === q
+  )) || null;
+}
+
+export function getStudentGuardian(studentId, rollNumber = null) {
+  const guardians = loadStore(STORAGE_KEYS.STUDENT_GUARDIANS, INITIAL_STUDENT_GUARDIANS);
+  if (studentId) {
+    const match = guardians.find(g => g.studentId === studentId);
+    if (match) return match;
+  }
+  if (rollNumber) {
+    const q = rollNumber.toString().trim().toLowerCase();
+    const match = guardians.find(g => (g.rollNumber || '').toLowerCase().trim() === q);
+    if (match) return match;
+  }
+  return null;
+}
+
+export function saveStudent(studentData, actorUser) {
+  const students = loadStore(STORAGE_KEYS.STUDENTS, INITIAL_STUDENTS);
+  const isNew = !studentData.id;
+  
+  if (isNew) {
+    const newStudent = {
+      ...studentData,
+      id: `stu_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      createdAt: new Date().toISOString(),
+      createdBy: actorUser?.name || 'Academic Admin',
+      isDeleted: false
+    };
+    students.unshift(newStudent);
+    saveStore(STORAGE_KEYS.STUDENTS, students);
+    addAuditLog('CREATE', 'Student Master', `Added student ${newStudent.fullName} (${newStudent.rollNumber})`, actorUser);
+    return { success: true, record: newStudent };
+  } else {
+    const index = students.findIndex(s => s.id === studentData.id);
+    if (index === -1) return { success: false, error: 'Student not found.' };
+    students[index] = {
+      ...students[index],
+      ...studentData,
+      updatedAt: new Date().toISOString(),
+      updatedBy: actorUser?.name || 'Academic Admin'
+    };
+    saveStore(STORAGE_KEYS.STUDENTS, students);
+    addAuditLog('UPDATE', 'Student Master', `Updated student ${students[index].fullName} (${students[index].rollNumber})`, actorUser);
+    return { success: true, record: students[index] };
+  }
+}
+
+export function saveStudentGuardian(guardianData, actorUser) {
+  const guardians = loadStore(STORAGE_KEYS.STUDENT_GUARDIANS, INITIAL_STUDENT_GUARDIANS);
+  const isNew = !guardianData.id;
+
+  if (isNew) {
+    const newGrd = {
+      ...guardianData,
+      id: `grd_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      createdAt: new Date().toISOString(),
+      isPrimary: true
+    };
+    guardians.unshift(newGrd);
+    saveStore(STORAGE_KEYS.STUDENT_GUARDIANS, guardians);
+    addAuditLog('CREATE', 'Guardian Directory', `Created guardian contact for roll ${newGrd.rollNumber}`, actorUser);
+    return { success: true, record: newGrd };
+  } else {
+    const index = guardians.findIndex(g => g.id === guardianData.id);
+    if (index === -1) return { success: false, error: 'Guardian profile not found.' };
+    guardians[index] = {
+      ...guardians[index],
+      ...guardianData,
+      updatedAt: new Date().toISOString()
+    };
+    saveStore(STORAGE_KEYS.STUDENT_GUARDIANS, guardians);
+    addAuditLog('UPDATE', 'Guardian Directory', `Updated guardian contact for roll ${guardians[index].rollNumber}`, actorUser);
+    return { success: true, record: guardians[index] };
+  }
+}
+
+export function maskPhoneNumber(phone) {
+  if (!phone || typeof phone !== 'string') return 'Not available';
+  const clean = phone.trim();
+  if (clean.length < 5) return 'Not available';
+  
+  // Extract pure digits
+  const digitsOnly = clean.replace(/\D/g, '');
+  if (digitsOnly.length === 10) {
+    return `${digitsOnly.slice(0, 2)}******${digitsOnly.slice(8)}`;
+  }
+  if (digitsOnly.length > 10) {
+    const countryCode = digitsOnly.slice(0, digitsOnly.length - 10);
+    const tenDigits = digitsOnly.slice(-10);
+    return `+${countryCode} ${tenDigits.slice(0, 2)}******${tenDigits.slice(8)}`;
+  }
+  return `${clean.slice(0, 2)}******${clean.slice(-2)}`;
+}
+
+// ─────────────────────────────────────────────────────────────
+// ATTENDANCE PARSING, VALIDATION & ENGINE
+// ─────────────────────────────────────────────────────────────
+
+export function parseAndValidateAttendanceCSV(csvText, customMapping = {}, threshold = 65.0) {
+  if (!csvText || typeof csvText !== 'string' || !csvText.trim()) {
+    return { error: 'Empty or invalid CSV file content.', totalRows: 0, rows: [] };
+  }
+
+  // Parse lines considering quotes
+  const lines = csvText.split(/\r\n|\n|\r/).filter(l => l.trim().length > 0);
+  if (lines.length < 2) {
+    return { error: 'CSV must contain a header row and at least one data row.', totalRows: 0, rows: [] };
+  }
+
+  // Helper to split CSV row by comma respecting quoted strings
+  const parseCSVLine = (line) => {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"' || char === "'") {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        result.push(current.trim().replace(/^["']|["']$/g, ''));
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    result.push(current.trim().replace(/^["']|["']$/g, ''));
+    return result;
+  };
+
+  const headers = parseCSVLine(lines[0]);
+  const normHeaders = headers.map(h => h.toLowerCase().replace(/[\s_\-\.\(\)]/g, ''));
+
+  // Header Auto-Detection logic
+  const findColIndex = (candidates) => {
+    for (const cand of candidates) {
+      const cleanCand = cand.toLowerCase().replace(/[\s_\-\.\(\)]/g, '');
+      const idx = normHeaders.findIndex(h => h === cleanCand || h.includes(cleanCand));
+      if (idx !== -1) return idx;
+    }
+    return -1;
+  };
+
+  const rollColIdx = customMapping.rollNumber !== undefined ? customMapping.rollNumber : findColIndex(['rollnumber', 'rollno', 'htno', 'hallticket', 'regno', 'registrationnumber', 'studentid', 'id']);
+  const nameColIdx = customMapping.studentName !== undefined ? customMapping.studentName : findColIndex(['studentname', 'fullname', 'name', 'student']);
+  const subCodeColIdx = customMapping.subjectCode !== undefined ? customMapping.subjectCode : findColIndex(['subjectcode', 'subcode', 'coursecode']);
+  const subNameColIdx = customMapping.subjectName !== undefined ? customMapping.subjectName : findColIndex(['subjectname', 'subject', 'coursename']);
+  const conductedColIdx = customMapping.classesConducted !== undefined ? customMapping.classesConducted : findColIndex(['classesconducted', 'totalclasses', 'conducted', 'totalhours', 'held', 'maxclasses']);
+  const attendedColIdx = customMapping.classesAttended !== undefined ? customMapping.classesAttended : findColIndex(['classesattended', 'attended', 'present', 'attendedhours']);
+  const percentageColIdx = customMapping.attendancePercentage !== undefined ? customMapping.attendancePercentage : findColIndex(['attendancepercentage', 'attendancepct', 'attendance', 'percentage', 'pct']);
+
+  if (rollColIdx === -1) {
+    return {
+      error: 'Could not identify Roll Number column. Please map the Roll Number / HTNO column explicitly.',
+      detectedHeaders: headers,
+      totalRows: 0,
+      rows: []
+    };
+  }
+
+  const studentsMaster = getStudents();
+  const rawRows = [];
+  const studentMap = new Map(); // rollNumber -> aggregate info
+
+  for (let i = 1; i < lines.length; i++) {
+    const rawCols = parseCSVLine(lines[i]);
+    if (rawCols.every(c => !c.trim())) continue;
+
+    const rawRoll = (rawCols[rollColIdx] || '').trim();
+    const rawName = nameColIdx !== -1 ? (rawCols[nameColIdx] || '').trim() : '';
+    const rawSubCode = subCodeColIdx !== -1 ? (rawCols[subCodeColIdx] || '').trim() : '';
+    const rawSubName = subNameColIdx !== -1 ? (rawCols[subNameColIdx] || '').trim() : '';
+    
+    let rawConducted = conductedColIdx !== -1 ? parseInt(rawCols[conductedColIdx], 10) : NaN;
+    let rawAttended = attendedColIdx !== -1 ? parseInt(rawCols[attendedColIdx], 10) : NaN;
+    let rawPercentage = percentageColIdx !== -1 ? parseFloat(rawCols[percentageColIdx].replace('%', '').trim()) : NaN;
+
+    const rowErrors = [];
+    const rowWarnings = [];
+
+    if (!rawRoll) {
+      rowErrors.push('Missing student Roll Number / Identifier.');
+    }
+
+    // Attendance computation & validation
+    let calcPercentage = null;
+    if (!isNaN(rawConducted) && !isNaN(rawAttended)) {
+      if (rawConducted <= 0) {
+        rowErrors.push('Classes Conducted must be greater than 0.');
+      } else if (rawAttended < 0) {
+        rowErrors.push('Classes Attended cannot be negative.');
+      } else if (rawAttended > rawConducted) {
+        rowErrors.push(`Classes Attended (${rawAttended}) cannot exceed Classes Conducted (${rawConducted}).`);
+      } else {
+        calcPercentage = parseFloat(((rawAttended / rawConducted) * 100).toFixed(2));
+      }
+    }
+
+    let finalPercentage = !isNaN(rawPercentage) ? rawPercentage : calcPercentage;
+
+    if (finalPercentage !== null && (finalPercentage < 0 || finalPercentage > 100)) {
+      rowErrors.push(`Invalid attendance percentage (${finalPercentage}%). Must be between 0% and 100%.`);
+      finalPercentage = null;
+    }
+
+    if (finalPercentage === null && rowErrors.length === 0) {
+      rowErrors.push('Unable to calculate attendance. Provide either (Conducted + Attended) or Attendance Percentage.');
+    }
+
+    // Match with student master
+    const matchedStudent = rawRoll ? studentsMaster.find(s => (s.rollNumber || '').toLowerCase() === rawRoll.toLowerCase() || (s.registrationNumber || '').toLowerCase() === rawRoll.toLowerCase()) : null;
+    const matchStatus = matchedStudent ? 'MATCHED' : (rawRoll ? 'UNMATCHED' : 'INVALID');
+    
+    const guardian = matchedStudent ? getStudentGuardian(matchedStudent.id, matchedStudent.rollNumber) : null;
+
+    const parsedRow = {
+      rowNumber: i,
+      rawRollNumber: rawRoll,
+      rawStudentName: rawName,
+      subjectCode: rawSubCode || 'OVERALL',
+      subjectName: rawSubName || (rawSubCode ? rawSubCode : 'Overall Attendance'),
+      classesConducted: !isNaN(rawConducted) ? rawConducted : null,
+      classesAttended: !isNaN(rawAttended) ? rawAttended : null,
+      attendancePercentage: finalPercentage,
+      isValid: rowErrors.length === 0,
+      errors: rowErrors,
+      warnings: rowWarnings,
+      matchStatus,
+      studentId: matchedStudent ? matchedStudent.id : null,
+      student: matchedStudent ? {
+        fullName: matchedStudent.fullName,
+        departmentCode: matchedStudent.departmentCode,
+        year: matchedStudent.year,
+        semester: matchedStudent.semester,
+        section: matchedStudent.section,
+        mentorName: matchedStudent.mentorName
+      } : null,
+      guardian: guardian ? {
+        guardianName: guardian.guardianName,
+        relationship: guardian.relationship,
+        phone: guardian.primaryPhone,
+        maskedPhone: maskPhoneNumber(guardian.primaryPhone)
+      } : null
+    };
+
+    rawRows.push(parsedRow);
+
+    // Grouping by student roll for multi-subject or single subject
+    if (parsedRow.isValid && rawRoll) {
+      const normRoll = rawRoll.toUpperCase();
+      if (!studentMap.has(normRoll)) {
+        studentMap.set(normRoll, {
+          rollNumber: normRoll,
+          student: parsedRow.student,
+          studentId: parsedRow.studentId,
+          guardian: parsedRow.guardian,
+          matchStatus: parsedRow.matchStatus,
+          subjects: [],
+          totalConducted: 0,
+          totalAttended: 0,
+          rawPercentages: []
+        });
+      }
+      const agg = studentMap.get(normRoll);
+      agg.subjects.push({
+        subjectCode: parsedRow.subjectCode,
+        subjectName: parsedRow.subjectName,
+        conducted: parsedRow.classesConducted,
+        attended: parsedRow.classesAttended,
+        percentage: parsedRow.attendancePercentage,
+        isBelow: parsedRow.attendancePercentage < threshold
+      });
+      if (parsedRow.classesConducted !== null && parsedRow.classesAttended !== null) {
+        agg.totalConducted += parsedRow.classesConducted;
+        agg.totalAttended += parsedRow.classesAttended;
+      }
+      if (parsedRow.attendancePercentage !== null) {
+        agg.rawPercentages.push(parsedRow.attendancePercentage);
+      }
+    }
+  }
+
+  // Build Aggregated Students List with final overall attendance percentage
+  const aggregatedStudents = [];
+  let lowAttendanceCount = 0;
+  let highRiskCount = 0;
+  let criticalCount = 0;
+
+  for (const [roll, data] of studentMap.entries()) {
+    let overallPercentage = 0;
+    if (data.totalConducted > 0) {
+      overallPercentage = parseFloat(((data.totalAttended / data.totalConducted) * 100).toFixed(2));
+    } else if (data.rawPercentages.length > 0) {
+      const sum = data.rawPercentages.reduce((a, b) => a + b, 0);
+      overallPercentage = parseFloat((sum / data.rawPercentages.length).toFixed(2));
+    }
+
+    const isBelow = overallPercentage < threshold;
+    const shortfall = isBelow ? parseFloat((threshold - overallPercentage).toFixed(2)) : 0;
+
+    let riskSeverity = 'NORMAL';
+    if (overallPercentage < 45.0) {
+      riskSeverity = 'CRITICAL';
+      criticalCount++;
+    } else if (overallPercentage < 55.0) {
+      riskSeverity = 'HIGH_RISK';
+      highRiskCount++;
+    } else if (overallPercentage < threshold) {
+      riskSeverity = 'LOW_ATTENDANCE';
+      lowAttendanceCount++;
+    }
+
+    const lowSubjectsCount = data.subjects.filter(s => s.percentage < threshold).length;
+
+    aggregatedStudents.push({
+      rollNumber: roll,
+      studentId: data.studentId,
+      studentName: data.student ? data.student.fullName : (rawRows.find(r => r.rawRollNumber.toUpperCase() === roll)?.rawStudentName || roll),
+      department: data.student ? data.student.departmentCode : 'UNRESOLVED',
+      year: data.student ? data.student.year : '-',
+      semester: data.student ? data.student.semester : '-',
+      section: data.student ? data.student.section : '-',
+      mentorName: data.student ? data.student.mentorName : 'Unassigned',
+      guardianName: data.guardian ? data.guardian.guardianName : null,
+      guardianRelationship: data.guardian ? data.guardian.relationship : null,
+      guardianPhone: data.guardian ? data.guardian.phone : null,
+      guardianMaskedPhone: data.guardian ? data.guardian.maskedPhone : 'Not available',
+      matchStatus: data.matchStatus,
+      classesConducted: data.totalConducted,
+      classesAttended: data.totalAttended,
+      attendancePercentage: overallPercentage,
+      shortfall,
+      threshold,
+      isBelowThreshold: isBelow,
+      riskSeverity,
+      lowSubjectsCount,
+      subjects: data.subjects
+    });
+  }
+
+  const matchedRowsCount = rawRows.filter(r => r.matchStatus === 'MATCHED').length;
+  const unmatchedRowsCount = rawRows.filter(r => r.matchStatus === 'UNMATCHED').length;
+  const invalidRowsCount = rawRows.filter(r => !r.isValid).length;
+
+  return {
+    headers,
+    columnMapping: {
+      rollNumber: rollColIdx,
+      studentName: nameColIdx,
+      subjectCode: subCodeColIdx,
+      subjectName: subNameColIdx,
+      classesConducted: conductedColIdx,
+      classesAttended: attendedColIdx,
+      attendancePercentage: percentageColIdx
+    },
+    totalRows: rawRows.length,
+    matchedRowsCount,
+    unmatchedRowsCount,
+    invalidRowsCount,
+    rawRows,
+    aggregatedStudents,
+    summary: {
+      totalStudents: aggregatedStudents.length,
+      belowThresholdCount: lowAttendanceCount + highRiskCount + criticalCount,
+      lowAttendanceCount,
+      highRiskCount,
+      criticalCount,
+      threshold
+    }
+  };
+}
+
+export function executeAttendanceImport(parsedResult, cohortMeta = {}, actorUser) {
+  if (!parsedResult || !parsedResult.aggregatedStudents || parsedResult.aggregatedStudents.length === 0) {
+    return { success: false, error: 'No valid attendance data to commit.' };
+  }
+
+  const threshold = cohortMeta.threshold || parsedResult.summary.threshold || 65.0;
+  const academicYear = cohortMeta.academicYear || '2026-27';
+  const semester = cohortMeta.semester || 'III-I';
+  const departmentCode = cohortMeta.departmentCode || 'CYS';
+  const section = cohortMeta.section || 'A';
+  const filename = cohortMeta.filename || 'attendance_upload.csv';
+  const sha256 = cohortMeta.sha256 || `sha256_${Date.now()}`;
+
+  const importJobs = loadStore(STORAGE_KEYS.ATTENDANCE_IMPORT_JOBS, []);
+  const snapshots = loadStore(STORAGE_KEYS.ATTENDANCE_SNAPSHOTS, INITIAL_ATTENDANCE_SNAPSHOTS);
+  const alerts = loadStore(STORAGE_KEYS.ATTENDANCE_ALERTS, INITIAL_ATTENDANCE_ALERTS);
+
+  const jobId = `att_job_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+  const recordedAt = new Date().toISOString();
+
+  let createdAlertsCount = 0;
+
+  parsedResult.aggregatedStudents.forEach(st => {
+    // 1. Create or Update Snapshot
+    const snapshotId = `att_snap_${st.rollNumber.toLowerCase()}_${Date.now()}`;
+    const snap = {
+      id: snapshotId,
+      studentId: st.studentId || null,
+      rollNumber: st.rollNumber,
+      importJobId: jobId,
+      academicYear,
+      semester,
+      section,
+      departmentCode: st.department !== 'UNRESOLVED' ? st.department : departmentCode,
+      classesConducted: st.classesConducted,
+      classesAttended: st.classesAttended,
+      attendancePercentage: st.attendancePercentage,
+      thresholdPercentage: threshold,
+      isBelowThreshold: st.isBelowThreshold,
+      riskSeverity: st.riskSeverity,
+      subjectBreakdown: st.subjects || [],
+      recordedAt
+    };
+    snapshots.unshift(snap);
+
+    // 2. If below threshold, create or update active alert
+    if (st.isBelowThreshold) {
+      const existingAlertIdx = alerts.findIndex(a => a.rollNumber.toUpperCase() === st.rollNumber.toUpperCase() && a.status !== 'RESOLVED');
+      if (existingAlertIdx !== -1) {
+        alerts[existingAlertIdx] = {
+          ...alerts[existingAlertIdx],
+          attendanceSnapshotId: snapshotId,
+          attendancePercentage: st.attendancePercentage,
+          shortfall: st.shortfall,
+          riskSeverity: st.riskSeverity,
+          threshold,
+          updatedAt: recordedAt
+        };
+      } else {
+        const newAlert = {
+          id: `alt_${st.rollNumber.toLowerCase()}_${Date.now()}`,
+          studentId: st.studentId || null,
+          rollNumber: st.rollNumber,
+          fullName: st.studentName,
+          departmentCode: st.department !== 'UNRESOLVED' ? st.department : departmentCode,
+          year: st.year !== '-' ? st.year : 'III',
+          semester,
+          section,
+          academicYear,
+          attendanceSnapshotId: snapshotId,
+          alertType: 'LOW_ATTENDANCE',
+          threshold,
+          attendancePercentage: st.attendancePercentage,
+          shortfall: st.shortfall,
+          riskSeverity: st.riskSeverity,
+          status: 'OPEN',
+          lastContactedAt: null,
+          lastContactStatus: null,
+          createdAt: recordedAt
+        };
+        alerts.unshift(newAlert);
+        createdAlertsCount++;
+      }
+    }
+  });
+
+  const jobRecord = {
+    id: jobId,
+    originalFilename: filename,
+    sha256,
+    academicYear,
+    semester,
+    departmentCode,
+    section,
+    uploadedBy: actorUser?.name || actorUser?.username || 'Academic Staff',
+    totalRows: parsedResult.totalRows,
+    matchedRows: parsedResult.matchedRowsCount,
+    unmatchedRows: parsedResult.unmatchedRowsCount,
+    lowAttendanceCount: parsedResult.summary.belowThresholdCount,
+    thresholdPercentage: threshold,
+    status: 'COMPLETED',
+    createdAt: recordedAt,
+    completedAt: recordedAt
+  };
+
+  importJobs.unshift(jobRecord);
+
+  saveStore(STORAGE_KEYS.ATTENDANCE_IMPORT_JOBS, importJobs);
+  saveStore(STORAGE_KEYS.ATTENDANCE_SNAPSHOTS, snapshots);
+  saveStore(STORAGE_KEYS.ATTENDANCE_ALERTS, alerts);
+
+  addAuditLog('IMPORT', 'Attendance Monitoring', `Committed attendance import for ${departmentCode} ${semester} Sec ${section} (${parsedResult.summary.belowThresholdCount} at-risk alerts)`, actorUser);
+
+  return {
+    success: true,
+    jobId,
+    totalStudents: parsedResult.aggregatedStudents.length,
+    alertsCreated: createdAlertsCount,
+    lowAttendanceCount: parsedResult.summary.belowThresholdCount
+  };
+}
+
+export function getAttendanceAlerts(filters = {}, actorUser = null) {
+  const alerts = loadStore(STORAGE_KEYS.ATTENDANCE_ALERTS, INITIAL_ATTENDANCE_ALERTS);
+  const students = loadStore(STORAGE_KEYS.STUDENTS, INITIAL_STUDENTS);
+  const guardians = loadStore(STORAGE_KEYS.STUDENT_GUARDIANS, INITIAL_STUDENT_GUARDIANS);
+
+  // Check user sensitive permission
+  const userPermissions = actorUser?.permissions || DEFAULT_ROLE_PERMISSIONS[actorUser?.role] || [];
+  const canViewSensitive = actorUser?.role === 'SUPER_ADMIN' || 
+                           actorUser?.role === 'ADMIN' || 
+                           userPermissions.includes('attendance.contact_parent') || 
+                           userPermissions.includes('students.guardian.view');
+
+  let list = alerts.map(alt => {
+    const student = students.find(s => s.id === alt.studentId || (s.rollNumber || '').toLowerCase() === (alt.rollNumber || '').toLowerCase()) || {};
+    const guardian = guardians.find(g => g.studentId === student.id || (g.rollNumber || '').toLowerCase() === (alt.rollNumber || '').toLowerCase()) || null;
+
+    return {
+      ...alt,
+      studentName: student.fullName || alt.fullName || alt.rollNumber,
+      registrationNumber: student.registrationNumber || '-',
+      department: student.departmentCode || alt.departmentCode || 'CYS',
+      year: student.year || alt.year || 'III',
+      semester: student.semester || alt.semester || 'III-I',
+      section: student.section || alt.section || 'A',
+      mentorName: student.mentorName || 'Dr. S. Venkateswarlu',
+      guardianName: guardian ? guardian.guardianName : null,
+      guardianRelationship: guardian ? guardian.relationship : null,
+      guardianPhone: canViewSensitive ? (guardian ? guardian.primaryPhone : null) : null,
+      guardianMaskedPhone: guardian ? maskPhoneNumber(guardian.primaryPhone) : 'Parent contact not available',
+      hasGuardian: !!guardian
+    };
+  });
+
+  // Department Scope Enforcement for HOD/Faculty
+  if (actorUser && actorUser.role === 'HOD' && actorUser.dept && actorUser.dept !== 'Management & Governance') {
+    list = list.filter(a => (a.department || '').toUpperCase() === actorUser.dept.toUpperCase());
+  }
+
+  // Filters
+  if (filters.department && filters.department !== 'ALL') {
+    list = list.filter(a => (a.department || '').toUpperCase() === filters.department.toUpperCase());
+  }
+  if (filters.year && filters.year !== 'ALL') {
+    list = list.filter(a => a.year === filters.year);
+  }
+  if (filters.semester && filters.semester !== 'ALL') {
+    list = list.filter(a => a.semester === filters.semester);
+  }
+  if (filters.section && filters.section !== 'ALL') {
+    list = list.filter(a => a.section === filters.section);
+  }
+  if (filters.status && filters.status !== 'ALL') {
+    list = list.filter(a => a.status === filters.status);
+  }
+  if (filters.severity && filters.severity !== 'ALL') {
+    list = list.filter(a => a.riskSeverity === filters.severity);
+  }
+  if (filters.search) {
+    const q = filters.search.toLowerCase().trim();
+    list = list.filter(a => 
+      (a.rollNumber || '').toLowerCase().includes(q) ||
+      (a.studentName || '').toLowerCase().includes(q) ||
+      (a.guardianName || '').toLowerCase().includes(q) ||
+      (a.mentorName || '').toLowerCase().includes(q)
+    );
+  }
+
+  return list;
+}
+
+export function getAttendanceSnapshotDetail(rollNumberOrAlertId, actorUser = null) {
+  if (!rollNumberOrAlertId) return null;
+  const q = rollNumberOrAlertId.toString().trim().toLowerCase();
+
+  const alerts = loadStore(STORAGE_KEYS.ATTENDANCE_ALERTS, INITIAL_ATTENDANCE_ALERTS);
+  const snapshots = loadStore(STORAGE_KEYS.ATTENDANCE_SNAPSHOTS, INITIAL_ATTENDANCE_SNAPSHOTS);
+  const students = loadStore(STORAGE_KEYS.STUDENTS, INITIAL_STUDENTS);
+  const guardians = loadStore(STORAGE_KEYS.STUDENT_GUARDIANS, INITIAL_STUDENT_GUARDIANS);
+  const contacts = loadStore(STORAGE_KEYS.ATTENDANCE_PARENT_CONTACTS, INITIAL_ATTENDANCE_PARENT_CONTACTS);
+
+  const alert = alerts.find(a => a.id.toLowerCase() === q || a.rollNumber.toLowerCase() === q);
+  const rollNumber = alert ? alert.rollNumber : rollNumberOrAlertId;
+
+  const student = students.find(s => (s.rollNumber || '').toLowerCase() === rollNumber.toLowerCase()) || null;
+  const guardian = student ? guardians.find(g => g.studentId === student.id || (g.rollNumber || '').toLowerCase() === rollNumber.toLowerCase()) : null;
+
+  // Find latest snapshot and historical trend
+  const studentSnapshots = snapshots.filter(sn => (sn.rollNumber || '').toLowerCase() === rollNumber.toLowerCase())
+    .sort((a, b) => new Date(b.recordedAt) - new Date(a.recordedAt));
+
+  const latestSnap = studentSnapshots[0] || null;
+  const contactHistory = contacts.filter(c => (c.rollNumber || '').toLowerCase() === rollNumber.toLowerCase() || (alert && c.alertId === alert.id))
+    .sort((a, b) => new Date(b.contactedAt) - new Date(a.contactedAt));
+
+  const userPermissions = actorUser?.permissions || DEFAULT_ROLE_PERMISSIONS[actorUser?.role] || [];
+  const canViewSensitive = actorUser?.role === 'SUPER_ADMIN' || 
+                           actorUser?.role === 'ADMIN' || 
+                           userPermissions.includes('attendance.contact_parent') || 
+                           userPermissions.includes('students.guardian.view');
+
+  return {
+    rollNumber,
+    alert,
+    student,
+    guardian: guardian ? {
+      guardianName: guardian.guardianName,
+      relationship: guardian.relationship,
+      primaryPhone: canViewSensitive ? guardian.primaryPhone : null,
+      alternatePhone: canViewSensitive ? guardian.alternatePhone : null,
+      maskedPhone: maskPhoneNumber(guardian.primaryPhone),
+      email: guardian.email,
+      address: guardian.address
+    } : null,
+    latestSnapshot: latestSnap,
+    trend: studentSnapshots.map(sn => ({
+      date: sn.recordedAt ? sn.recordedAt.split('T')[0] : 'Recent',
+      percentage: sn.attendancePercentage,
+      isBelow: sn.isBelowThreshold
+    })),
+    subjectBreakdown: latestSnap?.subjectBreakdown || [],
+    contactHistory
+  };
+}
+
+export function logParentContact(contactPayload, actorUser) {
+  const { alertId, rollNumber, contactMethod, contactStatus, notes, followUpDate } = contactPayload;
+  if (!alertId || !rollNumber) {
+    return { success: false, error: 'Alert ID and Roll Number are required.' };
+  }
+
+  const userPermissions = actorUser?.permissions || DEFAULT_ROLE_PERMISSIONS[actorUser?.role] || [];
+  const canContact = actorUser?.role === 'SUPER_ADMIN' || 
+                     actorUser?.role === 'ADMIN' || 
+                     actorUser?.role === 'HOD' || 
+                     userPermissions.includes('attendance.contact_parent');
+
+  if (!canContact) {
+    return { success: false, error: 'Unauthorized to log parent contact.' };
+  }
+
+  const contacts = loadStore(STORAGE_KEYS.ATTENDANCE_PARENT_CONTACTS, INITIAL_ATTENDANCE_PARENT_CONTACTS);
+  const alerts = loadStore(STORAGE_KEYS.ATTENDANCE_ALERTS, INITIAL_ATTENDANCE_ALERTS);
+  const student = getStudentByRollNumber(rollNumber);
+  const guardian = student ? getStudentGuardian(student.id, rollNumber) : null;
+
+  const newLog = {
+    id: `cnt_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+    alertId,
+    studentId: student ? student.id : null,
+    rollNumber,
+    guardianName: guardian ? guardian.guardianName : 'Parent',
+    phoneContacted: guardian ? guardian.primaryPhone : 'Unstated',
+    contactedBy: `${actorUser?.name || 'Academic Staff'} (${actorUser?.role || 'Staff'})`,
+    contactMethod: contactMethod || 'PHONE',
+    contactStatus: contactStatus || 'CONTACTED',
+    notes: notes || '',
+    followUpDate: followUpDate || null,
+    contactedAt: new Date().toISOString()
+  };
+
+  contacts.unshift(newLog);
+  saveStore(STORAGE_KEYS.ATTENDANCE_PARENT_CONTACTS, contacts);
+
+  // Update alert status
+  const alertIdx = alerts.findIndex(a => a.id === alertId);
+  if (alertIdx !== -1) {
+    alerts[alertIdx] = {
+      ...alerts[alertIdx],
+      status: contactStatus === 'RESOLVED' ? 'RESOLVED' : 'PARENT_CONTACTED',
+      lastContactedAt: newLog.contactedAt,
+      lastContactStatus: contactStatus
+    };
+    saveStore(STORAGE_KEYS.ATTENDANCE_ALERTS, alerts);
+  }
+
+  addAuditLog('CONTACT', 'Parent Communication', `Logged parent contact for student ${rollNumber} (Status: ${contactStatus})`, actorUser);
+
+  return { success: true, log: newLog };
+}
+
+export function getAttendanceParentContacts(alertId = null) {
+  const contacts = loadStore(STORAGE_KEYS.ATTENDANCE_PARENT_CONTACTS, INITIAL_ATTENDANCE_PARENT_CONTACTS);
+  if (alertId) {
+    return contacts.filter(c => c.alertId === alertId);
+  }
+  return contacts;
+}
+
+export function getAttendanceImportHistory() {
+  return loadStore(STORAGE_KEYS.ATTENDANCE_IMPORT_JOBS, []);
+}
+
+export function exportAttendanceRiskList(alerts, format = 'csv', includeSensitive = false, actorUser = null) {
+  const userPermissions = actorUser?.permissions || DEFAULT_ROLE_PERMISSIONS[actorUser?.role] || [];
+  const canExportSensitive = (actorUser?.role === 'SUPER_ADMIN' || actorUser?.role === 'ADMIN' || userPermissions.includes('attendance.export_sensitive')) && includeSensitive;
+
+  const exportRows = alerts.map((a, idx) => ({
+    'S.No': idx + 1,
+    'Roll Number': a.rollNumber,
+    'Student Name': a.studentName,
+    'Department': a.department,
+    'Year / Sem': `${a.year} - ${a.semester}`,
+    'Section': a.section,
+    'Attendance %': `${a.attendancePercentage}%`,
+    'Threshold': `${a.threshold}%`,
+    'Shortfall': `${a.shortfall}%`,
+    'Risk Severity': a.riskSeverity,
+    'Mentor': a.mentorName,
+    'Parent / Guardian': a.guardianName || 'Not available',
+    'Contact Phone': canExportSensitive ? (a.guardianPhone || a.guardianMaskedPhone) : a.guardianMaskedPhone,
+    'Contact Status': a.status
+  }));
+
+  if (format === 'csv') {
+    exportToCSV(exportRows, `NEC_Attendance_Risk_List_${new Date().toISOString().split('T')[0]}.csv`);
+  } else if (format === 'excel') {
+    exportToExcel(exportRows, `NEC_Attendance_Risk_List_${new Date().toISOString().split('T')[0]}.xlsx`);
+  }
+  return exportRows;
+}
+
+export function generateParentContactSheetPDF(alerts, cohortMeta = {}, includeSensitive = true, actorUser = null) {
+  const userPermissions = actorUser?.permissions || DEFAULT_ROLE_PERMISSIONS[actorUser?.role] || [];
+  const canExportSensitive = (actorUser?.role === 'SUPER_ADMIN' || actorUser?.role === 'ADMIN' || userPermissions.includes('attendance.export_sensitive')) && includeSensitive;
+
+  const doc = new jsPDF('landscape');
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  // Header Banner
+  doc.setFillColor(7, 15, 30); // #070F1E
+  doc.rect(0, 0, pageWidth, 28, 'F');
+
+  doc.setTextColor(241, 196, 15); // Gold
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('NARASARAOPETA ENGINEERING COLLEGE (AUTONOMOUS)', pageWidth / 2, 11, { align: 'center' });
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text('ACADEMIC MONITORING & LOW ATTENDANCE PARENT CONTACT SHEET', pageWidth / 2, 19, { align: 'center' });
+
+  // Metadata ribbon
+  doc.setFillColor(248, 250, 252);
+  doc.rect(14, 32, pageWidth - 28, 12, 'F');
+  doc.setDrawColor(226, 232, 240);
+  doc.rect(14, 32, pageWidth - 28, 12, 'S');
+
+  doc.setTextColor(15, 23, 42);
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'bold');
+  const metaText = `Cohort: ${cohortMeta.departmentCode || 'CYS'} | Year: ${cohortMeta.year || 'III'} | Semester: ${cohortMeta.semester || 'III-I'} | Section: ${cohortMeta.section || 'A'} | Policy Threshold: < ${cohortMeta.threshold || 65}% | Total At-Risk: ${alerts.length}`;
+  doc.text(metaText, 18, 40);
+
+  const tableData = alerts.map((a, idx) => [
+    idx + 1,
+    a.rollNumber,
+    a.studentName,
+    `${a.department} ${a.year}-${a.section}`,
+    `${a.attendancePercentage}%`,
+    a.riskSeverity.replace('_', ' '),
+    a.mentorName,
+    a.guardianName || 'Not available',
+    canExportSensitive ? (a.guardianPhone || a.guardianMaskedPhone) : a.guardianMaskedPhone,
+    a.status.replace('_', ' ')
+  ]);
+
+  autoTable(doc, {
+    startY: 48,
+    head: [['S.No', 'Roll No', 'Student Name', 'Class/Sec', 'Att %', 'Risk Level', 'Mentor Faculty', 'Guardian Name', 'Parent Contact', 'Call Status']],
+    body: tableData,
+    theme: 'grid',
+    headStyles: {
+      fillColor: [11, 25, 44],
+      textColor: [255, 255, 255],
+      fontSize: 7.5,
+      fontStyle: 'bold'
+    },
+    bodyStyles: {
+      fontSize: 7,
+      textColor: [15, 23, 42]
+    },
+    alternateRowStyles: {
+      fillColor: [248, 250, 252]
+    },
+    margin: { left: 14, right: 14 }
+  });
+
+  const finalY = doc.lastAutoTable?.finalY || 160;
+  doc.setFontSize(7);
+  doc.setTextColor(100, 116, 139);
+  doc.text(`CONFIDENTIAL ACADEMIC RECORD — Generated by ${actorUser?.name || 'Academic Administrator'} on ${new Date().toLocaleString()}`, 14, finalY + 10);
+
+  doc.save(`NEC_Parent_Contact_Sheet_${cohortMeta.departmentCode || 'CYS'}_${cohortMeta.semester || 'III-I'}_${new Date().toISOString().split('T')[0]}.pdf`);
+  return doc;
+}
+
 
