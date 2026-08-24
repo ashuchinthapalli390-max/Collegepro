@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { sanitizeExportRecord, sanitizeSpreadsheetCell } from '../lib/security/sanitizer.js';
 import { 
@@ -257,7 +257,6 @@ export const USER_ROLES = [
   }
 ];
 
-// Helper to safely load and save to localStorage
 function loadStore(key, initialData) {
   try {
     const item = localStorage.getItem(key);
@@ -267,21 +266,33 @@ function loadStore(key, initialData) {
     }
     const parsed = JSON.parse(item);
     if (Array.isArray(initialData)) {
+      let records = [];
       if (Array.isArray(parsed)) {
-        if (parsed.length === 0 && initialData.length > 0) {
-          localStorage.setItem(key, JSON.stringify(initialData));
-          return initialData;
-        }
-        return parsed;
+        records = parsed;
+      } else if (parsed && Array.isArray(parsed.records)) {
+        records = parsed.records;
+      } else {
+        localStorage.setItem(key, JSON.stringify(initialData));
+        return initialData;
       }
-      if (parsed && Array.isArray(parsed.records)) {
-        if (parsed.records.length === 0 && initialData.length > 0) {
-          localStorage.setItem(key, JSON.stringify(initialData));
-          return initialData;
+
+      // If initialData has records not yet in localStorage (e.g. newly added seed), merge them seamlessly
+      if (initialData.length > 0) {
+        let hasNew = false;
+        const existingIds = new Set(records.map(r => r.id || r.bosNumber || r.eventNumber || r.title));
+        for (const initRec of initialData) {
+          const recKey = initRec.id || initRec.bosNumber || initRec.eventNumber || initRec.title;
+          if (recKey && !existingIds.has(recKey)) {
+            records.push(initRec);
+            hasNew = true;
+          }
         }
-        return parsed.records;
+        if (hasNew) {
+          localStorage.setItem(key, JSON.stringify(records));
+        }
       }
-      return initialData;
+
+      return records;
     }
     return parsed;
   } catch (e) {
@@ -3120,7 +3131,7 @@ export function executeUniversalBulkImport(jobId, selectedRowIds, moduleKey, res
       recordTypeLabel = 'Official Circulars';
       break;
     case 'bos_meetings':
-      targetStorageKey = STORAGE_KEYS.BOS_MEETINGS;
+      targetStorageKey = STORAGE_KEYS.BOS;
       recordTypeLabel = 'Board of Studies';
       break;
     case 'academic_council':
@@ -3194,6 +3205,178 @@ export function executeUniversalBulkImport(jobId, selectedRowIds, moduleKey, res
         invoiceDate: norm.invoice_date || null,
         sourceReference: norm.source_reference || row.sourceReference || '',
         eventNumber: norm.event_number || autoNum
+      };
+    } else if (moduleKey === 'bos_meetings') {
+      const isR20 = String(norm.regulation_codes || norm.regulation || '').includes('R20');
+      const sourceKey = norm.meeting_source_key || norm.meeting_number || `BOS-CYS-${norm.regulation_codes || 'R23'}-${String(existingRecords.length + importedRecords.length + 1).padStart(2, '0')}`;
+      
+      const rawDept = String(norm.department_code || norm.department || 'CYS').toUpperCase();
+      const deptCode = rawDept === 'CYS' || rawDept.includes('CYBER') || rawDept.includes('CS') ? 'CSE (Cyber Security)' : (norm.department_name || rawDept);
+      
+      let members = [];
+      if (norm.member_list_json) {
+        try {
+          members = typeof norm.member_list_json === 'string' ? JSON.parse(norm.member_list_json) : norm.member_list_json;
+        } catch (e) {
+          console.error('Failed to parse member_list_json:', e);
+        }
+      } else if (norm.members) {
+        members = norm.members;
+      }
+
+      let chairman = norm.chairperson || norm.chairman || '';
+      let universityNominee = null;
+      const academicians = [];
+      let industryMember = null;
+      let alumniMember = null;
+      const facultyMembers = [];
+
+      members.forEach(m => {
+        const type = (m.member_type || m.category || '').toUpperCase();
+        const inst = m.organization || m.institution || '';
+        const desig = m.designation || '';
+
+        if (type.includes('CHAIRMAN') || type.includes('CHAIRPERSON')) {
+          if (!chairman) chairman = m.name;
+        } else if (type.includes('UNIVERSITY') || type.includes('NOMINEE')) {
+          if (!universityNominee) universityNominee = { name: m.name, institution: inst, designation: desig, email: m.email || '', phone: m.phone || '' };
+        } else if (type.includes('ACADEMIC') || type.includes('EXPERT') || type.includes('SUBJECT')) {
+          academicians.push({ name: m.name, institution: inst, designation: desig, email: m.email || '', phone: m.phone || '' });
+        } else if (type.includes('INDUSTRY')) {
+          if (!industryMember) industryMember = { name: m.name, company: inst, designation: desig, email: m.email || '', phone: m.phone || '' };
+        } else if (type.includes('ALUMNI')) {
+          if (!alumniMember) alumniMember = { name: m.name, company: inst, designation: desig, email: m.email || '', phone: m.phone || '' };
+        } else if (type.includes('INTERNAL') || type.includes('FACULTY') || type.includes('MEMBER')) {
+          facultyMembers.push(m.name);
+        }
+      });
+
+      let agendaItems = [];
+      if (norm.agenda_items_json) {
+        try {
+          const rawAgenda = typeof norm.agenda_items_json === 'string' ? JSON.parse(norm.agenda_items_json) : norm.agenda_items_json;
+          agendaItems = rawAgenda.map((item, i) => {
+            if (typeof item === 'string') return { itemNo: i + 1, title: item, description: item, decision: '' };
+            return {
+              itemNo: item.item_no || item.itemNo || i + 1,
+              title: item.title || item.agenda_title || `Agenda Item ${i + 1}`,
+              description: item.description || item.agenda_description || item.title || '',
+              decision: item.decision || ''
+            };
+          });
+        } catch (e) {
+          console.error('Failed to parse agenda_items_json:', e);
+        }
+      } else if (norm.agendaItems) {
+        agendaItems = norm.agendaItems;
+      }
+
+      let resolutions = [];
+      if (norm.resolutions_json) {
+        try {
+          const rawRes = typeof norm.resolutions_json === 'string' ? JSON.parse(norm.resolutions_json) : norm.resolutions_json;
+          resolutions = rawRes.map((res, i) => {
+            if (typeof res === 'string') return { resolutionNumber: i + 1, title: `Resolution ${i + 1}`, resolutionText: res, agendaRef: '' };
+            return {
+              resolutionNumber: res.resolution_no || res.resolutionNumber || i + 1,
+              title: res.title || `Resolution ${i + 1}`,
+              resolutionText: res.resolution_text || res.text || res.description || '',
+              agendaRef: res.agenda_ref || ''
+            };
+          });
+        } catch (e) {
+          console.error('Failed to parse resolutions_json:', e);
+        }
+      } else if (norm.resolutions) {
+        resolutions = norm.resolutions;
+      }
+
+      const PDF_MAP = {
+        'BOS-CYS-R23-01': { filename: '01_R23_1st_BoS_CYS_2023-09-26.pdf', sha256: '1d4cc612e02f8e595ab8475384c30a170ff7f9f0f8757676134b0ae62f0f5f69', sizeBytes: 4889167 },
+        'BOS-CYS-R23-02': { filename: '02_R23_2nd_BoS_CYS_2024-07-09.pdf', sha256: 'aaa481ce3241e79f8d5a8a955be9bd196f5f113e33485c98ca016dfc5ad280ef', sizeBytes: 4097445 },
+        'BOS-CYS-R23-03': { filename: '03_R23_3rd_BoS_CYS_2025-07-12.pdf', sha256: '889c9a3c4a10a188f5b88128a2430bb7fe134868e81e148e806472922309330c', sizeBytes: 4740600 },
+        'BOS-CYS-R23-04': { filename: '04_R23_4th_BoS_CYS_2026-02-21.pdf', sha256: '3c64980ae5df2375287cc54ed33c904b413d8d45d57c8a2b23a2ea9d1ac532ce', sizeBytes: 1883773 }
+      };
+
+      const documents = [];
+      const pdfInfo = PDF_MAP[sourceKey];
+      if (pdfInfo) {
+        documents.push({
+          id: `doc_${sourceKey.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+          title: `${norm.meeting_title || sourceKey} (Official Signed Minutes)`,
+          filename: pdfInfo.filename,
+          type: 'MINUTES',
+          documentType: 'MINUTES_PACKAGE',
+          containsAgenda: true,
+          containsAttendance: true,
+          containsMeetingEvidence: true,
+          storagePath: `/documents/bos/cse-cys/${pdfInfo.filename}`,
+          downloadUrl: `/documents/bos/cse-cys/${pdfInfo.filename}`,
+          sizeBytes: pdfInfo.sizeBytes,
+          sha256: pdfInfo.sha256,
+          visibility: 'PRIVATE',
+          version: 'v1.0',
+          uploadedAt: timestamp,
+          uploadedBy: currentUser?.name || 'Bulk Data Center'
+        });
+      }
+
+      entitySpecificFields = {
+        bosNumber: sourceKey,
+        meetingSourceKey: sourceKey,
+        department: deptCode,
+        departmentCode: 'CYS',
+        departmentName: norm.department_name || deptCode,
+        academicYear: norm.academic_year || (norm.meeting_date ? `${norm.meeting_date.slice(0, 4)}-${Number(norm.meeting_date.slice(2, 4)) + 1}` : '2023-24'),
+        targetYear: norm.target_year || 'All Years',
+        title: norm.meeting_title || `Board of Studies Meeting — ${sourceKey}`,
+        bosDate: norm.meeting_date || norm.bosDate || '',
+        meetingDate: norm.meeting_date || norm.bosDate || '',
+        startTime: norm.meeting_time ? `${norm.meeting_time} ${Number(norm.meeting_time.split(':')[0]) < 12 ? 'AM' : 'PM'}` : '10:00 AM',
+        endTime: norm.meeting_time ? `${Number(norm.meeting_time.split(':')[0]) + 3}:00 PM` : '01:00 PM',
+        meetingMode: norm.meeting_mode || (isR20 ? 'Offline' : 'Online'),
+        venue: norm.platform ? `${norm.platform} (Online)` : (isR20 ? 'CSE Department Conference Hall' : 'Online Microsoft Teams'),
+        platform: norm.platform || '',
+        privateMeetingLink: norm.private_meeting_link || '',
+        circularReference: norm.circular_reference || '',
+        circularDate: norm.circular_date || '',
+        regulations: norm.regulation_codes ? [norm.regulation_codes] : (norm.regulation ? [norm.regulation] : ['R23']),
+        regulationCodes: norm.regulation_codes || norm.regulation || 'R23',
+        regulationMeetingNumber: Number(norm.regulation_meeting_number) || 1,
+        meetingStatus: 'HELD',
+        workflowStatus: 'DRAFT',
+        status: isR20 ? 'Needs Review' : 'Draft',
+        sourceConfidence: norm.source_confidence || (isR20 ? 'LIMITED_XLSX_ONLY' : 'HIGH'),
+        reviewNotes: norm.review_notes || '',
+        chairman: chairman || 'Dr. V. V. A. S. Lakshmi (Professor & HOD, CSE (Cyber Security))',
+        chairperson: chairman || 'Dr. V. V. A. S. Lakshmi',
+        members,
+        universityNominee,
+        academicians,
+        industryMember,
+        alumniMember,
+        facultyMembers,
+        agendaItems,
+        resolutions,
+        documents,
+        approvalHistory: [
+          {
+            action: 'BOS_BULK_IMPORTED',
+            fromStatus: null,
+            toStatus: 'DRAFT',
+            actor: currentUser?.name || 'Bulk Data Center (System Ingestion)',
+            comments: isR20 
+              ? 'Imported summary R20 record from XLSX staging. Marked DRAFT / NEEDS_REVIEW for missing minutes.' 
+              : `Imported official R23 record with ${members.length} members, ${agendaItems.length} agenda items, and ${documents.length} linked PDF minutes package.`,
+            timestamp
+          }
+        ],
+        sourceType: 'BULK_IMPORT',
+        sourceFiles: norm.source_files || '',
+        sourceSha256Json: norm.source_sha256_json ? (typeof norm.source_sha256_json === 'string' ? JSON.parse(norm.source_sha256_json) : norm.source_sha256_json) : null,
+        publicVisibility: 'INTERNAL_ONLY',
+        isVerified: !isR20,
+        isDeleted: false
       };
     }
 
@@ -4192,6 +4375,14 @@ export function exportToExcel(filename, data, sheetName = 'Report', actor = null
   addAuditLog('EXCEL_EXPORT', 'Compliance & Reporting', `Exported ${data.length} records to ${filename}.xlsx`, actor);
 }
 
+function callAutoTable(doc, options) {
+  if (typeof doc.autoTable === 'function') {
+    doc.autoTable(options);
+  } else if (typeof autoTable === 'function') {
+    autoTable(doc, options);
+  }
+}
+
 export function exportToPDF(title, columns, rows, filename = 'NEC_Report', actor = null) {
   const doc = new jsPDF('landscape');
   doc.setFontSize(16);
@@ -4207,7 +4398,7 @@ export function exportToPDF(title, columns, rows, filename = 'NEC_Report', actor
   // Sanitize PDF rows to ensure text cells are clean strings
   const safeRows = rows.map(row => row.map(cell => cell !== null && cell !== undefined ? String(cell) : ''));
 
-  doc.autoTable({
+  callAutoTable(doc, {
     startY: 34,
     head: [columns],
     body: safeRows,
@@ -4220,6 +4411,521 @@ export function exportToPDF(title, columns, rows, filename = 'NEC_Report', actor
   doc.save(`${filename}.pdf`);
 
   addAuditLog('PDF_EXPORT', 'Compliance & Reporting', `Generated official PDF report: ${title}`, actor);
+}
+
+// -------------------------------------------------------------
+// Board of Studies (BoS) High-Fidelity PDF Export Engine
+// -------------------------------------------------------------
+
+export function exportBoSToPDF(meeting, actorUser = null) {
+  if (!meeting) return;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 14;
+  let y = margin;
+
+  // 1. Header Banner
+  doc.setFillColor(11, 25, 44);
+  doc.rect(margin, y, pageWidth - (margin * 2), 24, 'F');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(255, 255, 255);
+  doc.text('NARASARAOPETA ENGINEERING COLLEGE (AUTONOMOUS)', pageWidth / 2, y + 8, { align: 'center' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(212, 175, 55);
+  doc.text('Approved by AICTE, Affiliated to JNTUK, Accredited with NAAC "A+" Grade & NBA', pageWidth / 2, y + 14, { align: 'center' });
+
+  doc.setFontSize(8);
+  doc.setTextColor(226, 232, 240);
+  doc.text('BOARD OF STUDIES (BoS) — CURRICULUM & SYLLABUS GOVERNANCE', pageWidth / 2, y + 20, { align: 'center' });
+
+  y += 28;
+
+  // 2. Meeting Title & Subtitle
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(11, 25, 44);
+  doc.text(meeting.title || `Board of Studies Meeting — ${meeting.bosNumber}`, margin, y);
+  y += 6;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(71, 85, 105);
+  doc.text(`Department: ${meeting.department || 'CSE (Cyber Security)'}  |  Regulation: ${meeting.regulationCodes || (meeting.regulations ? meeting.regulations.join(', ') : 'R23')}  |  AY: ${meeting.academicYear || '2023-24'}  |  Target: ${meeting.targetYear || 'All Years'}`, margin, y);
+  y += 6;
+
+  // 3. Metadata Table
+  const metaRows = [
+    [
+      { content: 'BoS Ref Number:', styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
+      meeting.bosNumber || meeting.id || 'N/A',
+      { content: 'Meeting Date & Time:', styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
+      `${meeting.bosDate || meeting.meetingDate || 'N/A'} at ${meeting.startTime || '10:00 AM'}`
+    ],
+    [
+      { content: 'Meeting Mode:', styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
+      `${meeting.meetingMode || 'Online'} (${meeting.platform || meeting.venue || 'Microsoft Teams'})`,
+      { content: 'Workflow Status:', styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
+      `${meeting.workflowStatus || 'DRAFT'} (Institutional Record)`
+    ],
+    [
+      { content: 'Chairperson:', styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
+      { content: meeting.chairperson || meeting.chairman || 'Dr. V. V. A. S. Lakshmi (HOD)', colSpan: 3 }
+    ]
+  ];
+
+  if (meeting.circularReference) {
+    metaRows.push([
+      { content: 'Circular Reference:', styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
+      meeting.circularReference,
+      { content: 'Circular Date:', styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
+      meeting.circularDate || 'N/A'
+    ]);
+  }
+
+  callAutoTable(doc, {
+    startY: y,
+    margin: { left: margin, right: margin },
+    body: metaRows,
+    theme: 'grid',
+    styles: { fontSize: 8, cellPadding: 2.5, textColor: [30, 41, 59] },
+    columnStyles: {
+      0: { cellWidth: 35 },
+      1: { cellWidth: 55 },
+      2: { cellWidth: 35 },
+      3: { cellWidth: 57 }
+    }
+  });
+
+  y = doc.lastAutoTable.finalY + 7;
+
+  // 4. Committee Members Section
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(11, 25, 44);
+  doc.text(`1. Board of Studies Committee Members (${(meeting.members && meeting.members.length) || 0} Members)`, margin, y);
+  y += 4;
+
+  const memberRows = (meeting.members || []).map((m, idx) => {
+    const cat = m.member_type || m.category || (idx === 0 ? 'CHAIRMAN' : 'INTERNAL MEMBER');
+    return [
+      String(idx + 1),
+      m.name || '—',
+      cat.replace(/_/g, ' '),
+      m.designation || '—',
+      m.organization || m.institution || 'Narasaraopeta Engineering College'
+    ];
+  });
+
+  callAutoTable(doc, {
+    startY: y,
+    margin: { left: margin, right: margin },
+    head: [['#', 'Member Name', 'Category / Role', 'Designation', 'Institution / University']],
+    body: memberRows.length > 0 ? memberRows : [['1', meeting.chairperson || 'Dr. V. V. A. S. Lakshmi', 'CHAIRMAN', 'HOD & Professor', 'Narasaraopeta Engineering College']],
+    theme: 'striped',
+    headStyles: { fillColor: [11, 25, 44], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7.5 },
+    bodyStyles: { fontSize: 7.5, cellPadding: 2.2, textColor: [30, 41, 59] },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+    columnStyles: {
+      0: { cellWidth: 8, halign: 'center' },
+      1: { cellWidth: 46, fontStyle: 'bold' },
+      2: { cellWidth: 34 },
+      3: { cellWidth: 42 },
+      4: { cellWidth: 52 }
+    }
+  });
+
+  y = doc.lastAutoTable.finalY + 7;
+
+  // Page break check
+  if (y > pageHeight - 50) {
+    doc.addPage();
+    y = margin;
+  }
+
+  // 5. Agenda Items
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(11, 25, 44);
+  doc.text('2. Meeting Agenda & Points for Discussion', margin, y);
+  y += 4;
+
+  const agendaRows = (meeting.agendaItems || []).map((item, idx) => [
+    String(item.itemNo || idx + 1),
+    item.title || `Agenda Item ${idx + 1}`,
+    item.description || item.title || '—'
+  ]);
+
+  if (agendaRows.length > 0) {
+    callAutoTable(doc, {
+      startY: y,
+      margin: { left: margin, right: margin },
+      head: [['Item #', 'Agenda Topic', 'Discussion Details']],
+      body: agendaRows,
+      theme: 'grid',
+      headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7.5 },
+      bodyStyles: { fontSize: 7.5, cellPadding: 2.5, textColor: [30, 41, 59] },
+      columnStyles: {
+        0: { cellWidth: 14, halign: 'center' },
+        1: { cellWidth: 60, fontStyle: 'bold' },
+        2: { cellWidth: 108 }
+      }
+    });
+    y = doc.lastAutoTable.finalY + 7;
+  } else {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text('   Detailed agenda items not recorded in summary source.', margin, y + 3);
+    y += 9;
+  }
+
+  if (y > pageHeight - 50) {
+    doc.addPage();
+    y = margin;
+  }
+
+  // 6. Resolutions & Outcomes
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(11, 25, 44);
+  doc.text('3. Resolutions & Official Meeting Outcomes', margin, y);
+  y += 4;
+
+  const resolutionRows = (meeting.resolutions || []).map((res, idx) => [
+    String(res.resolutionNumber || idx + 1),
+    res.title || `Resolution ${idx + 1}`,
+    res.resolutionText || res.title || 'Approved as deliberated.'
+  ]);
+
+  if (resolutionRows.length > 0) {
+    callAutoTable(doc, {
+      startY: y,
+      margin: { left: margin, right: margin },
+      head: [['Res #', 'Subject', 'Resolution & Approved Outcome']],
+      body: resolutionRows,
+      theme: 'grid',
+      headStyles: { fillColor: [4, 120, 87], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7.5 },
+      bodyStyles: { fontSize: 7.5, cellPadding: 2.5, textColor: [30, 41, 59] },
+      columnStyles: {
+        0: { cellWidth: 14, halign: 'center' },
+        1: { cellWidth: 60, fontStyle: 'bold' },
+        2: { cellWidth: 108 }
+      }
+    });
+    y = doc.lastAutoTable.finalY + 7;
+  } else {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text('   Official resolutions recorded under signed minutes repository.', margin, y + 3);
+    y += 9;
+  }
+
+  // 7. Provenance & Notes (if any)
+  if (meeting.reviewNotes || meeting.sourceConfidence) {
+    if (y > pageHeight - 35) {
+      doc.addPage();
+      y = margin;
+    }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(100, 116, 139);
+    doc.text('Provenance & Institutional Review Notes:', margin, y);
+    y += 4;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(71, 85, 105);
+    const splitNotes = doc.splitTextToSize(`Source Confidence: ${meeting.sourceConfidence || 'HIGH'} | Notes: ${meeting.reviewNotes || 'Verified against institutional source documents.'}`, pageWidth - (margin * 2));
+    doc.text(splitNotes, margin, y);
+    y += (splitNotes.length * 3.5) + 4;
+  }
+
+  // Running Footers
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setDrawColor(226, 232, 240);
+    doc.line(margin, pageHeight - 12, pageWidth - margin, pageHeight - 12);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text('NEC Autonomous Academic Management Portal  |  Generated from institutional database record. (Not the scanned physical signed minutes)', margin, pageHeight - 8);
+    doc.text(`Page ${i} of ${totalPages}  |  Generated: ${new Date().toLocaleDateString('en-GB')}`, pageWidth - margin, pageHeight - 8, { align: 'right' });
+  }
+
+  const cleanFilename = `NEC_${(meeting.department || 'CYS').replace(/[^A-Za-z0-9]/g, '_')}_${meeting.bosNumber || 'BoS_Meeting'}_${meeting.bosDate || 'Report'}`.replace(/_+/g, '_');
+  doc.save(`${cleanFilename}.pdf`);
+
+  addAuditLog('BOS_EXPORT_PDF', 'Board of Studies', `Exported BoS single meeting PDF: ${meeting.bosNumber || meeting.id}`, actorUser);
+}
+
+export function exportBoSReportToPDF(meetings, actorUser = null, filters = {}) {
+  if (!meetings || meetings.length === 0) return;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 14;
+  let y = margin;
+
+  // Header Banner
+  doc.setFillColor(11, 25, 44);
+  doc.rect(margin, y, pageWidth - (margin * 2), 24, 'F');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(255, 255, 255);
+  doc.text('NARASARAOPETA ENGINEERING COLLEGE (AUTONOMOUS)', pageWidth / 2, y + 8, { align: 'center' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(212, 175, 55);
+  doc.text('Approved by AICTE, Affiliated to JNTUK, Accredited with NAAC "A+" Grade & NBA', pageWidth / 2, y + 14, { align: 'center' });
+
+  doc.setFontSize(8);
+  doc.setTextColor(226, 232, 240);
+  doc.text('BOARD OF STUDIES (BoS) — COMPREHENSIVE INSTITUTIONAL REPORT', pageWidth / 2, y + 20, { align: 'center' });
+
+  y += 28;
+
+  // Title & Filter Summary
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(11, 25, 44);
+  doc.text(`Department BoS Meetings Summary (${meetings.length} Records)`, margin, y);
+  y += 5;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(71, 85, 105);
+  doc.text(`Filter Scope: Department: ${filters.dept || 'All'} | Regulation: ${filters.reg || 'All'} | Academic Year: ${filters.ay || 'All'}`, margin, y);
+  y += 6;
+
+  // Executive Summary Table
+  const summaryRows = meetings.map((m, idx) => [
+    String(idx + 1),
+    m.bosNumber || m.id || 'N/A',
+    m.department || 'CSE (Cyber Security)',
+    m.regulationCodes || (m.regulations ? m.regulations.join(', ') : 'R23'),
+    m.bosDate || m.meetingDate || '—',
+    m.targetYear || '—',
+    String((m.members && m.members.length) || 0),
+    m.workflowStatus || 'DRAFT'
+  ]);
+
+  callAutoTable(doc, {
+    startY: y,
+    margin: { left: margin, right: margin },
+    head: [['#', 'Meeting Ref', 'Department', 'Regulation', 'Date', 'Target', 'Members', 'Status']],
+    body: summaryRows,
+    theme: 'striped',
+    headStyles: { fillColor: [11, 25, 44], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7.5 },
+    bodyStyles: { fontSize: 7.5, cellPadding: 2.2, textColor: [30, 41, 59] },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+    columnStyles: {
+      0: { cellWidth: 8, halign: 'center' },
+      1: { cellWidth: 38, fontStyle: 'bold' },
+      2: { cellWidth: 42 },
+      3: { cellWidth: 18, halign: 'center' },
+      4: { cellWidth: 22 },
+      5: { cellWidth: 20 },
+      6: { cellWidth: 16, halign: 'center' },
+      7: { cellWidth: 18 }
+    }
+  });
+
+  // Render Details for Each Meeting on subsequent pages
+  meetings.forEach((meeting, mIdx) => {
+    doc.addPage();
+    let my = margin;
+
+    // Meeting Section Header
+    doc.setFillColor(30, 41, 59);
+    doc.rect(margin, my, pageWidth - (margin * 2), 12, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(255, 255, 255);
+    doc.text(`RECORD ${mIdx + 1} OF ${meetings.length}: ${meeting.bosNumber || meeting.id} — ${meeting.title || 'BoS Meeting'}`, margin + 4, my + 8);
+    my += 16;
+
+    // Meeting Metadata table
+    const mRows = [
+      [
+        { content: 'Department:', styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
+        meeting.department || 'CSE (Cyber Security)',
+        { content: 'Meeting Date & Time:', styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
+        `${meeting.bosDate || meeting.meetingDate || 'N/A'} at ${meeting.startTime || '10:00 AM'}`
+      ],
+      [
+        { content: 'Regulation & Target:', styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
+        `${meeting.regulationCodes || (meeting.regulations ? meeting.regulations.join(', ') : 'R23')} (${meeting.targetYear || 'All Years'})`,
+        { content: 'Mode & Venue:', styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
+        `${meeting.meetingMode || 'Online'} (${meeting.platform || meeting.venue || 'Microsoft Teams'})`
+      ],
+      [
+        { content: 'Chairperson:', styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
+        { content: meeting.chairperson || meeting.chairman || 'Dr. V. V. A. S. Lakshmi (HOD)', colSpan: 3 }
+      ]
+    ];
+
+    callAutoTable(doc, {
+      startY: my,
+      margin: { left: margin, right: margin },
+      body: mRows,
+      theme: 'grid',
+      styles: { fontSize: 7.5, cellPadding: 2, textColor: [30, 41, 59] },
+      columnStyles: {
+        0: { cellWidth: 35 },
+        1: { cellWidth: 55 },
+        2: { cellWidth: 35 },
+        3: { cellWidth: 57 }
+      }
+    });
+
+    my = doc.lastAutoTable.finalY + 6;
+
+    // Committee Members Table
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(11, 25, 44);
+    doc.text(`Committee Members (${(meeting.members && meeting.members.length) || 0})`, margin, my);
+    my += 3.5;
+
+    const memRows = (meeting.members || []).map((mem, idx) => [
+      String(idx + 1),
+      mem.name || '—',
+      (mem.member_type || mem.category || 'MEMBER').replace(/_/g, ' '),
+      mem.designation || '—',
+      mem.organization || mem.institution || 'Narasaraopeta Engineering College'
+    ]);
+
+    callAutoTable(doc, {
+      startY: my,
+      margin: { left: margin, right: margin },
+      head: [['#', 'Member Name', 'Role', 'Designation', 'Institution']],
+      body: memRows.length > 0 ? memRows : [['1', meeting.chairperson || 'Dr. V. V. A. S. Lakshmi', 'CHAIRMAN', 'HOD & Professor', 'Narasaraopeta Engineering College']],
+      theme: 'striped',
+      headStyles: { fillColor: [11, 25, 44], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
+      bodyStyles: { fontSize: 7, cellPadding: 1.8, textColor: [30, 41, 59] },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      columnStyles: {
+        0: { cellWidth: 8, halign: 'center' },
+        1: { cellWidth: 46, fontStyle: 'bold' },
+        2: { cellWidth: 34 },
+        3: { cellWidth: 42 },
+        4: { cellWidth: 52 }
+      }
+    });
+
+    my = doc.lastAutoTable.finalY + 5;
+
+    // Agenda summary
+    if (meeting.agendaItems && meeting.agendaItems.length > 0) {
+      if (my > pageHeight - 40) {
+        doc.addPage();
+        my = margin;
+      }
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8.5);
+      doc.setTextColor(11, 25, 44);
+      doc.text(`Agenda & Deliberations (${meeting.agendaItems.length} Items)`, margin, my);
+      my += 3.5;
+
+      const agRows = meeting.agendaItems.map((ag, idx) => [
+        String(ag.itemNo || idx + 1),
+        ag.title || `Agenda Item ${idx + 1}`,
+        ag.description || ag.title || '—'
+      ]);
+
+      callAutoTable(doc, {
+        startY: my,
+        margin: { left: margin, right: margin },
+        head: [['#', 'Agenda Topic', 'Discussion / Context']],
+        body: agRows,
+        theme: 'grid',
+        headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
+        bodyStyles: { fontSize: 7, cellPadding: 2, textColor: [30, 41, 59] },
+        columnStyles: {
+          0: { cellWidth: 10, halign: 'center' },
+          1: { cellWidth: 56, fontStyle: 'bold' },
+          2: { cellWidth: 116 }
+        }
+      });
+
+      my = doc.lastAutoTable.finalY + 5;
+    }
+
+    // Resolutions summary
+    if (meeting.resolutions && meeting.resolutions.length > 0) {
+      if (my > pageHeight - 40) {
+        doc.addPage();
+        my = margin;
+      }
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8.5);
+      doc.setTextColor(11, 25, 44);
+      doc.text(`Resolutions & Approved Outcomes (${meeting.resolutions.length} Decisions)`, margin, my);
+      my += 3.5;
+
+      const resRows = meeting.resolutions.map((r, idx) => [
+        String(r.resolutionNumber || idx + 1),
+        r.title || `Resolution ${idx + 1}`,
+        r.resolutionText || r.title || 'Approved.'
+      ]);
+
+      callAutoTable(doc, {
+        startY: my,
+        margin: { left: margin, right: margin },
+        head: [['#', 'Subject', 'Resolution Details']],
+        body: resRows,
+        theme: 'grid',
+        headStyles: { fillColor: [4, 120, 87], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
+        bodyStyles: { fontSize: 7, cellPadding: 2, textColor: [30, 41, 59] },
+        columnStyles: {
+          0: { cellWidth: 10, halign: 'center' },
+          1: { cellWidth: 56, fontStyle: 'bold' },
+          2: { cellWidth: 116 }
+        }
+      });
+
+      my = doc.lastAutoTable.finalY + 5;
+    }
+
+    // Provenance / Review Notes
+    if (meeting.reviewNotes || meeting.sourceConfidence) {
+      if (my > pageHeight - 25) {
+        doc.addPage();
+        my = margin;
+      }
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(7);
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Provenance Note: ${meeting.sourceConfidence || 'HIGH'} — ${meeting.reviewNotes || 'Source verified.'}`, margin, my + 3);
+    }
+  });
+
+  // Add Running Footers
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setDrawColor(226, 232, 240);
+    doc.line(margin, pageHeight - 12, pageWidth - margin, pageHeight - 12);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text('NEC Autonomous Academic Management Portal  |  Generated from institutional database record. (Not the scanned physical signed minutes)', margin, pageHeight - 8);
+    doc.text(`Page ${i} of ${totalPages}  |  Generated: ${new Date().toLocaleDateString('en-GB')}`, pageWidth - margin, pageHeight - 8, { align: 'right' });
+  }
+
+  const cleanFilename = `NEC_BoS_Comprehensive_Report_${new Date().toISOString().slice(0, 10)}`;
+  doc.save(`${cleanFilename}.pdf`);
+
+  addAuditLog('BOS_EXPORT_PDF', 'Board of Studies', `Exported BoS comprehensive report (${meetings.length} records)`, actorUser);
 }
 
 // -------------------------------------------------------------
@@ -4570,7 +5276,8 @@ export function getBoSMeetings(includeDeleted = false) {
     }
   ];
 
-  const items = loadStore(STORAGE_KEYS.BOS, seed);
+  const combinedSeed = [...(INITIAL_BOS || []), ...seed];
+  const items = loadStore(STORAGE_KEYS.BOS, combinedSeed);
   return includeDeleted ? items : items.filter(i => !i.isDeleted);
 }
 

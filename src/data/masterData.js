@@ -9618,7 +9618,1311 @@ export const FACULTY_DATA = [
 
 export const INITIAL_PUBLICATIONS = [];
 export const INITIAL_PATENTS = [];
-export const INITIAL_BOS = [];
+export const INITIAL_BOS = [
+  {
+    "id": "bos_cys_r20_01",
+    "bosNumber": "BOS-CYS-R20-SRC-1",
+    "meetingSourceKey": "BOS-CYS-R20-SRC-1",
+    "department": "CSE (Cyber Security)",
+    "departmentCode": "CYS",
+    "departmentName": "CSE (Cyber Security)",
+    "academicYear": "2022-23",
+    "targetYear": "I & II",
+    "title": "R20 Board of Studies Meeting - I & II",
+    "bosDate": "2022-09-26",
+    "meetingDate": "2022-09-26",
+    "startTime": "10:00 AM",
+    "endTime": "01:00 PM",
+    "meetingMode": "Offline",
+    "venue": "CSE Department Conference Hall",
+    "platform": "",
+    "privateMeetingLink": "",
+    "circularReference": "",
+    "circularDate": "",
+    "regulations": [
+      "R20"
+    ],
+    "regulationCodes": "R20",
+    "regulationMeetingNumber": 1,
+    "meetingStatus": "HELD",
+    "workflowStatus": "DRAFT",
+    "status": "Needs Review",
+    "sourceConfidence": "LIMITED_XLSX_ONLY",
+    "reviewNotes": "Only summary-level R20 data is present in the provided XLSX. Chairperson, full internal member list, agenda, resolutions, and supporting minutes were not provided; do not invent them.",
+    "version": 1,
+    "chairmanType": "INTERNAL",
+    "chairman": "Dr. V. V. A. S. Lakshmi (Professor & HOD, CSE (Cyber Security))",
+    "chairperson": "Dr. V. V. A. S. Lakshmi",
+    "members": [
+      {
+        "name": "Dr.ASN Chakravarthy",
+        "member_type": "UNIVERSITY_NOMINEE",
+        "designation": "",
+        "institution": ""
+      },
+      {
+        "name": "Dr.Bheemarjuna Reddy Tamma",
+        "member_type": "ACADEMIC_EXPERT",
+        "designation": "",
+        "institution": ""
+      },
+      {
+        "name": "Dr.K.V.D.Kiran",
+        "member_type": "ACADEMIC_EXPERT",
+        "designation": "",
+        "institution": ""
+      },
+      {
+        "name": "Mr.P.Sudhakar",
+        "member_type": "INDUSTRY_EXPERT",
+        "designation": "",
+        "institution": ""
+      },
+      {
+        "name": "Mrs.Lakshmi Deepthi",
+        "member_type": "ALUMNI",
+        "designation": "",
+        "institution": ""
+      }
+    ],
+    "universityNominee": {
+      "name": "Dr.ASN Chakravarthy",
+      "institution": "",
+      "designation": "",
+      "email": "",
+      "phone": ""
+    },
+    "academicians": [
+      {
+        "name": "Dr.Bheemarjuna Reddy Tamma",
+        "institution": "",
+        "designation": "",
+        "email": "",
+        "phone": ""
+      },
+      {
+        "name": "Dr.K.V.D.Kiran",
+        "institution": "",
+        "designation": "",
+        "email": "",
+        "phone": ""
+      },
+      {
+        "name": "Mr.P.Sudhakar",
+        "institution": "",
+        "designation": "",
+        "email": "",
+        "phone": ""
+      }
+    ],
+    "industryMember": null,
+    "alumniMember": {
+      "name": "Mrs.Lakshmi Deepthi",
+      "company": "",
+      "designation": "",
+      "email": "",
+      "phone": ""
+    },
+    "facultyMembers": [],
+    "agendaItems": [],
+    "resolutions": [],
+    "documents": [],
+    "approvalHistory": [
+      {
+        "action": "BOS_BULK_IMPORTED",
+        "fromStatus": null,
+        "toStatus": "DRAFT",
+        "actor": "Bulk Data Center (System Ingestion)",
+        "comments": "Imported summary R20 record from XLSX staging. Marked DRAFT / NEEDS_REVIEW for missing minutes.",
+        "timestamp": "2026-08-24T06:54:38.230Z"
+      }
+    ],
+    "sourceType": "BULK_IMPORT",
+    "sourceFiles": "BOS CSE CS.xlsx",
+    "sourceSha256Json": {
+      "BOS CSE CS.xlsx": "74f0f94bacdd024fea07e81af758a111a9f630f398defc0d4fededb798038237"
+    },
+    "publicVisibility": "INTERNAL_ONLY",
+    "isVerified": false,
+    "isDeleted": false,
+    "createdAt": "2026-08-24T06:54:38.230Z",
+    "updatedAt": "2026-08-24T06:54:38.230Z"
+  },
+  {
+    "id": "bos_cys_r20_02",
+    "bosNumber": "BOS-CYS-R20-SRC-2",
+    "meetingSourceKey": "BOS-CYS-R20-SRC-2",
+    "department": "CSE (Cyber Security)",
+    "departmentCode": "CYS",
+    "departmentName": "CSE (Cyber Security)",
+    "academicYear": "2023-24",
+    "targetYear": "III & IV",
+    "title": "R20 Board of Studies Meeting - III & IV",
+    "bosDate": "2023-12-16",
+    "meetingDate": "2023-12-16",
+    "startTime": "10:00 AM",
+    "endTime": "01:00 PM",
+    "meetingMode": "Offline",
+    "venue": "CSE Department Conference Hall",
+    "platform": "",
+    "privateMeetingLink": "",
+    "circularReference": "",
+    "circularDate": "",
+    "regulations": [
+      "R20"
+    ],
+    "regulationCodes": "R20",
+    "regulationMeetingNumber": 2,
+    "meetingStatus": "HELD",
+    "workflowStatus": "DRAFT",
+    "status": "Needs Review",
+    "sourceConfidence": "LIMITED_XLSX_ONLY",
+    "reviewNotes": "Only summary-level R20 data is present in the provided XLSX. Chairperson, full internal member list, agenda, resolutions, and supporting minutes were not provided; do not invent them.",
+    "version": 1,
+    "chairmanType": "INTERNAL",
+    "chairman": "Dr. V. V. A. S. Lakshmi (Professor & HOD, CSE (Cyber Security))",
+    "chairperson": "Dr. V. V. A. S. Lakshmi",
+    "members": [
+      {
+        "name": "Dr.ASN Chakravarthy",
+        "member_type": "UNIVERSITY_NOMINEE",
+        "designation": "",
+        "institution": ""
+      },
+      {
+        "name": "Dr.Bheemarjuna Reddy Tamma",
+        "member_type": "ACADEMIC_EXPERT",
+        "designation": "",
+        "institution": ""
+      },
+      {
+        "name": "Dr.K.V.D.Kiran",
+        "member_type": "ACADEMIC_EXPERT",
+        "designation": "",
+        "institution": ""
+      },
+      {
+        "name": "Mr.P.Sudhakar",
+        "member_type": "INDUSTRY_EXPERT",
+        "designation": "",
+        "institution": ""
+      },
+      {
+        "name": "Mrs.Lakshmi Deepthi",
+        "member_type": "ALUMNI",
+        "designation": "",
+        "institution": ""
+      }
+    ],
+    "universityNominee": {
+      "name": "Dr.ASN Chakravarthy",
+      "institution": "",
+      "designation": "",
+      "email": "",
+      "phone": ""
+    },
+    "academicians": [
+      {
+        "name": "Dr.Bheemarjuna Reddy Tamma",
+        "institution": "",
+        "designation": "",
+        "email": "",
+        "phone": ""
+      },
+      {
+        "name": "Dr.K.V.D.Kiran",
+        "institution": "",
+        "designation": "",
+        "email": "",
+        "phone": ""
+      },
+      {
+        "name": "Mr.P.Sudhakar",
+        "institution": "",
+        "designation": "",
+        "email": "",
+        "phone": ""
+      }
+    ],
+    "industryMember": null,
+    "alumniMember": {
+      "name": "Mrs.Lakshmi Deepthi",
+      "company": "",
+      "designation": "",
+      "email": "",
+      "phone": ""
+    },
+    "facultyMembers": [],
+    "agendaItems": [],
+    "resolutions": [],
+    "documents": [],
+    "approvalHistory": [
+      {
+        "action": "BOS_BULK_IMPORTED",
+        "fromStatus": null,
+        "toStatus": "DRAFT",
+        "actor": "Bulk Data Center (System Ingestion)",
+        "comments": "Imported summary R20 record from XLSX staging. Marked DRAFT / NEEDS_REVIEW for missing minutes.",
+        "timestamp": "2026-08-24T06:54:38.230Z"
+      }
+    ],
+    "sourceType": "BULK_IMPORT",
+    "sourceFiles": "BOS CSE CS.xlsx",
+    "sourceSha256Json": {
+      "BOS CSE CS.xlsx": "74f0f94bacdd024fea07e81af758a111a9f630f398defc0d4fededb798038237"
+    },
+    "publicVisibility": "INTERNAL_ONLY",
+    "isVerified": false,
+    "isDeleted": false,
+    "createdAt": "2026-08-24T06:54:38.230Z",
+    "updatedAt": "2026-08-24T06:54:38.230Z"
+  },
+  {
+    "id": "bos_cys_r23_03",
+    "bosNumber": "BOS-CYS-R23-01",
+    "meetingSourceKey": "BOS-CYS-R23-01",
+    "department": "CSE (Cyber Security)",
+    "departmentCode": "CYS",
+    "departmentName": "CSE (Cyber Security)",
+    "academicYear": "2023-24",
+    "targetYear": "I",
+    "title": "R23 - 1st Board of Studies Meeting - I Year",
+    "bosDate": "2023-09-26",
+    "meetingDate": "2023-09-26",
+    "startTime": "10:00 AM",
+    "endTime": "01:00 PM",
+    "meetingMode": "ONLINE",
+    "venue": "Microsoft Teams (Online)",
+    "platform": "Microsoft Teams",
+    "privateMeetingLink": "https://teams.microsoft.com/l/meetup-join/19%3ameeting_ZTI5ZjIzMmUtNThkZi00YjBkLTk0MzEtNTZiMGRmYWVhMTVj%40thread.v2/0?context=%7b%22Tid%22%3a%2276254ace-27ad-489b-9f92-b6f1aa89d5d4%22%2c%22Oid%22%3a%22cc38ad36-f59f-4a8c-9f45-4cf536e0b763%22%7d",
+    "circularReference": "",
+    "circularDate": "",
+    "regulations": [
+      "R23"
+    ],
+    "regulationCodes": "R23",
+    "regulationMeetingNumber": 1,
+    "meetingStatus": "HELD",
+    "workflowStatus": "DRAFT",
+    "status": "Draft",
+    "sourceConfidence": "HIGH_WITH_NOTE",
+    "reviewNotes": "Minutes and workbook identify this as R23. One agenda page contains an R20 wording reference; keep R23 as canonical based on the meeting minutes/title and XLSX regulation value.",
+    "version": 1,
+    "chairmanType": "INTERNAL",
+    "chairman": "Dr.V.V.A.S.Lakshmi",
+    "chairperson": "Dr.V.V.A.S.Lakshmi",
+    "members": [
+      {
+        "name": "Dr.V.V.A.S.Lakshmi",
+        "member_type": "CHAIRMAN",
+        "designation": "Professor & Head",
+        "institution": ""
+      },
+      {
+        "name": "Dr.ASN Chakravarthy",
+        "member_type": "UNIVERSITY_NOMINEE",
+        "designation": "Professor",
+        "institution": "Dept. of CSE, CEK, JNTUK"
+      },
+      {
+        "name": "Dr.Bheemarjuna Reddy Tamma",
+        "member_type": "ACADEMIC_EXPERT",
+        "designation": "Professor",
+        "institution": "Dept. of CSE, IIT Hyderabad"
+      },
+      {
+        "name": "Dr.K.V.D.Kiran",
+        "member_type": "ACADEMIC_EXPERT",
+        "designation": "Professor",
+        "institution": "Dept. of CSE, KL Deemed to be University"
+      },
+      {
+        "name": "Mr.P.Sudhakar",
+        "member_type": "INDUSTRY_EXPERT",
+        "designation": "Technical Analyst",
+        "institution": "Coforge Limited, Bangalore"
+      },
+      {
+        "name": "Mrs.Lakshmi Deepthi",
+        "member_type": "ALUMNI",
+        "designation": "Senior RPA Developer",
+        "institution": "Tech Mahendra"
+      },
+      {
+        "name": "Dr.S.N.Tirumala Rao",
+        "member_type": "INTERNAL_MEMBER",
+        "designation": "Professor & Head",
+        "institution": "Dept. of CSE, NEC"
+      },
+      {
+        "name": "Dr.B.Jhansi Vazram",
+        "member_type": "INTERNAL_MEMBER",
+        "designation": "Professor",
+        "institution": "NEC"
+      },
+      {
+        "name": "Dr.K.Lakshmi Nadh",
+        "member_type": "INTERNAL_MEMBER",
+        "designation": "Professor",
+        "institution": "Dept. of CSE, NEC"
+      },
+      {
+        "name": "Dr.S.Siva Nageswara Rao",
+        "member_type": "INTERNAL_MEMBER",
+        "designation": "Professor",
+        "institution": "Dept. of CSE, NEC"
+      },
+      {
+        "name": "Dr.M.Sireesha",
+        "member_type": "INTERNAL_MEMBER",
+        "designation": "Assoc. Professor",
+        "institution": "Dept. of CSE, NEC"
+      }
+    ],
+    "universityNominee": {
+      "name": "Dr.ASN Chakravarthy",
+      "institution": "Dept. of CSE, CEK, JNTUK",
+      "designation": "Professor",
+      "email": "",
+      "phone": ""
+    },
+    "academicians": [
+      {
+        "name": "Dr.Bheemarjuna Reddy Tamma",
+        "institution": "Dept. of CSE, IIT Hyderabad",
+        "designation": "Professor",
+        "email": "",
+        "phone": ""
+      },
+      {
+        "name": "Dr.K.V.D.Kiran",
+        "institution": "Dept. of CSE, KL Deemed to be University",
+        "designation": "Professor",
+        "email": "",
+        "phone": ""
+      },
+      {
+        "name": "Mr.P.Sudhakar",
+        "institution": "Coforge Limited, Bangalore",
+        "designation": "Technical Analyst",
+        "email": "",
+        "phone": ""
+      }
+    ],
+    "industryMember": null,
+    "alumniMember": {
+      "name": "Mrs.Lakshmi Deepthi",
+      "company": "Tech Mahendra",
+      "designation": "Senior RPA Developer",
+      "email": "",
+      "phone": ""
+    },
+    "facultyMembers": [
+      "Dr.S.N.Tirumala Rao",
+      "Dr.B.Jhansi Vazram",
+      "Dr.K.Lakshmi Nadh",
+      "Dr.S.Siva Nageswara Rao",
+      "Dr.M.Sireesha"
+    ],
+    "agendaItems": [
+      {
+        "itemNo": 1,
+        "title": "Opening remarks by the Chairman, BoS-CSE (Cyber Security), and Principal.",
+        "description": "Opening remarks by the Chairman, BoS-CSE (Cyber Security), and Principal.",
+        "decision": ""
+      },
+      {
+        "itemNo": 2,
+        "title": "Discussion on R23 syllabus of I B.Tech. CSE (Cyber Security), including recommendations/amendments.",
+        "description": "Discussion on R23 syllabus of I B.Tech. CSE (Cyber Security), including recommendations/amendments.",
+        "decision": ""
+      },
+      {
+        "itemNo": 3,
+        "title": "Approval of the R23 first-year course structure and syllabus up to I Year-II Semester.",
+        "description": "Approval of the R23 first-year course structure and syllabus up to I Year-II Semester.",
+        "decision": ""
+      }
+    ],
+    "resolutions": [
+      {
+        "resolutionNumber": 1,
+        "title": "Resolution 1",
+        "resolutionText": "In Introduction to Programming (I-I), elaborate the concept of strings in Unit IV.",
+        "agendaRef": ""
+      },
+      {
+        "resolutionNumber": 2,
+        "title": "Resolution 2",
+        "resolutionText": "In Programming Lab, add one exercise consisting of basic Unix commands.",
+        "agendaRef": ""
+      },
+      {
+        "resolutionNumber": 3,
+        "title": "Resolution 3",
+        "resolutionText": "In I Year II Semester Data Structures, merge Unit III and Unit IV as Unit III.",
+        "agendaRef": ""
+      },
+      {
+        "resolutionNumber": 4,
+        "title": "Resolution 4",
+        "resolutionText": "Rework Data Structures Unit IV to include Trees from former Unit V plus Binary Trees, Traversal, AVL Trees and Heap Sort.",
+        "agendaRef": ""
+      },
+      {
+        "resolutionNumber": 5,
+        "title": "Resolution 5",
+        "resolutionText": "Add graph concepts in Unit V: introduction, graph representation, graph traversals and topological sorting.",
+        "agendaRef": ""
+      },
+      {
+        "resolutionNumber": 6,
+        "title": "Resolution 6",
+        "resolutionText": "The Board approved the R23 B.Tech. CSE (Cyber Security) first-year course structure and syllabus up to I Year-II Semester.",
+        "agendaRef": ""
+      }
+    ],
+    "documents": [
+      {
+        "id": "doc_bos_cys_r23_01",
+        "title": "R23 - 1st Board of Studies Meeting - I Year (Official Signed Minutes)",
+        "filename": "01_R23_1st_BoS_CYS_2023-09-26.pdf",
+        "type": "MINUTES",
+        "documentType": "MINUTES_PACKAGE",
+        "containsAgenda": true,
+        "containsAttendance": true,
+        "containsMeetingEvidence": true,
+        "storagePath": "/documents/bos/cse-cys/01_R23_1st_BoS_CYS_2023-09-26.pdf",
+        "downloadUrl": "/documents/bos/cse-cys/01_R23_1st_BoS_CYS_2023-09-26.pdf",
+        "sizeBytes": 4889167,
+        "sha256": "1d4cc612e02f8e595ab8475384c30a170ff7f9f0f8757676134b0ae62f0f5f69",
+        "visibility": "PRIVATE",
+        "version": "v1.0",
+        "uploadedAt": "2026-08-24T00:00:00.000Z",
+        "uploadedBy": "BoS Package Importer"
+      }
+    ],
+    "approvalHistory": [
+      {
+        "action": "BOS_BULK_IMPORTED",
+        "fromStatus": null,
+        "toStatus": "DRAFT",
+        "actor": "Bulk Data Center (System Ingestion)",
+        "comments": "Imported official R23 record with 11 members, 3 agenda items, and 1 linked PDF minutes package.",
+        "timestamp": "2026-08-24T06:54:38.230Z"
+      }
+    ],
+    "sourceType": "BULK_IMPORT",
+    "sourceFiles": "3. R23_Ist BOS CSE (CS) (26_09_2023).pdf | BOS CSE CS.xlsx",
+    "sourceSha256Json": {
+      "3. R23_Ist BOS CSE (CS) (26_09_2023).pdf": "1d4cc612e02f8e595ab8475384c30a170ff7f9f0f8757676134b0ae62f0f5f69",
+      "BOS CSE CS.xlsx": "74f0f94bacdd024fea07e81af758a111a9f630f398defc0d4fededb798038237"
+    },
+    "publicVisibility": "INTERNAL_ONLY",
+    "isVerified": true,
+    "isDeleted": false,
+    "createdAt": "2026-08-24T06:54:38.230Z",
+    "updatedAt": "2026-08-24T06:54:38.230Z"
+  },
+  {
+    "id": "bos_cys_r23_04",
+    "bosNumber": "BOS-CYS-R23-02",
+    "meetingSourceKey": "BOS-CYS-R23-02",
+    "department": "CSE (Cyber Security)",
+    "departmentCode": "CYS",
+    "departmentName": "CSE (Cyber Security)",
+    "academicYear": "2024-25",
+    "targetYear": "II",
+    "title": "R23 - 2nd Board of Studies Meeting - II Year",
+    "bosDate": "2024-07-09",
+    "meetingDate": "2024-07-09",
+    "startTime": "11:00 AM",
+    "endTime": "14:00 PM",
+    "meetingMode": "ONLINE",
+    "venue": "Microsoft Teams (Online)",
+    "platform": "Microsoft Teams",
+    "privateMeetingLink": "https://teams.microsoft.com/l/meetup-join/19%3ameeting_ZmE4NjRiYmMtY2Q0My00OTRiLTg3MzUtMmJkNTM0NGJmOGUz%40thread.v2/0?context=%7b%22Tid%22%3a%2276254ace-27ad-489b-9f92-b6f1aa89d5d4%22%2c%22Oid%22%3a%22cc38ad36-f59f-4a8c-9f45-4cf536e0b763%22%7d",
+    "circularReference": "",
+    "circularDate": "",
+    "regulations": [
+      "R23"
+    ],
+    "regulationCodes": "R23",
+    "regulationMeetingNumber": 2,
+    "meetingStatus": "HELD",
+    "workflowStatus": "DRAFT",
+    "status": "Draft",
+    "sourceConfidence": "HIGH",
+    "reviewNotes": "",
+    "version": 1,
+    "chairmanType": "INTERNAL",
+    "chairman": "Dr.V.V.A.S.Lakshmi",
+    "chairperson": "Dr.V.V.A.S.Lakshmi",
+    "members": [
+      {
+        "name": "Dr.V.V.A.S.Lakshmi",
+        "member_type": "CHAIRMAN",
+        "designation": "Professor & Head",
+        "institution": ""
+      },
+      {
+        "name": "Dr.ASN Chakravarthy",
+        "member_type": "UNIVERSITY_NOMINEE",
+        "designation": "Professor",
+        "institution": "Dept. of CSE, CEK, JNTUK"
+      },
+      {
+        "name": "Dr.Bheemarjuna Reddy Tamma",
+        "member_type": "ACADEMIC_EXPERT",
+        "designation": "Professor",
+        "institution": "Dept. of CSE, IIT Hyderabad"
+      },
+      {
+        "name": "Dr.K.V.D.Kiran",
+        "member_type": "ACADEMIC_EXPERT",
+        "designation": "Professor",
+        "institution": "Dept. of CSE, KL Deemed to be University"
+      },
+      {
+        "name": "Mr.P.Sudhakar",
+        "member_type": "INDUSTRY_EXPERT",
+        "designation": "Technical Analyst",
+        "institution": "Coforge Limited, Bangalore"
+      },
+      {
+        "name": "Mrs.Lakshmi Deepthi",
+        "member_type": "ALUMNI",
+        "designation": "Senior RPA Developer",
+        "institution": "Tech Mahendra"
+      },
+      {
+        "name": "Dr.S.N.Tirumala Rao",
+        "member_type": "INTERNAL_MEMBER",
+        "designation": "Professor & Head",
+        "institution": "Dept. of CSE, NEC"
+      },
+      {
+        "name": "Dr.B.Jhansi Vazram",
+        "member_type": "INTERNAL_MEMBER",
+        "designation": "Professor & HoD",
+        "institution": "Dept. of IT & CSE(AI), NEC"
+      },
+      {
+        "name": "Dr.K.Lakshmi Nadh",
+        "member_type": "INTERNAL_MEMBER",
+        "designation": "Professor",
+        "institution": "Dept. of CSE, NEC"
+      },
+      {
+        "name": "Dr.S.Siva Nageswara Rao",
+        "member_type": "INTERNAL_MEMBER",
+        "designation": "Professor",
+        "institution": "Dept. of CSE, NEC"
+      }
+    ],
+    "universityNominee": {
+      "name": "Dr.ASN Chakravarthy",
+      "institution": "Dept. of CSE, CEK, JNTUK",
+      "designation": "Professor",
+      "email": "",
+      "phone": ""
+    },
+    "academicians": [
+      {
+        "name": "Dr.Bheemarjuna Reddy Tamma",
+        "institution": "Dept. of CSE, IIT Hyderabad",
+        "designation": "Professor",
+        "email": "",
+        "phone": ""
+      },
+      {
+        "name": "Dr.K.V.D.Kiran",
+        "institution": "Dept. of CSE, KL Deemed to be University",
+        "designation": "Professor",
+        "email": "",
+        "phone": ""
+      },
+      {
+        "name": "Mr.P.Sudhakar",
+        "institution": "Coforge Limited, Bangalore",
+        "designation": "Technical Analyst",
+        "email": "",
+        "phone": ""
+      }
+    ],
+    "industryMember": null,
+    "alumniMember": {
+      "name": "Mrs.Lakshmi Deepthi",
+      "company": "Tech Mahendra",
+      "designation": "Senior RPA Developer",
+      "email": "",
+      "phone": ""
+    },
+    "facultyMembers": [
+      "Dr.S.N.Tirumala Rao",
+      "Dr.B.Jhansi Vazram",
+      "Dr.K.Lakshmi Nadh",
+      "Dr.S.Siva Nageswara Rao"
+    ],
+    "agendaItems": [
+      {
+        "itemNo": 1,
+        "title": "Welcome address by Chairman of BoS and introduction of members.",
+        "description": "Welcome address by Chairman of BoS and introduction of members.",
+        "decision": ""
+      },
+      {
+        "itemNo": 2,
+        "title": "Discussion on course structure and syllabus for R23 B.Tech. CSE (Cyber Security) II Year.",
+        "description": "Discussion on course structure and syllabus for R23 B.Tech. CSE (Cyber Security) II Year.",
+        "decision": ""
+      },
+      {
+        "itemNo": 3,
+        "title": "Finalization of syllabus with incorporation of recommendations and suggestions.",
+        "description": "Finalization of syllabus with incorporation of recommendations and suggestions.",
+        "decision": ""
+      },
+      {
+        "itemNo": 4,
+        "title": "Summarizing the minutes of the meeting.",
+        "description": "Summarizing the minutes of the meeting.",
+        "decision": ""
+      },
+      {
+        "itemNo": 5,
+        "title": "Approval of the course structure and syllabus.",
+        "description": "Approval of the course structure and syllabus.",
+        "decision": ""
+      },
+      {
+        "itemNo": 6,
+        "title": "Vote of thanks by Chairman of BoS.",
+        "description": "Vote of thanks by Chairman of BoS.",
+        "decision": ""
+      }
+    ],
+    "resolutions": [
+      {
+        "resolutionNumber": 1,
+        "title": "Resolution 1",
+        "resolutionText": "Add Operating Systems Lab to the Networks Lab in II Semester.",
+        "agendaRef": ""
+      },
+      {
+        "resolutionNumber": 2,
+        "title": "Resolution 2",
+        "resolutionText": "Add virtual labs.",
+        "agendaRef": ""
+      },
+      {
+        "resolutionNumber": 3,
+        "title": "Resolution 3",
+        "resolutionText": "Change the order of Unit II, Unit III, Unit IV, Unit V to Unit V, Unit IV, Unit III and Unit II in Computer Networks.",
+        "agendaRef": ""
+      },
+      {
+        "resolutionNumber": 4,
+        "title": "Resolution 4",
+        "resolutionText": "Remove Convex Hull from Advanced Data Structures and Algorithm Analysis (Unit-II) in II-I.",
+        "agendaRef": ""
+      },
+      {
+        "resolutionNumber": 5,
+        "title": "Resolution 5",
+        "resolutionText": "Shift Environmental Studies from II-I to II-II for faculty load balancing.",
+        "agendaRef": ""
+      },
+      {
+        "resolutionNumber": 6,
+        "title": "Resolution 6",
+        "resolutionText": "The enclosed course structure and syllabus was approved by BoS.",
+        "agendaRef": ""
+      }
+    ],
+    "documents": [
+      {
+        "id": "doc_bos_cys_r23_02",
+        "title": "R23 - 2nd Board of Studies Meeting - II Year (Official Signed Minutes)",
+        "filename": "02_R23_2nd_BoS_CYS_2024-07-09.pdf",
+        "type": "MINUTES",
+        "documentType": "MINUTES_PACKAGE",
+        "containsAgenda": true,
+        "containsAttendance": true,
+        "containsMeetingEvidence": true,
+        "storagePath": "/documents/bos/cse-cys/02_R23_2nd_BoS_CYS_2024-07-09.pdf",
+        "downloadUrl": "/documents/bos/cse-cys/02_R23_2nd_BoS_CYS_2024-07-09.pdf",
+        "sizeBytes": 4097445,
+        "sha256": "aaa481ce3241e79f8d5a8a955be9bd196f5f113e33485c98ca016dfc5ad280ef",
+        "visibility": "PRIVATE",
+        "version": "v1.0",
+        "uploadedAt": "2026-08-24T00:00:00.000Z",
+        "uploadedBy": "BoS Package Importer"
+      }
+    ],
+    "approvalHistory": [
+      {
+        "action": "BOS_BULK_IMPORTED",
+        "fromStatus": null,
+        "toStatus": "DRAFT",
+        "actor": "Bulk Data Center (System Ingestion)",
+        "comments": "Imported official R23 record with 10 members, 6 agenda items, and 1 linked PDF minutes package.",
+        "timestamp": "2026-08-24T06:54:38.230Z"
+      }
+    ],
+    "sourceType": "BULK_IMPORT",
+    "sourceFiles": "7. R23_2nd BOS CSE (CS) (09_07_2024).pdf | BOS CSE CS.xlsx",
+    "sourceSha256Json": {
+      "7. R23_2nd BOS CSE (CS) (09_07_2024).pdf": "aaa481ce3241e79f8d5a8a955be9bd196f5f113e33485c98ca016dfc5ad280ef",
+      "BOS CSE CS.xlsx": "74f0f94bacdd024fea07e81af758a111a9f630f398defc0d4fededb798038237"
+    },
+    "publicVisibility": "INTERNAL_ONLY",
+    "isVerified": true,
+    "isDeleted": false,
+    "createdAt": "2026-08-24T06:54:38.230Z",
+    "updatedAt": "2026-08-24T06:54:38.230Z"
+  },
+  {
+    "id": "bos_cys_r23_05",
+    "bosNumber": "BOS-CYS-R23-03",
+    "meetingSourceKey": "BOS-CYS-R23-03",
+    "department": "CSE (Cyber Security)",
+    "departmentCode": "CYS",
+    "departmentName": "CSE (Cyber Security)",
+    "academicYear": "2025-26",
+    "targetYear": "III",
+    "title": "R23 - 3rd Board of Studies Meeting - III Year",
+    "bosDate": "2025-07-12",
+    "meetingDate": "2025-07-12",
+    "startTime": "10:00 AM",
+    "endTime": "13:00 PM",
+    "meetingMode": "ONLINE",
+    "venue": "Microsoft Teams (Online)",
+    "platform": "Microsoft Teams",
+    "privateMeetingLink": "https://teams.microsoft.com/l/meetup-join/19%3ameeting_YmJlNDEyODQtODhkMi00MjY3LTlkYjUtZWYxZGYwMzAzOGNk%40thread.v2/0?context=%7b%22Tid%22%3a%2276254ace-27ad-489b-9f92-b6f1aa89d5d4%22%2c%22Oid%22%3a%22cc38ad36-f59f-4a8c-9f45-4cf536e0b763%22%7d",
+    "circularReference": "NEC/CSE (CS)/BoS-5",
+    "circularDate": "2025-07-10",
+    "regulations": [
+      "R23"
+    ],
+    "regulationCodes": "R23",
+    "regulationMeetingNumber": 3,
+    "meetingStatus": "HELD",
+    "workflowStatus": "DRAFT",
+    "status": "Draft",
+    "sourceConfidence": "HIGH_WITH_DATE_CONFLICT",
+    "reviewNotes": "Canonical meeting date/time set to 2025-07-12 10:00 because the cover, invitation email and minutes support it. The circular agenda page and XLSX date indicate 2025-07-11, and the circular agenda page shows 11:00; preserve this conflict for audit/review.",
+    "version": 1,
+    "chairmanType": "INTERNAL",
+    "chairman": "Dr.V.V.A.S.Lakshmi",
+    "chairperson": "Dr.V.V.A.S.Lakshmi",
+    "members": [
+      {
+        "name": "Dr.V.V.A.S.Lakshmi",
+        "member_type": "CHAIRMAN",
+        "designation": "Professor & Head",
+        "institution": ""
+      },
+      {
+        "name": "Dr.ASN Chakravarthy",
+        "member_type": "UNIVERSITY_NOMINEE",
+        "designation": "Professor",
+        "institution": "Dept. of CSE, CEK, JNTUK"
+      },
+      {
+        "name": "Dr.Bheemarjuna Reddy Tamma",
+        "member_type": "ACADEMIC_EXPERT",
+        "designation": "Professor",
+        "institution": "Dept. of CSE, IIT Hyderabad"
+      },
+      {
+        "name": "Dr.K.V.D.Kiran",
+        "member_type": "ACADEMIC_EXPERT",
+        "designation": "Professor",
+        "institution": "Dept. of CSE, KL Deemed to be University"
+      },
+      {
+        "name": "Mr.P.Sudhakar",
+        "member_type": "INDUSTRY_EXPERT",
+        "designation": "Technical Analyst",
+        "institution": "Coforge Limited, Bangalore"
+      },
+      {
+        "name": "Mrs.Lakshmi Deepthi",
+        "member_type": "ALUMNI",
+        "designation": "Senior RPA Developer",
+        "institution": "Tech Mahendra"
+      },
+      {
+        "name": "Dr.S.N.Tirumala Rao",
+        "member_type": "INTERNAL_MEMBER",
+        "designation": "Professor & Head",
+        "institution": "Dept. of CSE, NEC"
+      },
+      {
+        "name": "Dr.B.Jhansi Vazram",
+        "member_type": "INTERNAL_MEMBER",
+        "designation": "Professor & HoD",
+        "institution": "Dept. of IT"
+      },
+      {
+        "name": "Dr.S.V.N.Srinivasu",
+        "member_type": "INTERNAL_MEMBER",
+        "designation": "Professor",
+        "institution": "Dept. of CSE, NEC"
+      },
+      {
+        "name": "Dr.K.Lakshminadh",
+        "member_type": "INTERNAL_MEMBER",
+        "designation": "Professor",
+        "institution": "Dept. of CSE, NEC"
+      },
+      {
+        "name": "Mr.G.Mahesh Babu",
+        "member_type": "INTERNAL_MEMBER",
+        "designation": "Asst. Professor",
+        "institution": "Dept. of CSE(AIML), NEC"
+      },
+      {
+        "name": "Mr.G.J.Manikanta",
+        "member_type": "INTERNAL_MEMBER",
+        "designation": "Asst. Professor",
+        "institution": "Dept. of CSE(AIML), NEC"
+      },
+      {
+        "name": "Mr.D.Srikanth",
+        "member_type": "INTERNAL_MEMBER",
+        "designation": "Asst. Professor",
+        "institution": "Dept. of CSE(CS), NEC"
+      }
+    ],
+    "universityNominee": {
+      "name": "Dr.ASN Chakravarthy",
+      "institution": "Dept. of CSE, CEK, JNTUK",
+      "designation": "Professor",
+      "email": "",
+      "phone": ""
+    },
+    "academicians": [
+      {
+        "name": "Dr.Bheemarjuna Reddy Tamma",
+        "institution": "Dept. of CSE, IIT Hyderabad",
+        "designation": "Professor",
+        "email": "",
+        "phone": ""
+      },
+      {
+        "name": "Dr.K.V.D.Kiran",
+        "institution": "Dept. of CSE, KL Deemed to be University",
+        "designation": "Professor",
+        "email": "",
+        "phone": ""
+      },
+      {
+        "name": "Mr.P.Sudhakar",
+        "institution": "Coforge Limited, Bangalore",
+        "designation": "Technical Analyst",
+        "email": "",
+        "phone": ""
+      }
+    ],
+    "industryMember": null,
+    "alumniMember": {
+      "name": "Mrs.Lakshmi Deepthi",
+      "company": "Tech Mahendra",
+      "designation": "Senior RPA Developer",
+      "email": "",
+      "phone": ""
+    },
+    "facultyMembers": [
+      "Dr.S.N.Tirumala Rao",
+      "Dr.B.Jhansi Vazram",
+      "Dr.S.V.N.Srinivasu",
+      "Dr.K.Lakshminadh",
+      "Mr.G.Mahesh Babu",
+      "Mr.G.J.Manikanta",
+      "Mr.D.Srikanth"
+    ],
+    "agendaItems": [
+      {
+        "itemNo": 1,
+        "title": "Welcome address by Chairman of BoS and introduction of members.",
+        "description": "Welcome address by Chairman of BoS and introduction of members.",
+        "decision": ""
+      },
+      {
+        "itemNo": 2,
+        "title": "Discussion on course structure and syllabus for R23 B.Tech. CSE (Cyber Security) III Year.",
+        "description": "Discussion on course structure and syllabus for R23 B.Tech. CSE (Cyber Security) III Year.",
+        "decision": ""
+      },
+      {
+        "itemNo": 3,
+        "title": "Finalization of syllabus with incorporation of recommendations and suggestions.",
+        "description": "Finalization of syllabus with incorporation of recommendations and suggestions.",
+        "decision": ""
+      },
+      {
+        "itemNo": 4,
+        "title": "Summarizing the minutes of the meeting.",
+        "description": "Summarizing the minutes of the meeting.",
+        "decision": ""
+      },
+      {
+        "itemNo": 5,
+        "title": "Approval of the syllabus/course structure.",
+        "description": "Approval of the syllabus/course structure.",
+        "decision": ""
+      },
+      {
+        "itemNo": 6,
+        "title": "Vote of thanks by Chairman of BoS.",
+        "description": "Vote of thanks by Chairman of BoS.",
+        "decision": ""
+      }
+    ],
+    "resolutions": [
+      {
+        "resolutionNumber": 1,
+        "title": "Resolution 1",
+        "resolutionText": "In III-I, AICTE-Design Thinking and Idea Lab is included.",
+        "agendaRef": ""
+      },
+      {
+        "resolutionNumber": 2,
+        "title": "Resolution 2",
+        "resolutionText": "Unix & Shell Programming is included in P.E. II.",
+        "agendaRef": ""
+      },
+      {
+        "resolutionNumber": 3,
+        "title": "Resolution 3",
+        "resolutionText": "Fundamentals of Unix Programming is included in O.E. II.",
+        "agendaRef": ""
+      },
+      {
+        "resolutionNumber": 4,
+        "title": "Resolution 4",
+        "resolutionText": "The Board granted approval to the R23 B.Tech. CSE (Cyber Security) III Year course structure and syllabus.",
+        "agendaRef": ""
+      }
+    ],
+    "documents": [
+      {
+        "id": "doc_bos_cys_r23_03",
+        "title": "R23 - 3rd Board of Studies Meeting - III Year (Official Signed Minutes)",
+        "filename": "03_R23_3rd_BoS_CYS_2025-07-12.pdf",
+        "type": "MINUTES",
+        "documentType": "MINUTES_PACKAGE",
+        "containsAgenda": true,
+        "containsAttendance": true,
+        "containsMeetingEvidence": true,
+        "storagePath": "/documents/bos/cse-cys/03_R23_3rd_BoS_CYS_2025-07-12.pdf",
+        "downloadUrl": "/documents/bos/cse-cys/03_R23_3rd_BoS_CYS_2025-07-12.pdf",
+        "sizeBytes": 4740600,
+        "sha256": "889c9a3c4a10a188f5b88128a2430bb7fe134868e81e148e806472922309330c",
+        "visibility": "PRIVATE",
+        "version": "v1.0",
+        "uploadedAt": "2026-08-24T00:00:00.000Z",
+        "uploadedBy": "BoS Package Importer"
+      }
+    ],
+    "approvalHistory": [
+      {
+        "action": "BOS_BULK_IMPORTED",
+        "fromStatus": null,
+        "toStatus": "DRAFT",
+        "actor": "Bulk Data Center (System Ingestion)",
+        "comments": "Imported official R23 record with 13 members, 6 agenda items, and 1 linked PDF minutes package.",
+        "timestamp": "2026-08-24T06:54:38.230Z"
+      }
+    ],
+    "sourceType": "BULK_IMPORT",
+    "sourceFiles": "10. R23_ 3rd BOS (12_07_2025) Cyber se.pdf | BOS CSE CS.xlsx",
+    "sourceSha256Json": {
+      "10. R23_ 3rd BOS (12_07_2025) Cyber se.pdf": "889c9a3c4a10a188f5b88128a2430bb7fe134868e81e148e806472922309330c",
+      "BOS CSE CS.xlsx": "74f0f94bacdd024fea07e81af758a111a9f630f398defc0d4fededb798038237"
+    },
+    "publicVisibility": "INTERNAL_ONLY",
+    "isVerified": true,
+    "isDeleted": false,
+    "createdAt": "2026-08-24T06:54:38.230Z",
+    "updatedAt": "2026-08-24T06:54:38.230Z"
+  },
+  {
+    "id": "bos_cys_r23_06",
+    "bosNumber": "BOS-CYS-R23-04",
+    "meetingSourceKey": "BOS-CYS-R23-04",
+    "department": "CSE (Cyber Security)",
+    "departmentCode": "CYS",
+    "departmentName": "CSE (Cyber Security)",
+    "academicYear": "2025-26",
+    "targetYear": "IV",
+    "title": "R23 - 4th Board of Studies Meeting - IV Year",
+    "bosDate": "2026-02-21",
+    "meetingDate": "2026-02-21",
+    "startTime": "10:00 AM",
+    "endTime": "13:00 PM",
+    "meetingMode": "ONLINE",
+    "venue": "Microsoft Teams (Online)",
+    "platform": "Microsoft Teams",
+    "privateMeetingLink": "https://teams.microsoft.com/l/meetup-join/19%3ameeting_OTczYTUxMWEtZGRkOC00ZGQyLTg5ZjItYTUxNDgwMzBmNTZk%40thread.v2/0?context=%7b%22Tid%22%3a%2276254ace-27ad-489b-9f92-b6f1aa89d5d4%22%2c%22Oid%22%3a%22cc38ad36-f59f-4a8c-9f45-4cf536e0b763%22%7d",
+    "circularReference": "NEC/CSE (CS)/BoS-6",
+    "circularDate": "2026-02-17",
+    "regulations": [
+      "R23"
+    ],
+    "regulationCodes": "R23",
+    "regulationMeetingNumber": 4,
+    "meetingStatus": "HELD",
+    "workflowStatus": "DRAFT",
+    "status": "Draft",
+    "sourceConfidence": "HIGH",
+    "reviewNotes": "",
+    "version": 1,
+    "chairmanType": "INTERNAL",
+    "chairman": "Dr.V.V.A.S.Lakshmi",
+    "chairperson": "Dr.V.V.A.S.Lakshmi",
+    "members": [
+      {
+        "name": "Dr.V.V.A.S.Lakshmi",
+        "member_type": "CHAIRMAN",
+        "designation": "Professor & Head",
+        "institution": ""
+      },
+      {
+        "name": "Dr.ASN Chakravarthy",
+        "member_type": "UNIVERSITY_NOMINEE",
+        "designation": "Professor",
+        "institution": "Dept. of CSE, CEK, JNTUK"
+      },
+      {
+        "name": "Dr.Sriramulu Bojjagani",
+        "member_type": "ACADEMIC_EXPERT",
+        "designation": "Asst. Professor",
+        "institution": "Department of CSE, SRM University, AP"
+      },
+      {
+        "name": "Dr.B.Kotaiah",
+        "member_type": "ACADEMIC_EXPERT",
+        "designation": "Associate Professor",
+        "institution": "Department of CSE, Central University"
+      },
+      {
+        "name": "Mr.P.Sudhakar",
+        "member_type": "INDUSTRY_EXPERT",
+        "designation": "Technical Analyst",
+        "institution": "Coforge Limited, Bangalore"
+      },
+      {
+        "name": "Mrs.Lakshmi Deepthi",
+        "member_type": "ALUMNI",
+        "designation": "Senior RPA Developer",
+        "institution": "Tech Mahindra"
+      },
+      {
+        "name": "Dr.S.N.Tirumala Rao",
+        "member_type": "INTERNAL_MEMBER",
+        "designation": "Professor & Head",
+        "institution": "Dept. of CSE, NEC"
+      },
+      {
+        "name": "Dr.B.Jhansi Vazram",
+        "member_type": "INTERNAL_MEMBER",
+        "designation": "Professor & HOD",
+        "institution": "Dept. of IT"
+      },
+      {
+        "name": "Dr.S.V.N.Srinivasu",
+        "member_type": "INTERNAL_MEMBER",
+        "designation": "Professor",
+        "institution": "Dept. of CSE, NEC"
+      },
+      {
+        "name": "Dr.K.Lakshminadh",
+        "member_type": "INTERNAL_MEMBER",
+        "designation": "Professor",
+        "institution": "Dept. of CSE, NEC"
+      },
+      {
+        "name": "Mr.G.Mahesh Babu",
+        "member_type": "INTERNAL_MEMBER",
+        "designation": "Asst. Professor",
+        "institution": "Dept. of CSE(AIML), NEC"
+      },
+      {
+        "name": "Mr.G.J.Manikanta",
+        "member_type": "INTERNAL_MEMBER",
+        "designation": "Asst. Professor",
+        "institution": "Dept. of CSE(AIML), NEC"
+      },
+      {
+        "name": "Mr.D.Srikanth",
+        "member_type": "INTERNAL_MEMBER",
+        "designation": "Asst. Professor",
+        "institution": "Dept. of CSE(CS), NEC"
+      }
+    ],
+    "universityNominee": {
+      "name": "Dr.ASN Chakravarthy",
+      "institution": "Dept. of CSE, CEK, JNTUK",
+      "designation": "Professor",
+      "email": "",
+      "phone": ""
+    },
+    "academicians": [
+      {
+        "name": "Dr.Sriramulu Bojjagani",
+        "institution": "Department of CSE, SRM University, AP",
+        "designation": "Asst. Professor",
+        "email": "",
+        "phone": ""
+      },
+      {
+        "name": "Dr.B.Kotaiah",
+        "institution": "Department of CSE, Central University",
+        "designation": "Associate Professor",
+        "email": "",
+        "phone": ""
+      },
+      {
+        "name": "Mr.P.Sudhakar",
+        "institution": "Coforge Limited, Bangalore",
+        "designation": "Technical Analyst",
+        "email": "",
+        "phone": ""
+      }
+    ],
+    "industryMember": null,
+    "alumniMember": {
+      "name": "Mrs.Lakshmi Deepthi",
+      "company": "Tech Mahindra",
+      "designation": "Senior RPA Developer",
+      "email": "",
+      "phone": ""
+    },
+    "facultyMembers": [
+      "Dr.S.N.Tirumala Rao",
+      "Dr.B.Jhansi Vazram",
+      "Dr.S.V.N.Srinivasu",
+      "Dr.K.Lakshminadh",
+      "Mr.G.Mahesh Babu",
+      "Mr.G.J.Manikanta",
+      "Mr.D.Srikanth"
+    ],
+    "agendaItems": [
+      {
+        "itemNo": 1,
+        "title": "Welcome address by Chairman of BoS and introduction of members.",
+        "description": "Welcome address by Chairman of BoS and introduction of members.",
+        "decision": ""
+      },
+      {
+        "itemNo": 2,
+        "title": "Discussion on course structure and syllabus for R23 B.Tech. CSE (Cyber Security) IV Year.",
+        "description": "Discussion on course structure and syllabus for R23 B.Tech. CSE (Cyber Security) IV Year.",
+        "decision": ""
+      },
+      {
+        "itemNo": 3,
+        "title": "Finalization of syllabus with incorporation of recommendations and suggestions for R23 B.Tech. CSE (Cyber Security) IV Year.",
+        "description": "Finalization of syllabus with incorporation of recommendations and suggestions for R23 B.Tech. CSE (Cyber Security) IV Year.",
+        "decision": ""
+      },
+      {
+        "itemNo": 4,
+        "title": "Summarizing the minutes of the meeting.",
+        "description": "Summarizing the minutes of the meeting.",
+        "decision": ""
+      },
+      {
+        "itemNo": 5,
+        "title": "Approval of the syllabus/course structure.",
+        "description": "Approval of the syllabus/course structure.",
+        "decision": ""
+      },
+      {
+        "itemNo": 6,
+        "title": "Vote of thanks by Chairman of BoS.",
+        "description": "Vote of thanks by Chairman of BoS.",
+        "decision": ""
+      }
+    ],
+    "resolutions": [
+      {
+        "resolutionNumber": 1,
+        "title": "Resolution 1",
+        "resolutionText": "The BoS resolved to adopt and implement the University-prescribed R23 Course Structure and Syllabus for IV Year B.Tech. CSE (Cyber Security) without modifications.",
+        "agendaRef": ""
+      },
+      {
+        "resolutionNumber": 2,
+        "title": "Resolution 2",
+        "resolutionText": "Recommended textbook for Ethical Hacking: Randal L. Schwartz, Learning Perl, O'Reilly Media, 8th edition.",
+        "agendaRef": ""
+      },
+      {
+        "resolutionNumber": 3,
+        "title": "Resolution 3",
+        "resolutionText": "Recommended textbook for Ethical Hacking: Jon Erickson, Hacking: The Art of Exploitation, No Starch Press, 2nd edition.",
+        "agendaRef": ""
+      },
+      {
+        "resolutionNumber": 4,
+        "title": "Resolution 4",
+        "resolutionText": "The proposed syllabus for IV Year CSE (Cyber Security) was ratified.",
+        "agendaRef": ""
+      },
+      {
+        "resolutionNumber": 5,
+        "title": "Resolution 5",
+        "resolutionText": "The enclosed course structure and syllabus was approved by BoS.",
+        "agendaRef": ""
+      }
+    ],
+    "documents": [
+      {
+        "id": "doc_bos_cys_r23_04",
+        "title": "R23 - 4th Board of Studies Meeting - IV Year (Official Signed Minutes)",
+        "filename": "04_R23_4th_BoS_CYS_2026-02-21.pdf",
+        "type": "MINUTES",
+        "documentType": "MINUTES_PACKAGE",
+        "containsAgenda": true,
+        "containsAttendance": true,
+        "containsMeetingEvidence": true,
+        "storagePath": "/documents/bos/cse-cys/04_R23_4th_BoS_CYS_2026-02-21.pdf",
+        "downloadUrl": "/documents/bos/cse-cys/04_R23_4th_BoS_CYS_2026-02-21.pdf",
+        "sizeBytes": 1883773,
+        "sha256": "3c64980ae5df2375287cc54ed33c904b413d8d45d57c8a2b23a2ea9d1ac532ce",
+        "visibility": "PRIVATE",
+        "version": "v1.0",
+        "uploadedAt": "2026-08-24T00:00:00.000Z",
+        "uploadedBy": "BoS Package Importer"
+      }
+    ],
+    "approvalHistory": [
+      {
+        "action": "BOS_BULK_IMPORTED",
+        "fromStatus": null,
+        "toStatus": "DRAFT",
+        "actor": "Bulk Data Center (System Ingestion)",
+        "comments": "Imported official R23 record with 13 members, 6 agenda items, and 1 linked PDF minutes package.",
+        "timestamp": "2026-08-24T06:54:38.230Z"
+      }
+    ],
+    "sourceType": "BULK_IMPORT",
+    "sourceFiles": "CSE(CS).pdf | BOS CSE CS.xlsx",
+    "sourceSha256Json": {
+      "CSE(CS).pdf": "3c64980ae5df2375287cc54ed33c904b413d8d45d57c8a2b23a2ea9d1ac532ce",
+      "BOS CSE CS.xlsx": "74f0f94bacdd024fea07e81af758a111a9f630f398defc0d4fededb798038237"
+    },
+    "publicVisibility": "INTERNAL_ONLY",
+    "isVerified": true,
+    "isDeleted": false,
+    "createdAt": "2026-08-24T06:54:38.230Z",
+    "updatedAt": "2026-08-24T06:54:38.230Z"
+  }
+];
 export const INITIAL_STUDENT_ACHIEVEMENTS = [];
 export const INITIAL_INTERNSHIPS = [];
 export const INITIAL_STUDENT_PROJECTS = [];

@@ -52,7 +52,9 @@ import {
   generateBoSNumber,
   exportToCSV,
   exportToExcel,
-  exportToPDF
+  exportToPDF,
+  exportBoSToPDF,
+  exportBoSReportToPDF
 } from '../../data/portalStore.js';
 import { DEPARTMENTS, BRANDING_LOGOS } from '../../data/masterData.js';
 import BosWizardModal from './bos/BosWizardModal.jsx';
@@ -97,6 +99,7 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
   const [archiveModalMeeting, setArchiveModalMeeting] = useState(null);
   const [openActionMenuId, setOpenActionMenuId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [activePdfDoc, setActivePdfDoc] = useState(null);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -105,6 +108,21 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
 
   // Regulations Master List
   const availableRegulations = ['R16', 'R19', 'R20', 'R23', 'R26'];
+
+  // PDF Export Handlers
+  const handleExportFilteredPDF = () => {
+    exportBoSReportToPDF(filteredMeetings, currentUser, {
+      dept: selectedDeptFilter,
+      reg: selectedRegulationFilter,
+      ay: selectedAcademicYearFilter
+    });
+    showToast(`Exported formal BoS report for ${filteredMeetings.length} meetings.`);
+  };
+
+  const handleExportSingleMeetingPDF = (meeting) => {
+    exportBoSToPDF(meeting, currentUser);
+    showToast(`Generated official BoS PDF for ${meeting.bosNumber}.`);
+  };
 
   // Load BoS Data
   const refreshMeetings = () => {
@@ -296,7 +314,7 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
         subtitle="Statutory repository for department BoS regulations, external nominees, meeting minutes, and compliance approvals."
         onExportCSV={() => exportToCSV('bos_meetings')}
         onExportExcel={() => exportToExcel('bos_meetings')}
-        onExportPDF={() => exportToPDF('bos_meetings')}
+        onExportPDF={handleExportFilteredPDF}
         primaryAction={canCreate ? {
           label: 'Create BoS Record',
           icon: Plus,
@@ -550,9 +568,32 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
                       </td>
 
                       <td style={{ padding: '0.85rem 1rem' }}>
-                        <span style={{ fontSize: '0.74rem', color: '#475569', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <FileText size={13} style={{ color: '#3B82F6' }} /> {meeting.documents?.length || 0} Docs
-                        </span>
+                        {meeting.documents && meeting.documents.length > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => setActivePdfDoc(meeting.documents[0])}
+                            style={{
+                              background: '#FEF2F2',
+                              border: '1px solid #FECACA',
+                              color: '#DC2626',
+                              padding: '0.25rem 0.55rem',
+                              borderRadius: '6px',
+                              fontSize: '0.72rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.3rem'
+                            }}
+                            title="View Official Scanned PDF Minutes"
+                          >
+                            <FileText size={12} /> {meeting.documents.length} PDF{meeting.documents.length > 1 ? 's' : ''}
+                          </button>
+                        ) : (
+                          <span style={{ fontSize: '0.74rem', color: '#94A3B8', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <FileText size={13} /> 0 Docs
+                          </span>
+                        )}
                       </td>
 
                       <td style={{ padding: '0.85rem 1rem', textAlign: 'right', position: 'relative' }}>
@@ -568,6 +609,16 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
                             className="hover:bg-slate-100"
                           >
                             <Eye size={13} />
+                          </button>
+
+                          <button
+                            type="button"
+                            title="Export Meeting PDF Report"
+                            onClick={() => handleExportSingleMeetingPDF(meeting)}
+                            style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', padding: '0.3rem 0.45rem', borderRadius: '6px', cursor: 'pointer' }}
+                            className="hover:bg-red-100"
+                          >
+                            <Printer size={13} />
                           </button>
 
                           {canEdit && (
@@ -627,7 +678,7 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
                                 borderRadius: '8px',
                                 boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
                                 zIndex: 200,
-                                minWidth: '150px',
+                                minWidth: '170px',
                                 padding: '0.35rem',
                                 display: 'flex',
                                 flexDirection: 'column',
@@ -645,6 +696,32 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
                                 >
                                   <Eye size={12} /> View Dossier
                                 </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenActionMenuId(null);
+                                    handleExportSingleMeetingPDF(meeting);
+                                  }}
+                                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', padding: '0.4rem 0.6rem', border: 'none', background: 'transparent', color: '#DC2626', fontSize: '0.75rem', fontWeight: 700, textAlign: 'left', borderRadius: '4px', cursor: 'pointer' }}
+                                  className="hover:bg-red-50"
+                                >
+                                  <Printer size={12} /> Export PDF Report
+                                </button>
+
+                                {meeting.documents && meeting.documents.length > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenActionMenuId(null);
+                                      setActivePdfDoc(meeting.documents[0]);
+                                    }}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', padding: '0.4rem 0.6rem', border: 'none', background: 'transparent', color: '#0F172A', fontSize: '0.75rem', fontWeight: 600, textAlign: 'left', borderRadius: '4px', cursor: 'pointer' }}
+                                    className="hover:bg-slate-50"
+                                  >
+                                    <FileText size={12} /> View Official Minutes
+                                  </button>
+                                )}
 
                                 {canEdit && (
                                   <button
@@ -759,10 +836,10 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <button
                   type="button"
-                  onClick={() => showToast(`Printing official dossier for ${detailModalMeeting.bosNumber}...`)}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)', color: '#FFFFFF', padding: '0.4rem 0.75rem', borderRadius: '6px', fontSize: '0.74rem', cursor: 'pointer' }}
+                  onClick={() => handleExportSingleMeetingPDF(detailModalMeeting)}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', padding: '0.4rem 0.85rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}
                 >
-                  <Printer size={13} /> Print
+                  <Printer size={13} /> Export PDF Report
                 </button>
                 <button
                   type="button"
@@ -777,9 +854,9 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
             <div style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', padding: '0 1.5rem', display: 'flex', gap: '1rem', overflowX: 'auto' }}>
               {[
                 { id: 'overview', label: 'Overview' },
-                { id: 'members', label: 'Statutory Members' },
-                { id: 'agenda', label: 'Agenda & Resolutions' },
-                { id: 'documents', label: 'Documents & Minutes' },
+                { id: 'members', label: `Statutory Members (${(detailModalMeeting.members && detailModalMeeting.members.length) || 0})` },
+                { id: 'agenda', label: `Agenda & Resolutions (${(detailModalMeeting.agendaItems?.length || 0) + (detailModalMeeting.resolutions?.length || 0)})` },
+                { id: 'documents', label: `Official Documents (${detailModalMeeting.documents?.length || 0})` },
                 { id: 'history', label: 'Approval Trail' }
               ].map(tab => (
                 <button
@@ -804,70 +881,175 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
 
             <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1 }}>
               {activeDetailTab === 'overview' && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', background: '#F8FAFC', padding: '1rem', borderRadius: '12px', border: '1px solid #E2E8F0', fontSize: '0.82rem' }}>
-                  <div><strong>Meeting Date:</strong> {detailModalMeeting.bosDate}</div>
-                  <div><strong>Timing:</strong> {detailModalMeeting.startTime || 'N/A'} to {detailModalMeeting.endTime || 'N/A'}</div>
-                  <div><strong>Mode:</strong> {detailModalMeeting.meetingMode}</div>
-                  <div><strong>Venue:</strong> {detailModalMeeting.venue || 'N/A'}</div>
-                  <div><strong>Meeting Status:</strong> {detailModalMeeting.meetingStatus}</div>
-                  <div><strong>Governance Status:</strong> {detailModalMeeting.workflowStatus}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', background: '#F8FAFC', padding: '1rem', borderRadius: '12px', border: '1px solid #E2E8F0', fontSize: '0.82rem' }}>
+                    <div><strong>Meeting Date:</strong> {detailModalMeeting.bosDate || detailModalMeeting.meetingDate || 'N/A'}</div>
+                    <div><strong>Timing:</strong> {detailModalMeeting.startTime || '10:00 AM'} to {detailModalMeeting.endTime || '01:00 PM'}</div>
+                    <div><strong>Mode:</strong> {detailModalMeeting.meetingMode || 'Online'}</div>
+                    <div><strong>Venue / Platform:</strong> {detailModalMeeting.platform || detailModalMeeting.venue || 'Microsoft Teams'}</div>
+                    <div><strong>Meeting Status:</strong> {detailModalMeeting.meetingStatus || 'HELD'}</div>
+                    <div><strong>Governance Status:</strong> {detailModalMeeting.workflowStatus || 'DRAFT'}</div>
+                    <div><strong>Chairperson:</strong> {detailModalMeeting.chairperson || detailModalMeeting.chairman || 'Dr. V. V. A. S. Lakshmi'}</div>
+                    <div><strong>Target Regulation:</strong> {detailModalMeeting.regulationCodes || (detailModalMeeting.regulations ? detailModalMeeting.regulations.join(', ') : 'R23')} ({detailModalMeeting.targetYear || 'All Years'})</div>
+                  </div>
+
+                  {(detailModalMeeting.reviewNotes || detailModalMeeting.sourceConfidence || detailModalMeeting.sourceFiles) && (
+                    <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', padding: '1rem', borderRadius: '12px' }}>
+                      <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#B45309', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem' }}>
+                        <ShieldCheck size={15} /> PROVENANCE & INSTITUTIONAL REVIEW AUDIT TRAIL
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: '#78350F', lineHeight: 1.5 }}>
+                        <div><strong>Source Confidence:</strong> <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>{detailModalMeeting.sourceConfidence || 'HIGH'}</span></div>
+                        {detailModalMeeting.reviewNotes && <div style={{ marginTop: '0.25rem' }}><strong>Review Notes:</strong> {detailModalMeeting.reviewNotes}</div>}
+                        {detailModalMeeting.sourceFiles && <div style={{ marginTop: '0.25rem' }}><strong>Original Files:</strong> {detailModalMeeting.sourceFiles}</div>}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
               {activeDetailTab === 'members' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <div style={{ background: '#F8FAFC', padding: '0.85rem', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                    <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#D4AF37', textTransform: 'uppercase' }}>BoS Chairman</div>
-                    <div style={{ fontWeight: 800, color: '#0F172A' }}>{detailModalMeeting.chairmanName || detailModalMeeting.chairman}</div>
-                    <div style={{ fontSize: '0.74rem', color: '#64748B' }}>{detailModalMeeting.chairmanEmail} • {detailModalMeeting.chairmanPhone}</div>
-                  </div>
-
-                  <div style={{ background: '#F8FAFC', padding: '0.85rem', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                    <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#2563EB', textTransform: 'uppercase' }}>University Nominee</div>
-                    <div style={{ fontWeight: 800, color: '#0F172A' }}>{detailModalMeeting.universityNominee?.name}</div>
-                    <div style={{ fontSize: '0.74rem', color: '#475569' }}>
-                      {detailModalMeeting.universityNominee?.designation}, {detailModalMeeting.universityNominee?.institution}
+                  {detailModalMeeting.members && detailModalMeeting.members.length > 0 ? (
+                    <div style={{ overflowX: 'auto', border: '1px solid #E2E8F0', borderRadius: '10px' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                        <thead>
+                          <tr style={{ background: '#0F172A', color: '#FFFFFF', textAlign: 'left' }}>
+                            <th style={{ padding: '0.6rem 0.75rem', width: '35px', textAlign: 'center' }}>#</th>
+                            <th style={{ padding: '0.6rem 0.75rem' }}>Member Name</th>
+                            <th style={{ padding: '0.6rem 0.75rem' }}>Role / Category</th>
+                            <th style={{ padding: '0.6rem 0.75rem' }}>Designation</th>
+                            <th style={{ padding: '0.6rem 0.75rem' }}>Institution / Organization</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {detailModalMeeting.members.map((m, i) => (
+                            <tr key={i} style={{ borderBottom: '1px solid #F1F5F9', background: i % 2 === 0 ? '#FFFFFF' : '#F8FAFC' }}>
+                              <td style={{ padding: '0.55rem 0.75rem', textAlign: 'center', fontWeight: 700 }}>{i + 1}</td>
+                              <td style={{ padding: '0.55rem 0.75rem', fontWeight: 700, color: '#0F172A' }}>{m.name}</td>
+                              <td style={{ padding: '0.55rem 0.75rem' }}>
+                                <span style={{ fontSize: '0.68rem', fontWeight: 700, background: '#EFF6FF', color: '#1D4ED8', padding: '0.2rem 0.45rem', borderRadius: '4px' }}>
+                                  {(m.member_type || m.category || 'MEMBER').replace(/_/g, ' ')}
+                                </span>
+                              </td>
+                              <td style={{ padding: '0.55rem 0.75rem', color: '#475569' }}>{m.designation || '—'}</td>
+                              <td style={{ padding: '0.55rem 0.75rem', color: '#334155' }}>{m.organization || m.institution || 'Narasaraopeta Engineering College'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-                  </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div style={{ background: '#F8FAFC', padding: '0.85rem', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                        <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#D4AF37', textTransform: 'uppercase' }}>BoS Chairman</div>
+                        <div style={{ fontWeight: 800, color: '#0F172A' }}>{detailModalMeeting.chairmanName || detailModalMeeting.chairman || detailModalMeeting.chairperson}</div>
+                      </div>
+                      {detailModalMeeting.universityNominee && (
+                        <div style={{ background: '#F8FAFC', padding: '0.85rem', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#2563EB', textTransform: 'uppercase' }}>University Nominee</div>
+                          <div style={{ fontWeight: 800, color: '#0F172A' }}>{detailModalMeeting.universityNominee.name}</div>
+                          <div style={{ fontSize: '0.74rem', color: '#475569' }}>{detailModalMeeting.universityNominee.designation}, {detailModalMeeting.universityNominee.institution}</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
               {activeDetailTab === 'agenda' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {detailModalMeeting.agendaItems?.map((it, idx) => (
-                    <div key={idx} style={{ background: '#F8FAFC', padding: '1rem', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                      <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#D4AF37', marginBottom: '0.2rem' }}>AGENDA ITEM #{it.itemNo}</div>
-                      <div style={{ fontWeight: 800, color: '#0F172A', marginBottom: '0.35rem' }}>{it.title}</div>
-                      <div style={{ fontSize: '0.78rem', color: '#475569', background: '#FFFFFF', padding: '0.65rem', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
-                        <strong>Resolution / Decision:</strong> {it.decision || 'Approved without amendments.'}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {detailModalMeeting.agendaItems && detailModalMeeting.agendaItems.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#0F172A', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <BookOpen size={14} style={{ color: '#D4AF37' }} /> Agenda Items & Deliberations ({detailModalMeeting.agendaItems.length})
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                        {detailModalMeeting.agendaItems.map((it, idx) => (
+                          <div key={idx} style={{ background: '#F8FAFC', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                            <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#D4AF37', marginBottom: '0.2rem' }}>AGENDA ITEM #{it.itemNo || idx + 1}</div>
+                            <div style={{ fontWeight: 800, color: '#0F172A', marginBottom: '0.25rem' }}>{it.title}</div>
+                            {it.description && <div style={{ fontSize: '0.76rem', color: '#64748B' }}>{it.description}</div>}
+                            {it.decision && (
+                              <div style={{ fontSize: '0.76rem', color: '#047857', background: '#ECFDF5', padding: '0.45rem 0.65rem', borderRadius: '6px', border: '1px solid #A7F3D0', marginTop: '0.4rem' }}>
+                                <strong>Decision:</strong> {it.decision}
+                              </div>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  ))}
+                  )}
+
+                  {detailModalMeeting.resolutions && detailModalMeeting.resolutions.length > 0 && (
+                    <div style={{ marginTop: '0.5rem' }}>
+                      <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#0F172A', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <CheckCircle2 size={14} style={{ color: '#10B981' }} /> Formal BoS Resolutions ({detailModalMeeting.resolutions.length})
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                        {detailModalMeeting.resolutions.map((res, idx) => (
+                          <div key={idx} style={{ background: '#F0FDF4', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid #BBF7D0' }}>
+                            <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#15803D', marginBottom: '0.2rem' }}>RESOLUTION #{res.resolutionNumber || idx + 1}</div>
+                            <div style={{ fontWeight: 800, color: '#0F172A', marginBottom: '0.25rem' }}>{res.title}</div>
+                            <div style={{ fontSize: '0.78rem', color: '#166534', lineHeight: 1.45 }}>{res.resolutionText || res.title}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {(!detailModalMeeting.agendaItems || detailModalMeeting.agendaItems.length === 0) && (!detailModalMeeting.resolutions || detailModalMeeting.resolutions.length === 0) && (
+                    <div style={{ textAlign: 'center', padding: '2rem', color: '#64748B', fontSize: '0.82rem' }}>
+                      No separate agenda items or resolutions parsed for this summary record. Please refer to official minutes package.
+                    </div>
+                  )}
                 </div>
               )}
 
               {activeDetailTab === 'documents' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                  {detailModalMeeting.documents?.map(doc => (
-                    <div key={doc.id} style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <FileText size={20} style={{ color: '#EF4444' }} />
-                        <div>
-                          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0F172A' }}>{doc.title}</div>
-                          <div style={{ fontSize: '0.7rem', color: '#64748B' }}>
-                            {doc.filename} • {(doc.sizeBytes / 1024 / 1024).toFixed(1)} MB • {doc.version}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {detailModalMeeting.documents && detailModalMeeting.documents.length > 0 ? (
+                    detailModalMeeting.documents.map(doc => (
+                      <div key={doc.id} style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <div style={{ width: '42px', height: '42px', borderRadius: '8px', background: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <FileText size={22} />
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A' }}>{doc.title || doc.filename}</div>
+                            <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '0.15rem' }}>
+                              {doc.filename} • {doc.sizeBytes ? `${(doc.sizeBytes / 1024 / 1024).toFixed(2)} MB` : 'PDF'} • {doc.type || 'MINUTES'}
+                            </div>
+                            {doc.sha256 && (
+                              <div style={{ fontSize: '0.66rem', color: '#94A3B8', fontFamily: 'monospace', marginTop: '0.2rem' }}>
+                                SHA-256: {doc.sha256.slice(0, 24)}...
+                              </div>
+                            )}
                           </div>
                         </div>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button
+                            type="button"
+                            onClick={() => setActivePdfDoc(doc)}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: '#0F172A', color: '#FFFFFF', border: 'none', padding: '0.45rem 0.85rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
+                          >
+                            <Eye size={13} /> View PDF
+                          </button>
+                          <a
+                            href={doc.downloadUrl || doc.url || `/documents/bos/cse-cys/${doc.filename}`}
+                            download={doc.filename}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: '#F8FAFC', border: '1px solid #CBD5E1', color: '#334155', padding: '0.45rem 0.85rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, textDecoration: 'none', cursor: 'pointer' }}
+                          >
+                            <Download size={13} /> Download
+                          </a>
+                        </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => showToast(`Downloading verified document ${doc.filename}...`)}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: '#F8FAFC', border: '1px solid #CBD5E1', padding: '0.35rem 0.75rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}
-                      >
-                        <Download size={12} /> Download
-                      </button>
+                    ))
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '2rem', color: '#64748B', fontSize: '0.82rem' }}>
+                      No source PDF evidence package attached to this meeting record.
                     </div>
-                  ))}
+                  )}
                 </div>
               )}
 
@@ -1189,6 +1371,85 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
               </button>
             </div>
           </motion.div>
+        </div>
+      )}
+
+      {/* 10. Official Scanned PDF Viewer Modal */}
+      {activePdfDoc && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(7, 15, 30, 0.88)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          flexDirection: 'column',
+          zIndex: 8500,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: '#0F172A',
+            borderRadius: '12px 12px 0 0',
+            padding: '0.75rem 1.25rem',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            borderBottom: '1px solid #334155'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <FileText size={20} style={{ color: '#D4AF37' }} />
+              <div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#FFFFFF' }}>
+                  {activePdfDoc.title || activePdfDoc.filename}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: '#94A3B8' }}>
+                  {activePdfDoc.filename} • Verified Official Signed Minutes Package
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <a
+                href={activePdfDoc.downloadUrl || activePdfDoc.url || `/documents/bos/cse-cys/${activePdfDoc.filename}`}
+                download={activePdfDoc.filename}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  background: '#D4AF37',
+                  color: '#0F172A',
+                  border: 'none',
+                  padding: '0.45rem 0.9rem',
+                  borderRadius: '6px',
+                  fontSize: '0.76rem',
+                  fontWeight: 800,
+                  textDecoration: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                <Download size={13} /> Download PDF
+              </a>
+              <button
+                type="button"
+                onClick={() => setActivePdfDoc(null)}
+                style={{
+                  background: '#334155',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  padding: '0.45rem 0.65rem',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+          <div style={{ flex: 1, background: '#1E293B', borderRadius: '0 0 12px 12px', overflow: 'hidden' }}>
+            <iframe
+              src={activePdfDoc.downloadUrl || activePdfDoc.url || `/documents/bos/cse-cys/${activePdfDoc.filename}`}
+              title={activePdfDoc.title || 'Official Document Viewer'}
+              style={{ width: '100%', height: '100%', border: 'none' }}
+            />
+          </div>
         </div>
       )}
     </MotionPage>
