@@ -117,11 +117,13 @@ import ResearchDiscoveryView from './research/ResearchDiscoveryView.jsx';
 import ResearchDataSourcesView from './research/ResearchDataSourcesView.jsx';
 import { NaacPortalManager, NbaTier1Manager, NirfDataManager, ExportHubManager } from './compliance/ComplianceHubs.jsx';
 import { IamMatrixManager, IamSessionsManager, IamSettingsManager } from './iam/IamModules.jsx';
+import BulkDataCenterView from './bulk-data/BulkDataCenterView.jsx';
 import PortalModuleFallback from './common/PortalModuleFallback.jsx';
 import ModuleErrorBoundary from '../common/ModuleErrorBoundary.jsx';
 
 export default function PortalDashboard({ currentUser, onNavigatePublic, onLogout, onExitPortal }) {
   const [activeModule, setActiveModule] = useState('overview');
+  const [selectedBulkModule, setSelectedBulkModule] = useState(null);
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [isMobileDrawer, setIsMobileDrawer] = useState(false);
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 1024 : false);
@@ -129,6 +131,11 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [bulkImportModalOpen, setBulkImportModalOpen] = useState(false);
   const [dataVersion, setDataVersion] = useState(0);
+
+  const handleOpenBulkImport = (moduleKey) => {
+    setSelectedBulkModule(moduleKey || 'academic_events');
+    setActiveModule('bulk-data');
+  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -490,6 +497,7 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
             <AcademicEventsManager
               currentUser={currentUser}
               onDataChange={refreshData}
+              onOpenBulkDataCenter={() => handleOpenBulkImport('academic_events')}
               initialTypeFilter={
                 activeModule === 'hackathons' ? 'Hackathon' :
                 activeModule === 'codeathons' ? 'Code-a-thon' :
@@ -917,7 +925,17 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
           )}
 
           {/* ────────────────────────────────────────────────────────── */}
-          {/* VIEW 20: RECYCLE BIN & AUDIT LOGS */}
+          {/* VIEW 20: BULK DATA CENTER */}
+          {/* ────────────────────────────────────────────────────────── */}
+          {activeModule === 'bulk-data' && (
+            <BulkDataCenterView
+              currentUser={currentUser}
+              initialModuleKey={selectedBulkModule}
+            />
+          )}
+
+          {/* ────────────────────────────────────────────────────────── */}
+          {/* VIEW 21: RECYCLE BIN & AUDIT LOGS */}
           {/* ────────────────────────────────────────────────────────── */}
           {activeModule === 'recycle-bin' && (
             <RecycleBin currentUser={currentUser} onRestored={refreshData} />
@@ -928,7 +946,7 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
           )}
 
           {/* ────────────────────────────────────────────────────────── */}
-          {/* VIEW 21: ZERO-BLANK-SCREEN FALLBACK */}
+          {/* VIEW 22: ZERO-BLANK-SCREEN FALLBACK */}
           {/* ────────────────────────────────────────────────────────── */}
           {![
             'overview',
@@ -981,6 +999,7 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
             'nirf-data',
             'export-hub',
             'iam-users',
+            'bulk-data',
             'iam-matrix',
             'iam-sessions',
             'iam-settings',

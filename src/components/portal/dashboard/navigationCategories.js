@@ -113,6 +113,7 @@ export const NAVIGATION_CATEGORIES = [
     icon: Sliders,
     items: [
       { id: 'iam-users', label: 'User Directory & Roles', icon: UserCheck },
+      { id: 'bulk-data', label: 'Bulk Data Center', icon: Database },
       { id: 'iam-matrix', label: 'Permissions Matrix', icon: Grid },
       { id: 'iam-sessions', label: 'Active Sessions & Devices', icon: Smartphone },
       { id: 'iam-settings', label: 'Auth & OTP Policies', icon: Sliders },

@@ -27,9 +27,9 @@ import {
   Layers, 
   Star, 
   Image as ImageIcon,
-  Tag,
   Check,
-  X
+  X,
+  UploadCloud
 } from 'lucide-react';
 import { DEPARTMENTS } from '../../../data/masterData.js';
 import { 
@@ -43,6 +43,8 @@ import {
   exportToPDF
 } from '../../../data/portalStore.js';
 import AcademicEventWizardModal from './AcademicEventWizardModal.jsx';
+import AcademicEventBulkImportModal from './AcademicEventBulkImportModal.jsx';
+import { downloadBulkImportTemplate } from '../../../lib/events/bulkImportEngine.js';
 import ConfirmDeleteDialog from '../common/ConfirmDeleteDialog.jsx';
 import { 
   MotionPage, 
@@ -67,7 +69,7 @@ const EVENT_TYPE_TABS = [
   { id: 'Technical Talk', label: 'Technical Talks', icon: Video }
 ];
 
-export default function AcademicEventsManager({ currentUser, onDataChange, initialTypeFilter = 'ALL' }) {
+export default function AcademicEventsManager({ currentUser, onDataChange, initialTypeFilter = 'ALL', onOpenBulkDataCenter }) {
   const [dataVersion, setDataVersion] = useState(0);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
@@ -78,6 +80,7 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
   const [reviewRemarks, setReviewRemarks] = useState('');
   const [winnersModalItem, setWinnersModalItem] = useState(null);
   const [deleteConfirmItem, setDeleteConfirmItem] = useState(null);
+  const [bulkImportModalOpen, setBulkImportModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
 
   const showToast = (msg) => {
@@ -142,6 +145,7 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
 
   // Permissions
   const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD' || currentUser?.role === 'FACULTY';
+  const canBulkImport = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD';
   const canReview = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD';
 
   const handleExecuteReview = () => {
@@ -223,6 +227,57 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
         onExportCSV={() => exportToCSV('events')}
         onExportExcel={() => exportToExcel('events')}
         onExportPDF={() => exportToPDF('events')}
+        customActions={
+          <>
+            <button
+              type="button"
+              onClick={downloadBulkImportTemplate}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                padding: '0.48rem 0.85rem',
+                background: '#FFFFFF',
+                border: '1px solid #CBD5E1',
+                borderRadius: '8px',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                color: '#15803D',
+                cursor: 'pointer'
+              }}
+            >
+              <Download size={14} /> Template
+            </button>
+            {canBulkImport && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (onOpenBulkDataCenter) {
+                    onOpenBulkDataCenter();
+                  } else {
+                    setBulkImportModalOpen(true);
+                  }
+                }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  padding: '0.48rem 0.95rem',
+                  background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
+                  color: '#F1C40F',
+                  border: '1px solid #334155',
+                  borderRadius: '8px',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                }}
+              >
+                <UploadCloud size={14} /> Bulk Import CSV
+              </button>
+            )}
+          </>
+        }
         primaryAction={canCreate ? {
           label: 'Create Event',
           icon: Plus,
@@ -728,6 +783,17 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
           </div>
         </div>
       )}
+      {/* Bulk Import CSV Modal */}
+      <AcademicEventBulkImportModal
+        isOpen={bulkImportModalOpen}
+        onClose={() => setBulkImportModalOpen(false)}
+        currentUser={currentUser}
+        onImportComplete={(result) => {
+          refresh();
+          showToast(`Successfully imported ${result.importedCount} event(s) into DRAFT verification queue.`);
+        }}
+      />
+
       {/* Confirm Delete Dialog */}
       <ConfirmDeleteDialog
         isOpen={Boolean(deleteConfirmItem)}

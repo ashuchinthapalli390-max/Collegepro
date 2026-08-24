@@ -64,7 +64,15 @@ export const STORAGE_KEYS = {
   FACULTY_RESEARCH_PROFILES: 'nec_portal_faculty_research_profiles_v3',
   DATASET_VERSIONS: 'nec_portal_dataset_versions_v3',
   METRIC_SNAPSHOTS: 'nec_portal_metric_snapshots_v3',
-  STAFF_PROFILES: 'nec_portal_staff_profiles_v3'
+  STAFF_PROFILES: 'nec_portal_staff_profiles_v3',
+  ACADEMIC_EVENT_IMPORT_JOBS: 'nec_portal_academic_event_import_jobs_v3',
+  ACADEMIC_EVENT_IMPORT_ROWS: 'nec_portal_academic_event_import_rows_v3',
+  BULK_IMPORT_JOBS: 'nec_portal_bulk_import_jobs_v3',
+  BULK_IMPORT_ROWS: 'nec_portal_bulk_import_rows_v3',
+  BULK_IMPORT_ALIAS_MAPPINGS: 'nec_portal_bulk_import_alias_mappings_v3',
+  BULK_MEDIA_JOBS: 'nec_portal_bulk_media_jobs_v3',
+  BULK_MEDIA_FOLDERS: 'nec_portal_bulk_media_folders_v3',
+  BULK_MEDIA_ITEMS: 'nec_portal_bulk_media_items_v3'
 };
 
 // Automatic one-time cleanup of obsolete legacy demo caches
@@ -304,6 +312,23 @@ export const ALL_PERMISSIONS = [
   { key: 'users.suspend', module: 'User Management', label: 'Suspend / Lock Users' },
   { key: 'users.assign_role', module: 'User Management', label: 'Change Roles & Permissions' },
   { key: 'cms.publish', module: 'CMS', label: 'Publish News & Circulars' },
+  { key: 'events.view', module: 'Events', label: 'View Academic Events & Workshops' },
+  { key: 'events.create', module: 'Events', label: 'Create Academic Event' },
+  { key: 'events.update', module: 'Events', label: 'Edit Academic Event' },
+  { key: 'events.bulk_import', module: 'Events', label: 'Bulk CSV Import Academic Events' },
+  { key: 'events.review', module: 'Events', label: 'Review & Verify Academic Events' },
+  { key: 'events.approve', module: 'Events', label: 'Approve & Publish Academic Events' },
+  { key: 'bulk_import.view', module: 'Bulk Data', label: 'Access Bulk Data Center' },
+  { key: 'bulk_import.upload', module: 'Bulk Data', label: 'Upload CSV/XLSX Datasets' },
+  { key: 'bulk_import.validate', module: 'Bulk Data', label: 'Validate Staged Records' },
+  { key: 'bulk_import.commit', module: 'Bulk Data', label: 'Commit Bulk Import to Production Drafts' },
+  { key: 'bulk_import.rollback', module: 'Bulk Data', label: 'Rollback Staged / Draft Imports' },
+  { key: 'bulk_import.download_template', module: 'Bulk Data', label: 'Download Module Templates' },
+  { key: 'bulk_import.download_errors', module: 'Bulk Data', label: 'Download Issue Reports' },
+  { key: 'bulk_import.view_history', module: 'Bulk Data', label: 'View Ingestion History & Provenance' },
+  { key: 'bulk_import.manage_mappings', module: 'Bulk Data', label: 'Manage Institutional Alias Mappings' },
+  { key: 'media.bulk_upload', module: 'Media', label: 'Folder-Based Bulk Media Ingestion' },
+  { key: 'media.approve_public', module: 'Media', label: 'Approve Media for Public Visibility' },
   { key: 'reports.export', module: 'Reports', label: 'Export PDF / Excel / CSV' },
   { key: 'audit.view', module: 'Audit', label: 'Inspect Immutable Security Logs' }
 ];
@@ -317,6 +342,10 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     'bos.view', 'bos.create',
     'internships.view', 'internships.manage',
     'achievements.view', 'achievements.approve',
+    'events.view', 'events.create', 'events.update', 'events.bulk_import', 'events.review', 'events.approve',
+    'bulk_import.view', 'bulk_import.upload', 'bulk_import.validate', 'bulk_import.commit', 'bulk_import.rollback',
+    'bulk_import.download_template', 'bulk_import.download_errors', 'bulk_import.view_history', 'bulk_import.manage_mappings',
+    'media.bulk_upload', 'media.approve_public',
     'users.view', 'users.create', 'users.suspend',
     'cms.publish', 'reports.export', 'audit.view'
   ],
@@ -327,6 +356,10 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     'bos.view', 'bos.create',
     'internships.view', 'internships.manage',
     'achievements.view', 'achievements.approve',
+    'events.view', 'events.create', 'events.update', 'events.bulk_import', 'events.review',
+    'bulk_import.view', 'bulk_import.upload', 'bulk_import.validate', 'bulk_import.commit',
+    'bulk_import.download_template', 'bulk_import.download_errors', 'bulk_import.view_history',
+    'media.bulk_upload',
     'reports.export'
   ],
   FACULTY: [
@@ -335,6 +368,8 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     'patents.view', 'patents.create',
     'bos.view',
     'achievements.view',
+    'events.view', 'events.create', 'events.update',
+    'bulk_import.download_template',
     'reports.export'
   ],
   DATA_ENTRY: [
@@ -342,11 +377,17 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     'publications.view', 'publications.create',
     'patents.view', 'patents.create',
     'internships.view', 'internships.create',
-    'achievements.view', 'achievements.create'
+    'achievements.view', 'achievements.create',
+    'events.view', 'events.create',
+    'bulk_import.view', 'bulk_import.upload', 'bulk_import.validate', 'bulk_import.commit',
+    'bulk_import.download_template', 'bulk_import.download_errors',
+    'media.bulk_upload'
   ],
   AUDITOR: [
     'faculty.view', 'publications.view', 'patents.view', 'bos.view',
-    'internships.view', 'achievements.view', 'reports.export', 'audit.view'
+    'internships.view', 'achievements.view', 'events.view',
+    'bulk_import.view', 'bulk_import.view_history', 'bulk_import.download_errors',
+    'reports.export', 'audit.view'
   ]
 };
 
@@ -2653,6 +2694,672 @@ export function softDeleteAcademicEvent(id, user) {
   }
   return Array.isArray(items) ? items.filter(i => !i.isDeleted) : [];
 }
+
+// -------------------------------------------------------------
+// 9.1 Academic Events Bulk Import Jobs & Transactional Execution
+// -------------------------------------------------------------
+
+export function getAcademicEventImportJobs() {
+  const jobs = loadStore(STORAGE_KEYS.ACADEMIC_EVENT_IMPORT_JOBS, []);
+  return Array.isArray(jobs) ? jobs : [];
+}
+
+export function saveAcademicEventImportJob(job) {
+  const jobs = getAcademicEventImportJobs();
+  const index = jobs.findIndex(j => j.id === job.id);
+  if (index >= 0) {
+    jobs[index] = { ...jobs[index], ...job, updatedAt: new Date().toISOString() };
+  } else {
+    jobs.unshift({
+      ...job,
+      id: job.id || `imp_job_${Date.now()}`,
+      createdAt: job.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+  }
+  saveStore(STORAGE_KEYS.ACADEMIC_EVENT_IMPORT_JOBS, jobs);
+  return job;
+}
+
+export function getAcademicEventImportRows(jobId) {
+  const allRows = loadStore(STORAGE_KEYS.ACADEMIC_EVENT_IMPORT_ROWS, []);
+  if (!Array.isArray(allRows)) return [];
+  return jobId ? allRows.filter(r => r.importJobId === jobId) : allRows;
+}
+
+export function saveAcademicEventImportRows(jobId, rows = []) {
+  const allRows = loadStore(STORAGE_KEYS.ACADEMIC_EVENT_IMPORT_ROWS, []);
+  const cleanRows = Array.isArray(allRows) ? allRows.filter(r => r.importJobId !== jobId) : [];
+  const stampedRows = rows.map(r => ({
+    ...r,
+    importJobId: jobId,
+    savedAt: new Date().toISOString()
+  }));
+  const updated = [...stampedRows, ...cleanRows];
+  saveStore(STORAGE_KEYS.ACADEMIC_EVENT_IMPORT_ROWS, updated);
+  return stampedRows;
+}
+
+export function executeBulkAcademicEventImport(jobId, selectedRowIds = [], resolvedRows = [], adminUser) {
+  const items = loadStore(STORAGE_KEYS.EVENTS, INITIAL_EVENTS);
+  const rowsToImport = resolvedRows.filter(r => 
+    selectedRowIds.includes(r.id) && r.validationStatus !== 'BLOCKED'
+  );
+
+  if (rowsToImport.length === 0) {
+    return {
+      success: false,
+      error: 'No valid rows selected for import.',
+      importedCount: 0,
+      importedEvents: []
+    };
+  }
+
+  const importedEvents = [];
+  const timestamp = new Date().toISOString();
+
+  // Create department counts tracker for clean sequence numbers
+  const deptSequenceTracker = {};
+  items.forEach(ev => {
+    const d = ev.department || 'CSE';
+    deptSequenceTracker[d] = (deptSequenceTracker[d] || 0) + 1;
+  });
+
+  for (const row of rowsToImport) {
+    const primaryDept = (row.departmentCode === 'ALL' || !row.departmentCode) 
+      ? 'CSE' 
+      : row.departmentCode.split(',')[0].trim();
+
+    const ay = row.academicYear || '2026-27';
+    const yearCode = ay.slice(0, 4);
+    deptSequenceTracker[primaryDept] = (deptSequenceTracker[primaryDept] || 0) + 1;
+    const seq = String(deptSequenceTracker[primaryDept]).padStart(4, '0');
+    const eventNumber = `EVT-${primaryDept.replace(/[^A-Z0-9]/gi, '')}-${yearCode}-${seq}`;
+
+    // Structured Resource Persons Array
+    const resourcePersons = [];
+    if (row.resourcePerson && row.resourcePerson.name) {
+      resourcePersons.push({
+        name: row.resourcePerson.name,
+        designation: row.resourcePerson.designation || 'Expert / Resource Person',
+        organization: row.resourcePerson.organization || row.organizedBy || '',
+        isExternal: row.resourcePerson.isExternal !== false
+      });
+    }
+
+    const newEvent = {
+      id: `evt_bulk_${Date.now()}_${Math.random().toString(36).substr(2, 7)}`,
+      eventNumber,
+      title: row.title,
+      name: row.title,
+      eventType: row.eventType || 'Workshop',
+      department: row.departmentCode || primaryDept,
+      academicYear: ay,
+      startDate: row.startDate,
+      endDate: row.endDate || row.startDate,
+      startTime: row.startTime || '09:30',
+      endTime: row.endTime || '16:30',
+      mode: row.mode || 'Offline',
+      venue: String(row.venue || 'Campus Auditorium'),
+      level: row.level || 'Institution',
+      description: row.description || `Organized by ${row.organizedBy || 'TechnoElite, ISTE'}.`,
+      targetAudience: row.targetAudience || 'All Students',
+      targetYear: row.audienceYears || 'All Years',
+      targetSemester: 'Both Semesters',
+      
+      // People
+      coordinatorName: row.coordinatorName || '',
+      coCoordinatorName: '',
+      studentCoordinatorName: '',
+      resourcePersons,
+      
+      // Participant Metrics
+      expectedParticipants: Number(row.participantsTotal || 0),
+      actualParticipants: Number(row.participantsTotal || 0),
+      participantBreakdown: row.participantsBreakdown || '',
+      
+      // Governance & Staging Lifecycle Status (Always DRAFT / INTERNAL_ONLY)
+      eventStatus: 'PLANNED',
+      workflowStatus: 'DRAFT',
+      status: 'Draft',
+      publicVisibility: 'INTERNAL_ONLY',
+      
+      // Collaboration & MoU
+      isMouAssociated: row.isMouAssociated || (row.mouPartnerText ? 'Yes' : 'No'),
+      associatedMoU: row.mouPartnerText || '',
+      associatedOrganization: row.mouPartnerText || '',
+      mouId: row.mouId || null,
+      
+      // Financials (null if empty, never 0)
+      amount: row.amount || null,
+      invoiceDate: row.invoiceDate || null,
+      
+      // Provenance
+      sourceType: 'BULK_CSV_IMPORT',
+      sourceImportJobId: jobId,
+      sourceRowNumber: row.sourceRowNumber,
+      sourceRawPayload: row.rawPayload || {},
+      
+      // Containers
+      sessions: [],
+      documents: [],
+      photos: [],
+      winners: [],
+      reviewHistory: [
+        {
+          action: 'BULK_IMPORT',
+          fromStatus: 'NONE',
+          toStatus: 'DRAFT',
+          remarks: `Bulk imported via CSV (${row.title}). Pending HOD/Admin review.`,
+          reviewerName: adminUser?.name || 'Authorized Admin',
+          reviewerRole: adminUser?.role || 'SUPER_ADMIN',
+          timestamp
+        }
+      ],
+      
+      createdAt: timestamp,
+      createdBy: adminUser?.name || 'Super Admin',
+      updatedAt: timestamp,
+      isDeleted: false
+    };
+
+    items.unshift(newEvent);
+    importedEvents.push(newEvent);
+    row.importedEventId = newEvent.id;
+  }
+
+  // Commit updated events to main store
+  saveStore(STORAGE_KEYS.EVENTS, items);
+
+  // Update Import Job
+  const existingJob = getAcademicEventImportJobs().find(j => j.id === jobId);
+  const updatedJob = {
+    ...(existingJob || { id: jobId, createdAt: timestamp }),
+    status: importedEvents.length === resolvedRows.length ? 'COMPLETED' : 'COMPLETED_WITH_ERRORS',
+    importedRows: importedEvents.length,
+    totalRows: resolvedRows.length,
+    completedAt: timestamp,
+    completedBy: adminUser?.name
+  };
+  saveAcademicEventImportJob(updatedJob);
+  saveAcademicEventImportRows(jobId, resolvedRows);
+
+  // Record Immutable Audit Log
+  addAuditLog(
+    'EVENTS_BULK_IMPORTED',
+    'Academic Events',
+    `Bulk imported ${importedEvents.length} academic event(s) from CSV (Job ID: ${jobId}) as DRAFT records awaiting verification.`,
+    adminUser
+  );
+
+  return {
+    success: true,
+    importedCount: importedEvents.length,
+    importedEvents,
+    jobSummary: updatedJob
+  };
+}
+
+// ─────────────────────────────────────────────────────────────
+// 9B. UNIVERSAL BULK DATA CENTER & BULK MEDIA STORE ENGINE
+// ─────────────────────────────────────────────────────────────
+
+export function getBulkImportJobs() {
+  return loadStore(STORAGE_KEYS.BULK_IMPORT_JOBS, []);
+}
+
+export function getBulkImportJobById(jobId) {
+  const jobs = getBulkImportJobs();
+  return jobs.find(j => j.id === jobId || j.jobNumber === jobId) || null;
+}
+
+export function saveBulkImportJob(job) {
+  const jobs = getBulkImportJobs();
+  const index = jobs.findIndex(j => j.id === job.id);
+  let updated;
+  if (index >= 0) {
+    updated = [...jobs];
+    updated[index] = { ...updated[index], ...job, updatedAt: new Date().toISOString() };
+  } else {
+    updated = [job, ...jobs];
+  }
+  saveStore(STORAGE_KEYS.BULK_IMPORT_JOBS, updated);
+  return job;
+}
+
+export function getBulkImportRows(jobId) {
+  const allRows = loadStore(STORAGE_KEYS.BULK_IMPORT_ROWS, []);
+  if (!jobId) return allRows;
+  return allRows.filter(r => r.importJobId === jobId);
+}
+
+export function saveBulkImportRows(jobId, rows) {
+  const allRows = loadStore(STORAGE_KEYS.BULK_IMPORT_ROWS, []);
+  const otherRows = allRows.filter(r => r.importJobId !== jobId);
+  const updated = [...rows, ...otherRows];
+  saveStore(STORAGE_KEYS.BULK_IMPORT_ROWS, updated);
+  return rows;
+}
+
+export function getBulkImportAliasMappings(moduleKey) {
+  const mappings = loadStore(STORAGE_KEYS.BULK_IMPORT_ALIAS_MAPPINGS, [
+    { id: 'alias_ds', moduleKey: 'academic_events', fieldKey: 'department', sourceValueNormalized: 'ds', targetType: 'department', targetId: 'CSE (Data Science)', targetLabel: 'CSE (Data Science)', isDefault: true, isActive: true },
+    { id: 'alias_cs', moduleKey: 'academic_events', fieldKey: 'department', sourceValueNormalized: 'cs', targetType: 'department', targetId: 'CSE (Cyber Security)', targetLabel: 'CSE (Cyber Security)', isDefault: true, isActive: true },
+    { id: 'alias_all', moduleKey: 'academic_events', fieldKey: 'department', sourceValueNormalized: 'all', targetType: 'department', targetId: 'ALL', targetLabel: 'Institution Wide / All Departments', isDefault: true, isActive: true },
+    { id: 'alias_aiml_ai', moduleKey: 'academic_events', fieldKey: 'department', sourceValueNormalized: 'aiml, ai', targetType: 'department', targetId: 'CSE (AI & ML), CSE (AI)', targetLabel: 'Joint: CSE (AI & ML) & CSE (AI)', isDefault: true, isActive: true }
+  ]);
+  if (!moduleKey) return mappings;
+  return mappings.filter(m => m.moduleKey === moduleKey || m.moduleKey === 'general');
+}
+
+export function saveBulkImportAliasMapping(mapping, adminUser) {
+  const mappings = loadStore(STORAGE_KEYS.BULK_IMPORT_ALIAS_MAPPINGS, []);
+  const index = mappings.findIndex(m => m.id === mapping.id);
+  let updated;
+  if (index >= 0) {
+    updated = [...mappings];
+    updated[index] = { ...updated[index], ...mapping, updatedAt: new Date().toISOString() };
+  } else {
+    const newMapping = {
+      ...mapping,
+      id: mapping.id || `alias_${Date.now()}`,
+      createdBy: adminUser?.name || 'Admin',
+      createdAt: new Date().toISOString(),
+      isActive: mapping.isActive !== false
+    };
+    updated = [newMapping, ...mappings];
+  }
+  saveStore(STORAGE_KEYS.BULK_IMPORT_ALIAS_MAPPINGS, updated);
+  addAuditLog('BULK_ALIAS_MAPPING_UPDATED', 'Bulk Data Center', `Alias mapping updated for "${mapping.sourceValueNormalized}" -> "${mapping.targetLabel}".`, adminUser);
+  return mapping;
+}
+
+// ─────────────────────────────────────────────────────────────
+// BULK MEDIA STORE
+// ─────────────────────────────────────────────────────────────
+
+export function getBulkMediaJobs() {
+  return loadStore(STORAGE_KEYS.BULK_MEDIA_JOBS, []);
+}
+
+export function getBulkMediaJobById(jobId) {
+  return getBulkMediaJobs().find(j => j.id === jobId) || null;
+}
+
+export function saveBulkMediaJob(job) {
+  const jobs = getBulkMediaJobs();
+  const index = jobs.findIndex(j => j.id === job.id);
+  let updated;
+  if (index >= 0) {
+    updated = [...jobs];
+    updated[index] = { ...updated[index], ...job, updatedAt: new Date().toISOString() };
+  } else {
+    updated = [job, ...jobs];
+  }
+  saveStore(STORAGE_KEYS.BULK_MEDIA_JOBS, updated);
+  return job;
+}
+
+export function getBulkMediaFolders(jobId) {
+  const allFolders = loadStore(STORAGE_KEYS.BULK_MEDIA_FOLDERS, []);
+  if (!jobId) return allFolders;
+  return allFolders.filter(f => f.jobId === jobId);
+}
+
+export function saveBulkMediaFolders(jobId, folders) {
+  const allFolders = loadStore(STORAGE_KEYS.BULK_MEDIA_FOLDERS, []);
+  const others = allFolders.filter(f => f.jobId !== jobId);
+  const updated = [...folders, ...others];
+  saveStore(STORAGE_KEYS.BULK_MEDIA_FOLDERS, updated);
+  return folders;
+}
+
+export function getBulkMediaItems(jobId) {
+  const allItems = loadStore(STORAGE_KEYS.BULK_MEDIA_ITEMS, []);
+  if (!jobId) return allItems;
+  return allItems.filter(i => i.jobId === jobId);
+}
+
+export function saveBulkMediaItems(jobId, items) {
+  const allItems = loadStore(STORAGE_KEYS.BULK_MEDIA_ITEMS, []);
+  const others = allItems.filter(i => i.jobId !== jobId);
+  const updated = [...items, ...others];
+  saveStore(STORAGE_KEYS.BULK_MEDIA_ITEMS, updated);
+  return items;
+}
+
+// ─────────────────────────────────────────────────────────────
+// UNIVERSAL BULK IMPORT TRANSACTION EXECUTION
+// ─────────────────────────────────────────────────────────────
+
+export function executeUniversalBulkImport(jobId, selectedRowIds, moduleKey, resolvedRows, currentUser) {
+  const timestamp = new Date().toISOString();
+  const isHod = currentUser?.role === 'HOD';
+  const userDept = currentUser?.dept || '';
+
+  // Load target store based on module
+  let targetStorageKey = STORAGE_KEYS.EVENTS;
+  let defaultWorkflowStatus = 'DRAFT';
+  let defaultVisibility = 'INTERNAL_ONLY';
+  let recordTypeLabel = 'Academic Events';
+
+  switch (moduleKey) {
+    case 'academic_events':
+      targetStorageKey = STORAGE_KEYS.EVENTS;
+      recordTypeLabel = 'Academic Events';
+      break;
+    case 'publications':
+      targetStorageKey = STORAGE_KEYS.PUBLICATIONS;
+      defaultWorkflowStatus = 'IMPORTED_PENDING_REVIEW';
+      recordTypeLabel = 'Publications';
+      break;
+    case 'patents':
+      targetStorageKey = STORAGE_KEYS.PATENTS;
+      defaultWorkflowStatus = 'IMPORTED_PENDING_REVIEW';
+      recordTypeLabel = 'Patents';
+      break;
+    case 'faculty_memberships':
+      targetStorageKey = STORAGE_KEYS.FACULTY_MEMBERSHIPS;
+      recordTypeLabel = 'Faculty Memberships';
+      break;
+    case 'student_projects':
+      targetStorageKey = STORAGE_KEYS.STUDENT_PROJECTS;
+      recordTypeLabel = 'Student Projects';
+      break;
+    case 'student_achievements':
+      targetStorageKey = STORAGE_KEYS.STUDENT_ACHIEVEMENTS;
+      recordTypeLabel = 'Student Achievements';
+      break;
+    case 'student_internships':
+      targetStorageKey = STORAGE_KEYS.INTERNSHIPS;
+      recordTypeLabel = 'Student Internships';
+      break;
+    case 'nptel_certifications':
+      targetStorageKey = STORAGE_KEYS.NPTEL_CERTIFICATIONS;
+      recordTypeLabel = 'NPTEL Certifications';
+      break;
+    case 'mous':
+      targetStorageKey = STORAGE_KEYS.MOUS;
+      recordTypeLabel = 'Industry MoUs';
+      break;
+    case 'fdps_organized':
+      targetStorageKey = STORAGE_KEYS.FDPS_ORGANIZED;
+      recordTypeLabel = 'FDPs Organized';
+      break;
+    case 'faculty_achievements':
+      targetStorageKey = STORAGE_KEYS.FACULTY_ACHIEVEMENTS;
+      recordTypeLabel = 'Faculty Achievements';
+      break;
+    case 'circulars':
+      targetStorageKey = STORAGE_KEYS.CIRCULARS;
+      recordTypeLabel = 'Official Circulars';
+      break;
+    case 'bos_meetings':
+      targetStorageKey = STORAGE_KEYS.BOS_MEETINGS;
+      recordTypeLabel = 'Board of Studies';
+      break;
+    case 'academic_council':
+      targetStorageKey = STORAGE_KEYS.ACADEMIC_COUNCIL;
+      recordTypeLabel = 'Academic Council';
+      break;
+    case 'placements':
+      targetStorageKey = STORAGE_KEYS.PLACEMENTS;
+      recordTypeLabel = 'Placements';
+      break;
+    case 'staff_profiles':
+      targetStorageKey = STORAGE_KEYS.STAFF_PROFILES;
+      recordTypeLabel = 'Staff Profiles';
+      break;
+    case 'faculty_directory':
+      targetStorageKey = STORAGE_KEYS.USERS;
+      recordTypeLabel = 'Faculty Directory';
+      break;
+    default:
+      targetStorageKey = STORAGE_KEYS.EVENTS;
+      recordTypeLabel = 'General Data';
+  }
+
+  const existingRecords = loadStore(targetStorageKey, []);
+  const importedRecords = [];
+
+  for (const row of resolvedRows) {
+    if (!selectedRowIds.includes(row.id)) continue;
+    if (row.validationStatus === 'BLOCKED' || row.validationStatus === 'ERROR') continue;
+
+    // Enforce HOD scope
+    if (isHod && row.departmentCode && row.departmentCode !== 'ALL') {
+      const depts = String(row.departmentCode).toLowerCase();
+      if (!depts.includes(userDept.toLowerCase())) {
+        continue;
+      }
+    }
+
+    const norm = row.normalizedPayload || row;
+    const recId = `${moduleKey.substring(0, 3)}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    
+    // Construct database entity with complete provenance
+    const newRecord = {
+      ...norm,
+      id: recId,
+      workflowStatus: norm.workflowStatus || defaultWorkflowStatus,
+      status: norm.status || 'Draft',
+      publicVisibility: defaultVisibility,
+      isVerified: false,
+      sourceType: 'BULK_IMPORT',
+      sourceImportJobId: jobId,
+      sourceRowNumber: row.sourceRowNumber || row.rowNumber,
+      sourceRawPayload: row.rawPayload || norm,
+      createdBy: currentUser?.name || 'Bulk Data Center',
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+
+    existingRecords.unshift(newRecord);
+    importedRecords.push(newRecord);
+    row.importedRecordId = recId;
+    row.validationStatus = 'IMPORTED';
+  }
+
+  // Commit to target store
+  saveStore(targetStorageKey, existingRecords);
+
+  // Update import job metadata
+  const existingJob = getBulkImportJobById(jobId);
+  const updatedJob = {
+    ...(existingJob || { id: jobId, createdAt: timestamp }),
+    status: importedRecords.length === selectedRowIds.length ? 'COMPLETED' : 'COMPLETED_WITH_ERRORS',
+    importedRows: importedRecords.length,
+    selectedRows: selectedRowIds.length,
+    completedAt: timestamp,
+    completedBy: currentUser?.name || 'Administrator'
+  };
+
+  saveBulkImportJob(updatedJob);
+  saveBulkImportRows(jobId, resolvedRows);
+
+  // Add immutable audit log
+  addAuditLog(
+    'BULK_IMPORT_COMMITTED',
+    recordTypeLabel,
+    `Bulk imported ${importedRecords.length} records into "${recordTypeLabel}" as DRAFT (Job: ${jobId}, File: ${updatedJob.originalFilename || 'Data'}).`,
+    currentUser
+  );
+
+  return {
+    success: true,
+    importedCount: importedRecords.length,
+    importedRecords,
+    jobSummary: updatedJob
+  };
+}
+
+// ─────────────────────────────────────────────────────────────
+// SAFE ROLLBACK FOR BULK IMPORTS
+// ─────────────────────────────────────────────────────────────
+
+export function rollbackBulkImportJob(jobId, currentUser) {
+  const job = getBulkImportJobById(jobId);
+  if (!job) {
+    return { success: false, error: 'Import job not found.' };
+  }
+
+  if (job.status === 'ROLLED_BACK') {
+    return { success: false, error: 'This import job has already been rolled back.' };
+  }
+
+  const rows = getBulkImportRows(jobId);
+  const importedRecordIds = rows.map(r => r.importedRecordId || r.importedEventId).filter(Boolean);
+
+  if (importedRecordIds.length === 0) {
+    return { success: false, error: 'No imported records found for this job.' };
+  }
+
+  // Determine storage key
+  let targetStorageKey = STORAGE_KEYS.EVENTS;
+  switch (job.moduleKey) {
+    case 'academic_events': targetStorageKey = STORAGE_KEYS.EVENTS; break;
+    case 'publications': targetStorageKey = STORAGE_KEYS.PUBLICATIONS; break;
+    case 'patents': targetStorageKey = STORAGE_KEYS.PATENTS; break;
+    case 'faculty_memberships': targetStorageKey = STORAGE_KEYS.FACULTY_MEMBERSHIPS; break;
+    case 'student_projects': targetStorageKey = STORAGE_KEYS.STUDENT_PROJECTS; break;
+    case 'student_achievements': targetStorageKey = STORAGE_KEYS.STUDENT_ACHIEVEMENTS; break;
+    case 'student_internships': targetStorageKey = STORAGE_KEYS.INTERNSHIPS; break;
+    case 'nptel_certifications': targetStorageKey = STORAGE_KEYS.NPTEL_CERTIFICATIONS; break;
+    case 'mous': targetStorageKey = STORAGE_KEYS.MOUS; break;
+    case 'fdps_organized': targetStorageKey = STORAGE_KEYS.FDPS_ORGANIZED; break;
+    case 'faculty_achievements': targetStorageKey = STORAGE_KEYS.FACULTY_ACHIEVEMENTS; break;
+    case 'circulars': targetStorageKey = STORAGE_KEYS.CIRCULARS; break;
+    case 'bos_meetings': targetStorageKey = STORAGE_KEYS.BOS_MEETINGS; break;
+    case 'academic_council': targetStorageKey = STORAGE_KEYS.ACADEMIC_COUNCIL; break;
+    case 'placements': targetStorageKey = STORAGE_KEYS.PLACEMENTS; break;
+    case 'staff_profiles': targetStorageKey = STORAGE_KEYS.STAFF_PROFILES; break;
+    case 'faculty_directory': targetStorageKey = STORAGE_KEYS.USERS; break;
+    default: targetStorageKey = STORAGE_KEYS.EVENTS;
+  }
+
+  const allRecords = loadStore(targetStorageKey, []);
+  
+  // Check for protected status changes (e.g. APPROVED or PUBLISHED)
+  const modifiedOrApproved = allRecords.filter(r => 
+    importedRecordIds.includes(r.id) && 
+    (r.workflowStatus === 'APPROVED' || r.workflowStatus === 'PUBLISHED' || r.isVerified === true)
+  );
+
+  if (modifiedOrApproved.length > 0) {
+    return {
+      success: false,
+      error: `Cannot rollback: ${modifiedOrApproved.length} record(s) have already been approved or verified in production.`
+    };
+  }
+
+  // Filter out imported records (safe rollback)
+  const retainedRecords = allRecords.filter(r => !importedRecordIds.includes(r.id));
+  saveStore(targetStorageKey, retainedRecords);
+
+  // Update job status to ROLLED_BACK (preserving history)
+  const updatedJob = {
+    ...job,
+    status: 'ROLLED_BACK',
+    rolledBackAt: new Date().toISOString(),
+    rolledBackBy: currentUser?.name || 'Administrator'
+  };
+  saveBulkImportJob(updatedJob);
+
+  // Mark rows as rolled back
+  const updatedRows = rows.map(r => ({ ...r, validationStatus: 'SKIPPED', rollbackStatus: 'ROLLED_BACK' }));
+  saveBulkImportRows(jobId, updatedRows);
+
+  // Record audit log
+  addAuditLog(
+    'BULK_IMPORT_ROLLED_BACK',
+    job.moduleKey || 'Bulk Data',
+    `Rolled back ${importedRecordIds.length} draft record(s) from Import Job ${job.jobNumber || jobId}.`,
+    currentUser
+  );
+
+  return {
+    success: true,
+    rolledBackCount: importedRecordIds.length,
+    job: updatedJob
+  };
+}
+
+// ─────────────────────────────────────────────────────────────
+// BULK MEDIA ATTACHMENT EXECUTION
+// ─────────────────────────────────────────────────────────────
+
+export function executeBulkMediaImport(jobId, selectedFolderIds, currentUser) {
+  const timestamp = new Date().toISOString();
+  const job = getBulkMediaJobById(jobId);
+  const folders = getBulkMediaFolders(jobId);
+  const items = getBulkMediaItems(jobId);
+  const events = getAcademicEvents();
+
+  let attachedCount = 0;
+  const updatedEvents = [...events];
+
+  for (const folder of folders) {
+    if (!selectedFolderIds.includes(folder.id)) continue;
+    if (folder.mappingStatus !== 'MATCHED' || !folder.matchedRecordId) continue;
+
+    const eventIndex = updatedEvents.findIndex(e => e.id === folder.matchedRecordId || e.eventNumber === folder.matchedRecordId);
+    if (eventIndex === -1) continue;
+
+    const folderItems = items.filter(i => i.folderId === folder.id && i.validationStatus === 'VALID');
+    const targetEvent = { ...updatedEvents[eventIndex] };
+    
+    // Existing photo attachments
+    const existingPhotos = targetEvent.photosPayload || targetEvent.photos || [];
+    const newPhotos = folderItems.map(item => ({
+      id: item.id,
+      url: item.mediaAssetUrl || item.relativePath,
+      filename: item.originalFilename,
+      role: item.mediaRole,
+      type: item.mediaType,
+      visibility: 'PRIVATE', // Private by default as required
+      uploadedAt: timestamp,
+      source: 'BULK_MEDIA_FOLDER'
+    }));
+
+    targetEvent.photosPayload = [...existingPhotos, ...newPhotos];
+    
+    // If primary cover found and event has no cover
+    const coverItem = folderItems.find(i => i.mediaRole === 'COVER');
+    if (coverItem && !targetEvent.coverImageUrl) {
+      targetEvent.coverImageUrl = coverItem.mediaAssetUrl || coverItem.relativePath;
+    }
+
+    updatedEvents[eventIndex] = targetEvent;
+    attachedCount += folderItems.length;
+  }
+
+  // Save updated events
+  saveStore(STORAGE_KEYS.EVENTS, updatedEvents);
+
+  // Update job
+  const updatedJob = {
+    ...job,
+    status: 'COMPLETED',
+    completedAt: timestamp,
+    completedBy: currentUser?.name
+  };
+  saveBulkMediaJob(updatedJob);
+
+  // Log audit
+  addAuditLog(
+    'BULK_MEDIA_IMPORTED',
+    'Media & Events',
+    `Folder-based bulk media import completed. Attached ${attachedCount} media asset(s) across selected event folders as PRIVATE.`,
+    currentUser
+  );
+
+  return {
+    success: true,
+    attachedCount,
+    job: updatedJob
+  };
+}
+
 
 // ─────────────────────────────────────────────────────────────
 // 10. FACULTY MEMBERSHIPS & PROFESSIONAL BODIES REPOSITORY
