@@ -36,8 +36,9 @@ export default function ResearchHub({ onOpenPortal }) {
 
   // Only display APPROVED + PUBLIC publications in the public website
   const allPublications = getPublications() || [];
-  const approvedPublicPubs = allPublications.filter(p => p && !p.isDeleted && p.workflowStatus !== 'REJECTED' && p.workflowStatus !== 'ARCHIVED');
-  const patents = getPatents() || [];
+  const approvedPublicPubs = allPublications.filter(p => p && !p.isDeleted && (p.workflowStatus === 'APPROVED' || p.workflowStatus === 'APPROVED_PUBLIC'));
+  const allPatents = getPatents() || [];
+  const patents = allPatents.filter(pat => pat && !pat.isDeleted && (pat.workflowStatus === 'APPROVED' || pat.workflowStatus === 'APPROVED_PUBLIC'));
   const mous = getMoUs() || [];
   const datasetVersions = getDatasetVersions() || [];
 
@@ -45,9 +46,9 @@ export default function ResearchHub({ onOpenPortal }) {
     const q = pubSearch.toLowerCase().trim();
     if (!q) {
       if (indexingFilter === 'All') return true;
-      if (indexingFilter === 'Scopus') return p.scopusIndexed === 'Yes';
-      if (indexingFilter === 'WoS') return p.wosIndexed === 'Yes';
-      if (indexingFilter === 'OpenAccess') return p.openAccess === true;
+      if (indexingFilter === 'Scopus') return p.scopusIndexed === 'Yes' || p.isScopusIndexed;
+      if (indexingFilter === 'WoS') return p.wosIndexed === 'Yes' || p.isWosIndexed;
+      if (indexingFilter === 'OpenAccess') return p.openAccess === true || p.isOpenAccess === true;
       return true;
     }
 
@@ -58,21 +59,22 @@ export default function ResearchHub({ onOpenPortal }) {
                           (p.doi || '').toLowerCase().includes(q);
 
     const matchesIndex = indexingFilter === 'All' || 
-                         (indexingFilter === 'Scopus' && p.scopusIndexed === 'Yes') ||
-                         (indexingFilter === 'WoS' && p.wosIndexed === 'Yes') ||
-                         (indexingFilter === 'OpenAccess' && p.openAccess === true);
+                         (indexingFilter === 'Scopus' && (p.scopusIndexed === 'Yes' || p.isScopusIndexed)) ||
+                         (indexingFilter === 'WoS' && (p.wosIndexed === 'Yes' || p.isWosIndexed)) ||
+                         (indexingFilter === 'OpenAccess' && (p.openAccess === true || p.isOpenAccess === true));
 
     return matchesSearch && matchesIndex;
   });
 
   const filteredPatents = patents.filter(pat => {
     const q = patentSearch.toLowerCase();
-    const matchesSearch = pat.title.toLowerCase().includes(q) || 
-                          pat.facultyName.toLowerCase().includes(q) || 
-                          pat.applicationNo.toLowerCase().includes(q) || 
-                          pat.department.toLowerCase().includes(q);
+    const invNames = (pat.inventors || []).map(i => i.name).join(' ');
+    const matchesSearch = (pat.title || '').toLowerCase().includes(q) || 
+                          (pat.facultyName || invNames).toLowerCase().includes(q) || 
+                          (pat.applicationNumber || pat.applicationNo || '').toLowerCase().includes(q) || 
+                          (pat.department || '').toLowerCase().includes(q);
 
-    const matchesStatus = patentStatusFilter === 'All' || pat.patentStatus === patentStatusFilter;
+    const matchesStatus = patentStatusFilter === 'All' || pat.patentStatus === patentStatusFilter || pat.legalStatus === patentStatusFilter;
     return matchesSearch && matchesStatus;
   });
 

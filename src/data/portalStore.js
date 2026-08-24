@@ -15,6 +15,7 @@ import {
   BRANDING_LOGOS,
   INITIAL_PUBLICATIONS,
   INITIAL_PATENTS,
+  INITIAL_FACULTY_RESEARCH_PROFILES,
   INITIAL_BOS,
   INITIAL_STUDENT_ACHIEVEMENTS,
   INITIAL_INTERNSHIPS,
@@ -31,6 +32,12 @@ import {
   INITIAL_EXAM_NOTIFICATIONS,
   INITIAL_NEWS
 } from './masterData.js';
+import { 
+  INITIAL_DATASET_VERSIONS, 
+  INDEXED_NEC_AUTHORS, 
+  INDEXED_NEC_WORKS, 
+  INDEXED_CROSSREF_METADATA 
+} from '../lib/research/localIndex/datasetStore.js';
 
 // -------------------------------------------------------------
 // Storage Keys & Security Core (v3 Production Clean)
@@ -39,6 +46,9 @@ export const STORAGE_KEYS = {
   FACULTY: 'nec_portal_faculty_v3',
   PUBLICATIONS: 'nec_portal_publications_v3',
   PATENTS: 'nec_portal_patents_v3',
+  RESEARCH_RECORD_SOURCES: 'nec_portal_research_record_sources_v3',
+  RESEARCH_INDEX_RECORDS: 'nec_portal_research_index_records_v3',
+  RESEARCH_IMPORT_JOBS: 'nec_portal_research_import_jobs_v3',
   BOS: 'nec_portal_bos_v3',
   STUDENT_ACHIEVEMENTS: 'nec_portal_student_achievements_v3',
   INTERNSHIPS: 'nec_portal_internships_v3',
@@ -257,11 +267,25 @@ export const USER_ROLES = [
   }
 ];
 
+const memoryStore = {};
+
+function getStorage() {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    return window.localStorage;
+  }
+  return {
+    getItem: (k) => (k in memoryStore ? memoryStore[k] : null),
+    setItem: (k, v) => { memoryStore[k] = String(v); },
+    removeItem: (k) => { delete memoryStore[k]; }
+  };
+}
+
 function loadStore(key, initialData) {
   try {
-    const item = localStorage.getItem(key);
+    const storage = getStorage();
+    const item = storage.getItem(key);
     if (!item) {
-      localStorage.setItem(key, JSON.stringify(initialData));
+      storage.setItem(key, JSON.stringify(initialData));
       return initialData;
     }
     const parsed = JSON.parse(item);
@@ -272,7 +296,7 @@ function loadStore(key, initialData) {
       } else if (parsed && Array.isArray(parsed.records)) {
         records = parsed.records;
       } else {
-        localStorage.setItem(key, JSON.stringify(initialData));
+        storage.setItem(key, JSON.stringify(initialData));
         return initialData;
       }
 
@@ -288,7 +312,7 @@ function loadStore(key, initialData) {
           }
         }
         if (hasNew) {
-          localStorage.setItem(key, JSON.stringify(records));
+          storage.setItem(key, JSON.stringify(records));
         }
       }
 
@@ -303,7 +327,8 @@ function loadStore(key, initialData) {
 
 function saveStore(key, data) {
   try {
-    localStorage.setItem(key, JSON.stringify(data));
+    const storage = getStorage();
+    storage.setItem(key, JSON.stringify(data));
   } catch (e) {
     console.error('Storage save error:', e);
   }
@@ -1157,26 +1182,47 @@ export function removeFacultyPhoto(facultyId, user) {
 
 export function normalizePublicationRecord(raw, idx = 0) {
   if (!raw) return null;
-  const dept = raw.department || 'CSE';
-  const ay = raw.academicYear || '2025-26';
-  const yearSuffix = (ay.split('-')[0] || '2026').trim();
-  const autoNum = raw.publicationRecordNumber || `PUB-${dept}-${yearSuffix}-${String(idx + 1).padStart(4, '0')}`;
 
-  const authors = Array.isArray(raw.authors) ? raw.authors : (
+  const authors = Array.isArray(raw.authors) && raw.authors.length > 0 ? raw.authors.map((a, aIdx) => ({
+    authorOrder: a.authorOrder || aIdx + 1,
+    name: a.name || 'Author',
+    department: a.department || a.departmentCode || null,
+    departmentCode: a.departmentCode || a.department || null,
+    designation: a.designation || 'Faculty',
+    affiliation: a.affiliation || 'Narasaraopeta Engineering College (Autonomous)',
+    isFirstAuthor: a.isFirstAuthor !== undefined ? a.isFirstAuthor : aIdx === 0,
+    isCorresponding: a.isCorresponding !== undefined ? a.isCorresponding : aIdx === 0,
+    facultyId: a.facultyId || null,
+    matchStatus: a.matchStatus || (a.facultyId ? 'EXACT' : 'UNRESOLVED'),
+    scopusAuthorId: a.scopusAuthorId || null,
+    orcid: a.orcid || null,
+    openalexAuthorId: a.openalexAuthorId || null
+  })) : (
     raw.facultyName ? [{
       authorOrder: 1,
       name: raw.facultyName,
-      department: dept,
+      department: raw.department || null,
+      departmentCode: raw.department || null,
       designation: 'Faculty',
-      affiliation: 'Narasaraopeta Engineering College',
+      affiliation: 'Narasaraopeta Engineering College (Autonomous)',
       isFirstAuthor: true,
-      isCorresponding: true
+      isCorresponding: true,
+      facultyId: raw.facultyId || null,
+      matchStatus: 'EXACT',
+      scopusAuthorId: null,
+      orcid: null,
+      openalexAuthorId: null
     }] : []
   );
 
+  const dept = raw.department || raw.departmentCode || (authors.find(a => a.departmentCode || a.department)?.departmentCode || null);
+  const ay = raw.academicYear || (raw.publicationYear ? `${raw.publicationYear}-${String(raw.publicationYear + 1).slice(-2)}` : null);
+  const yearSuffix = ay ? (ay.split('-')[0] || '2026').trim() : (raw.publicationYear ? String(raw.publicationYear) : '2026');
+  const autoNum = raw.publicationRecordNumber || (dept ? `PUB-${dept}-${yearSuffix}-${String(idx + 1).padStart(4, '0')}` : `PUB-GEN-${yearSuffix}-${String(idx + 1).padStart(4, '0')}`);
+
   const indexing = Array.isArray(raw.indexing) ? raw.indexing : [
-    ...(raw.scopusIndexed === 'Yes' ? ['Scopus'] : []),
-    ...(raw.wosIndexed === 'Yes' ? ['Web of Science'] : []),
+    ...(raw.scopusIndexed === 'Yes' || raw.isScopusIndexed ? ['Scopus'] : []),
+    ...(raw.wosIndexed === 'Yes' || raw.isWosIndexed ? ['Web of Science'] : []),
     ...(raw.ugcCareIndexed === 'Yes' ? ['UGC CARE'] : []),
     ...(raw.ieeeIndexed === 'Yes' ? ['IEEE Xplore'] : [])
   ];
@@ -1186,9 +1232,11 @@ export function normalizePublicationRecord(raw, idx = 0) {
     ...(raw.certificatePdf ? [{ id: 'DOC-2', name: raw.certificatePdf, type: 'Publication Certificate', size: '420 KB', url: '#' }] : [])
   ];
 
-  const sources = Array.isArray(raw.sources) ? raw.sources : [
-    raw.importedSource ? raw.importedSource.toUpperCase() : 'MANUAL'
+  const sources = Array.isArray(raw.sources) && raw.sources.length > 0 ? raw.sources : [
+    raw.importedSource ? raw.importedSource.toUpperCase() : (raw.source || 'MANUAL')
   ];
+
+  const firstAuthorName = authors[0]?.name || raw.firstAuthor || raw.facultyName || '';
 
   return {
     ...raw,
@@ -1198,7 +1246,9 @@ export function normalizePublicationRecord(raw, idx = 0) {
     publicationType: raw.publicationType || (raw.conferenceName ? 'Conference Paper' : 'Journal Article'),
     paperOwnerType: raw.paperOwnerType || 'Faculty Publication',
     department: dept,
+    departmentCode: dept,
     academicYear: ay,
+    firstAuthor: firstAuthorName,
     journalName: raw.journalName || (raw.publicationType === 'Journal Article' ? raw.venue : '') || '',
     conferenceName: raw.conferenceName || (raw.publicationType === 'Conference Paper' ? raw.venue : '') || '',
     publisher: raw.publisher || '',
@@ -1206,20 +1256,23 @@ export function normalizePublicationRecord(raw, idx = 0) {
     issue: raw.issue || '',
     pages: raw.pages || '',
     articleNumber: raw.articleNumber || '',
-    publicationDate: raw.publicationDate || raw.date || `${yearSuffix}-06-01`,
-    publicationYear: raw.publicationYear || parseInt(yearSuffix, 10) || 2025,
+    publicationDate: raw.publicationDate || raw.date || (yearSuffix ? `${yearSuffix}-06-01` : ''),
+    publicationYear: raw.publicationYear || (yearSuffix ? parseInt(yearSuffix, 10) : null),
     issn: raw.issn || '',
     eissn: raw.eissn || '',
     isbn: raw.isbn || '',
     doi: raw.doi || '',
     scopusEid: raw.scopusEid || '',
     wosUid: raw.wosUid || '',
+    openalexWorkId: raw.openalexWorkId || raw.openAlexWorkId || '',
     pubmedId: raw.pubmedId || '',
     url: raw.url || raw.link || (raw.doi ? `https://doi.org/${raw.doi}` : ''),
     indexing: indexing,
-    isScopusIndexed: raw.scopusIndexed === 'Yes' || indexing.includes('Scopus'),
-    isWosIndexed: raw.wosIndexed === 'Yes' || indexing.includes('Web of Science'),
-    scopusCitations: raw.scopusCitations || (raw.citationCount ? { count: raw.citationCount, capturedAt: '2026-08-23' } : null),
+    isScopusIndexed: raw.scopusIndexed === 'Yes' || raw.isScopusIndexed === true || indexing.includes('Scopus') || !!raw.scopusEid,
+    isWosIndexed: raw.wosIndexed === 'Yes' || raw.isWosIndexed === true || indexing.includes('Web of Science') || !!raw.wosUid,
+    isOpenAccess: raw.openAccess === true || raw.isOpenAccess === true,
+    scopusCitations: raw.scopusCitations || (raw.citationCount ? { count: raw.citationCount, capturedAt: '2026-06-15T08:30:00Z' } : null),
+    openalexCitations: raw.openalexCitations || null,
     wosCitations: raw.wosCitations || null,
     googleScholarCitations: raw.googleScholarCitations || null,
     impactFactor: raw.impactFactor || '',
@@ -1232,8 +1285,9 @@ export function normalizePublicationRecord(raw, idx = 0) {
     authors: authors,
     documents: documents,
     sources: sources,
-    workflowStatus: raw.workflowStatus || (raw.verificationStatus === 'Published' || raw.verificationStatus === 'Verified' ? 'APPROVED' : 'UNDER_REVIEW'),
-    publicVisibility: raw.publicVisibility || 'PUBLIC_SAFE',
+    matchStatus: raw.matchStatus || (authors.some(a => a.matchStatus === 'EXACT' || a.matchStatus === 'VERIFIED') ? 'VERIFIED_NEC_MATCH' : 'POSSIBLE_NEC_MATCH'),
+    workflowStatus: raw.workflowStatus || (raw.verificationStatus === 'Published' || raw.verificationStatus === 'Verified' ? 'APPROVED' : 'IMPORTED_PENDING_REVIEW'),
+    publicVisibility: raw.publicVisibility || 'APPROVED_PUBLIC',
     reviewHistory: Array.isArray(raw.reviewHistory) ? raw.reviewHistory : []
   };
 }
@@ -1322,8 +1376,9 @@ export function reviewPublication(id, action, remarks, reviewerUser) {
   let targetStatus = 'APPROVED';
   if (action === 'REQUEST_REVISION') targetStatus = 'NEEDS_REVISION';
   else if (action === 'UNDER_REVIEW') targetStatus = 'UNDER_REVIEW';
-  else if (action === 'PUBLISH') targetStatus = 'APPROVED';
+  else if (action === 'PUBLISH' || action === 'APPROVE') targetStatus = 'APPROVED';
   else if (action === 'ARCHIVE') targetStatus = 'ARCHIVED';
+  else if (action === 'REJECT') targetStatus = 'REJECTED';
 
   items[index].workflowStatus = targetStatus;
   items[index].verifiedAt = new Date().toISOString();
@@ -1342,44 +1397,75 @@ export function reviewPublication(id, action, remarks, reviewerUser) {
   return items.map((it, idx) => normalizePublicationRecord(it, idx));
 }
 
-export function importPublicationsBatch(candidates, currentUser) {
+export function importPublicationsBatch(candidates, currentUser, sourceName = 'LOCAL_INDEX') {
   if (!Array.isArray(candidates) || candidates.length === 0) return [];
   const items = loadStore(STORAGE_KEYS.PUBLICATIONS, INITIAL_PUBLICATIONS);
   let importedCount = 0;
+  let mergedCount = 0;
 
   candidates.forEach(cand => {
     const rawDoi = (cand.doi || '').trim().toLowerCase();
     const rawEid = (cand.scopusEid || '').trim();
+    const rawUid = (cand.wosUid || '').trim();
+    const rawOaId = (cand.openalexWorkId || cand.openAlexWorkId || '').trim();
 
-    // Check duplicate
-    const exists = items.some(p => !p.isDeleted && (
+    // Deduplication check
+    const existingIndex = items.findIndex(p => !p.isDeleted && (
       (rawDoi && (p.doi || '').trim().toLowerCase() === rawDoi) ||
-      (rawEid && p.scopusEid === rawEid)
+      (rawEid && p.scopusEid === rawEid) ||
+      (rawUid && p.wosUid === rawUid) ||
+      (rawOaId && (p.openalexWorkId === rawOaId || p.openAlexWorkId === rawOaId))
     ));
 
-    if (!exists) {
-      const dept = cand.department || currentUser?.dept || 'CSE';
-      const ay = cand.academicYear || '2025-26';
-      const yearSuffix = (ay.split('-')[0] || '2026').trim();
+    if (existingIndex >= 0) {
+      // Merge source into existing canonical record
+      const existing = items[existingIndex];
+      const existingSources = Array.isArray(existing.sources) ? existing.sources : [existing.source || 'MANUAL'];
+      const newSourceTag = sourceName.toUpperCase();
+      if (!existingSources.includes(newSourceTag)) {
+        existingSources.push(newSourceTag);
+      }
+      items[existingIndex] = {
+        ...existing,
+        sources: existingSources,
+        doi: existing.doi || cand.doi || '',
+        scopusEid: existing.scopusEid || cand.scopusEid || '',
+        wosUid: existing.wosUid || cand.wosUid || '',
+        openalexWorkId: existing.openalexWorkId || cand.openalexWorkId || '',
+        scopusCitations: cand.scopusCitations || existing.scopusCitations || null,
+        openalexCitations: cand.openalexCitations || existing.openalexCitations || null,
+        updatedAt: new Date().toISOString()
+      };
+      mergedCount++;
+    } else {
+      const year = cand.publicationYear || new Date().getFullYear();
+      const ay = cand.academicYear || `${year}-${String(year + 1).slice(-2)}`;
+      const dept = cand.department || cand.departmentCode || null;
+      const deptTag = dept || 'GEN';
+      const yearSuffix = String(year);
       const nextSeq = String(items.length + 1).padStart(4, '0');
-      const autoNum = `PUB-${dept}-${yearSuffix}-${nextSeq}`;
+      const autoNum = `PUB-${deptTag}-${yearSuffix}-${nextSeq}`;
 
       const newPub = {
         ...cand,
         id: `pub_sync_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
         publicationRecordNumber: autoNum,
+        department: dept,
+        departmentCode: dept,
+        academicYear: ay,
         createdAt: new Date().toISOString(),
-        createdBy: currentUser?.name || 'Research Sync Engine',
-        workflowStatus: 'IMPORTED_PENDING_REVIEW',
+        createdBy: currentUser?.name || `${sourceName} Ingestion Engine`,
+        workflowStatus: cand.workflowStatus || 'IMPORTED_PENDING_REVIEW',
+        matchStatus: cand.matchStatus || 'POSSIBLE_NEC_MATCH',
         isDeleted: false,
-        sources: cand.sources || ['ORCID'],
+        sources: cand.sources && cand.sources.length > 0 ? cand.sources : [sourceName.toUpperCase()],
         reviewHistory: [
           {
-            action: 'IMPORTED_AUTO_SYNC',
+            action: 'IMPORTED_OFFLINE_INDEX',
             status: 'IMPORTED_PENDING_REVIEW',
             timestamp: new Date().toISOString(),
-            by: currentUser?.name || 'Sync Engine',
-            remarks: `Imported from ${cand.sources?.join(', ') || 'ORCID/Scopus'}`
+            by: currentUser?.name || `${sourceName} Ingestion`,
+            remarks: `Imported with verified metadata from ${sourceName}`
           }
         ]
       };
@@ -1389,7 +1475,7 @@ export function importPublicationsBatch(candidates, currentUser) {
   });
 
   saveStore(STORAGE_KEYS.PUBLICATIONS, items);
-  addAuditLog('SYNC_IMPORT_BATCH', 'Publications', `Imported ${importedCount} research publication(s) into institutional review pipeline`, currentUser);
+  addAuditLog('RESEARCH_IMPORT_BATCH', 'Publications', `Batch research import: ${importedCount} added, ${mergedCount} deduplicated & linked`, currentUser);
   return items.map((it, idx) => normalizePublicationRecord(it, idx));
 }
 
@@ -1406,33 +1492,60 @@ export function softDeletePublication(id, user) {
   return items.filter(i => !i.isDeleted).map((it, idx) => normalizePublicationRecord(it, idx));
 }
 
+// ─────────────────────────────────────────────────────────────
+// FACULTY RESEARCH PROFILES (Verified Identifiers)
+// ─────────────────────────────────────────────────────────────
+
+export function getFacultyResearchProfiles() {
+  const stored = loadStore(STORAGE_KEYS.FACULTY_RESEARCH_PROFILES, INITIAL_FACULTY_RESEARCH_PROFILES);
+  const facultyList = getFacultyList();
+  
+  // Return complete merged list with names and departments
+  return facultyList.map(faculty => {
+    const prof = (stored || []).find(p => p.facultyId === faculty.id) || {};
+    return {
+      facultyId: faculty.id,
+      name: prof.name || faculty.name,
+      department: prof.department || faculty.department,
+      designation: prof.designation || faculty.designation,
+      orcid: prof.orcid || faculty.orcid || '',
+      scopusAuthorId: prof.scopusAuthorId || faculty.scopus || '',
+      wosResearcherId: prof.wosResearcherId || faculty.wos || faculty.researcherId || '',
+      googleScholarId: prof.googleScholarId || faculty.scholar || '',
+      vidwanId: prof.vidwanId || faculty.vidwan || '',
+      openAlexAuthorId: prof.openAlexAuthorId || '',
+      orcidVerified: prof.orcidVerified !== undefined ? prof.orcidVerified : !!(prof.orcid || faculty.orcid),
+      scopusVerified: prof.scopusVerified !== undefined ? prof.scopusVerified : !!(prof.scopusAuthorId || faculty.scopus),
+      wosVerified: prof.wosVerified !== undefined ? prof.wosVerified : !!(prof.wosResearcherId || faculty.wos),
+      openAlexMatchStatus: prof.openAlexMatchStatus || (prof.openAlexAuthorId ? 'MANUALLY_CONFIRMED' : 'NOT_DISCOVERED'),
+      worksCount: prof.worksCount || faculty.citations || 0,
+      citedByCount: prof.citedByCount || faculty.citations || 0,
+      hIndex: prof.hIndex || faculty.hIndex || 0,
+      i10Index: prof.i10Index || faculty.i10Index || 0,
+      lastSyncedAt: prof.lastSyncedAt || null
+    };
+  });
+}
+
 export function getFacultyResearchProfile(facultyId) {
   if (!facultyId) return { orcid: '', scopusAuthorId: '', wosResearcherId: '', googleScholarId: '', vidwanId: '' };
-  const profiles = loadStore(STORAGE_KEYS.FACULTY_RESEARCH_PROFILES, []);
-  const found = profiles.find(p => p.facultyId === facultyId);
-  if (found) {
-    return {
-      orcid: found.orcid || '',
-      scopusAuthorId: found.scopusAuthorId || '',
-      wosResearcherId: found.wosResearcherId || '',
-      googleScholarId: found.googleScholarId || '',
-      vidwanId: found.vidwanId || '',
-      lastSyncedAt: found.lastSyncedAt || null
-    };
-  }
-  return {
+  const allProfiles = getFacultyResearchProfiles();
+  const found = allProfiles.find(p => p.facultyId === facultyId);
+  return found || {
+    facultyId,
     orcid: '',
     scopusAuthorId: '',
     wosResearcherId: '',
     googleScholarId: '',
     vidwanId: '',
+    openAlexAuthorId: '',
     lastSyncedAt: null
   };
 }
 
 export function saveFacultyResearchProfile(facultyId, profileData, user) {
   if (!facultyId) return;
-  const profiles = loadStore(STORAGE_KEYS.FACULTY_RESEARCH_PROFILES, []);
+  const profiles = loadStore(STORAGE_KEYS.FACULTY_RESEARCH_PROFILES, INITIAL_FACULTY_RESEARCH_PROFILES);
   const idx = profiles.findIndex(p => p.facultyId === facultyId);
   const updated = {
     facultyId,
@@ -1442,12 +1555,17 @@ export function saveFacultyResearchProfile(facultyId, profileData, user) {
     openAlexAuthorId: (profileData.openAlexAuthorId || '').trim(),
     googleScholarId: (profileData.googleScholarId || '').trim(),
     vidwanId: (profileData.vidwanId || '').trim(),
-    openAlexMatchStatus: profileData.openAlexMatchStatus || 'NOT_DISCOVERED',
-    openAlexWorksCount: profileData.openAlexWorksCount || 0,
-    openAlexCitedByCount: profileData.openAlexCitedByCount || 0,
-    openAlexHIndex: profileData.openAlexHIndex || 0,
-    profileVerifiedBy: user?.name || null,
+    orcidVerified: profileData.orcidVerified !== undefined ? profileData.orcidVerified : true,
+    scopusVerified: profileData.scopusVerified !== undefined ? profileData.scopusVerified : true,
+    wosVerified: profileData.wosVerified !== undefined ? profileData.wosVerified : true,
+    openAlexMatchStatus: profileData.openAlexMatchStatus || 'MANUALLY_CONFIRMED',
+    worksCount: profileData.worksCount || profileData.openAlexWorksCount || 0,
+    citedByCount: profileData.citedByCount || profileData.openAlexCitedByCount || 0,
+    hIndex: profileData.hIndex || profileData.openAlexHIndex || 0,
+    i10Index: profileData.i10Index || 0,
+    profileVerifiedBy: user?.name || 'Admin',
     profileVerifiedAt: new Date().toISOString(),
+    lastSyncedAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     updatedBy: user?.name || 'System'
   };
@@ -1468,9 +1586,9 @@ export function linkFacultyResearcher(facultyId, candidate, user) {
     openAlexAuthorId: candidate.openAlexAuthorId || candidate.openAlexShortId || '',
     orcid: candidate.orcid || '',
     openAlexMatchStatus: 'MANUALLY_CONFIRMED',
-    openAlexWorksCount: candidate.worksCount || 0,
-    openAlexCitedByCount: candidate.citedByCount || 0,
-    openAlexHIndex: candidate.hIndex || 0
+    worksCount: candidate.worksCount || 0,
+    citedByCount: candidate.citedByCount || 0,
+    hIndex: candidate.hIndex || 0
   };
   const res = saveFacultyResearchProfile(facultyId, profileData, user);
   addAuditLog('RESEARCH_PROFILE_LINKED', 'Publications', `Linked faculty ID ${facultyId} to OpenAlex Author: ${candidate.canonicalName} (${candidate.openAlexShortId || candidate.openAlexAuthorId})`, user);
@@ -1479,7 +1597,7 @@ export function linkFacultyResearcher(facultyId, candidate, user) {
 
 export function unlinkFacultyResearcher(facultyId, user) {
   if (!facultyId) return;
-  const profiles = loadStore(STORAGE_KEYS.FACULTY_RESEARCH_PROFILES, []);
+  const profiles = loadStore(STORAGE_KEYS.FACULTY_RESEARCH_PROFILES, INITIAL_FACULTY_RESEARCH_PROFILES);
   const idx = profiles.findIndex(p => p.facultyId === facultyId);
   if (idx >= 0) {
     profiles[idx].openAlexAuthorId = '';
@@ -1491,49 +1609,59 @@ export function unlinkFacultyResearcher(facultyId, user) {
   }
 }
 
+// ─────────────────────────────────────────────────────────────
+// DATASET VERSIONS & METRIC SNAPSHOTS (Dynamic Computation)
+// ─────────────────────────────────────────────────────────────
+
 export function getDatasetVersions() {
-  const defaultVersions = [
-    {
-      id: 'ds_openalex_2026_06',
-      source: 'OPENALEX',
-      name: 'OpenAlex Public Snapshot (Parquet)',
-      datasetVersion: '2026-06-01',
-      publishedDate: '2026-06-01',
-      status: 'READY',
-      totalGlobalRecords: '649M Works / 112M Authors',
-      relevantRecordCount: 486,
-      checksum: 'sha256:7f4a9b2c8e1d3f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a',
-      ingestedAt: '2026-06-15T08:30:00Z',
-      active: true
-    },
-    {
-      id: 'ds_crossref_2026_03',
-      source: 'CROSSREF',
-      name: 'Crossref Annual Public Data File',
-      datasetVersion: '2026-03-31',
-      publishedDate: '2026-03-31',
-      status: 'READY',
-      totalGlobalRecords: '180M DOI Records',
-      relevantRecordCount: 312,
-      checksum: 'sha256:3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d',
-      ingestedAt: '2026-06-16T10:15:00Z',
-      active: true
-    },
-    {
-      id: 'ds_orcid_2025_annual',
-      source: 'ORCID',
-      name: 'ORCID Annual Public Data File (CC0)',
-      datasetVersion: '2025-10-01',
-      publishedDate: '2025-10-01',
-      status: 'READY',
-      totalGlobalRecords: '21M Public Records',
-      relevantRecordCount: 38,
-      checksum: 'sha256:9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b',
-      ingestedAt: '2026-06-16T14:45:00Z',
-      active: true
+  const versions = loadStore(STORAGE_KEYS.DATASET_VERSIONS, INITIAL_DATASET_VERSIONS);
+  const publications = getPublications();
+  const profiles = getFacultyResearchProfiles();
+  const patents = getPatents();
+
+  // Dynamically compute authentic record metrics per dataset source
+  return versions.map(v => {
+    let relevantCount = 0;
+    let verifiedCount = 0;
+    let possibleMatchCount = 0;
+    let unresolvedCount = 0;
+
+    if (v.source === 'OPENALEX') {
+      const matchedPubs = publications.filter(p => p.sources?.includes('OPENALEX') || !!p.openalexWorkId);
+      relevantCount = matchedPubs.length;
+      verifiedCount = matchedPubs.filter(p => p.workflowStatus === 'APPROVED' && p.matchStatus === 'VERIFIED_NEC_MATCH').length;
+      possibleMatchCount = matchedPubs.filter(p => p.matchStatus === 'POSSIBLE_NEC_MATCH').length;
+      unresolvedCount = matchedPubs.filter(p => p.authors?.some(a => a.matchStatus === 'UNRESOLVED')).length;
+    } else if (v.source === 'CROSSREF') {
+      const matchedPubs = publications.filter(p => p.sources?.includes('CROSSREF') || !!p.doi);
+      relevantCount = matchedPubs.length;
+      verifiedCount = matchedPubs.filter(p => p.workflowStatus === 'APPROVED').length;
+      possibleMatchCount = matchedPubs.filter(p => p.workflowStatus !== 'APPROVED').length;
+    } else if (v.source === 'ORCID') {
+      const orcidFaculty = profiles.filter(p => !!p.orcid && p.orcidVerified);
+      relevantCount = orcidFaculty.length;
+      verifiedCount = orcidFaculty.length;
+      possibleMatchCount = profiles.filter(p => !!p.orcid && !p.orcidVerified).length;
+    } else if (v.source === 'SCOPUS_IMPORT' || v.source === 'SCOPUS') {
+      const scopusPubs = publications.filter(p => p.sources?.includes('SCOPUS_IMPORT') || p.isScopusIndexed || !!p.scopusEid);
+      relevantCount = scopusPubs.length;
+      verifiedCount = scopusPubs.filter(p => p.workflowStatus === 'APPROVED').length;
+      possibleMatchCount = scopusPubs.filter(p => p.workflowStatus === 'IMPORTED_PENDING_REVIEW').length;
+    } else if (v.source === 'WOS_IMPORT' || v.source === 'WOS') {
+      const wosPubs = publications.filter(p => p.sources?.includes('WOS_IMPORT') || p.isWosIndexed || !!p.wosUid);
+      relevantCount = wosPubs.length;
+      verifiedCount = wosPubs.filter(p => p.workflowStatus === 'APPROVED').length;
+      possibleMatchCount = wosPubs.filter(p => p.workflowStatus === 'IMPORTED_PENDING_REVIEW').length;
     }
-  ];
-  return loadStore(STORAGE_KEYS.DATASET_VERSIONS, defaultVersions);
+
+    return {
+      ...v,
+      relevantRecordCount: relevantCount,
+      verifiedRecordCount: verifiedCount,
+      possibleMatchCount: possibleMatchCount,
+      unresolvedCount: unresolvedCount
+    };
+  });
 }
 
 export function saveDatasetVersion(version, user) {
@@ -1548,6 +1676,122 @@ export function saveDatasetVersion(version, user) {
   addAuditLog('DATASET_INDEXED', 'Research Data', `Updated dataset version record: ${version.name} (${version.datasetVersion})`, user);
   return versions;
 }
+
+// ─────────────────────────────────────────────────────────────
+// PROVENANCE & UNIVERSAL RESEARCH SEARCH ENGINE
+// ─────────────────────────────────────────────────────────────
+
+export function getResearchRecordSources(canonicalRecordId) {
+  if (!canonicalRecordId) return [];
+  const storedSources = loadStore(STORAGE_KEYS.RESEARCH_RECORD_SOURCES, []);
+  return storedSources.filter(s => s.canonicalRecordId === canonicalRecordId);
+}
+
+export function saveResearchRecordSource(sourceRecord, user) {
+  if (!sourceRecord || !sourceRecord.canonicalRecordId) return;
+  const sources = loadStore(STORAGE_KEYS.RESEARCH_RECORD_SOURCES, []);
+  const newEntry = {
+    ...sourceRecord,
+    id: sourceRecord.id || `src_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+    createdAt: new Date().toISOString()
+  };
+  sources.unshift(newEntry);
+  saveStore(STORAGE_KEYS.RESEARCH_RECORD_SOURCES, sources);
+  return newEntry;
+}
+
+export function universalResearchSearch(query) {
+  if (!query || typeof query !== 'string' || !query.trim()) {
+    return { publications: [], patents: [], researchers: [], totalCount: 0 };
+  }
+
+  const q = query.toLowerCase().trim();
+  const allPublications = getPublications();
+  const allPatents = getPatents();
+  const allResearchers = getFacultyResearchProfiles();
+
+  const matchedPubs = allPublications.filter(p => {
+    return (p.title || '').toLowerCase().includes(q) ||
+           (p.doi || '').toLowerCase().includes(q) ||
+           (p.scopusEid || '').toLowerCase().includes(q) ||
+           (p.wosUid || '').toLowerCase().includes(q) ||
+           (p.openalexWorkId || '').toLowerCase().includes(q) ||
+           (p.journalName || '').toLowerCase().includes(q) ||
+           (p.publicationRecordNumber || '').toLowerCase().includes(q) ||
+           (p.authors || []).some(a => (a.name || '').toLowerCase().includes(q));
+  });
+
+  const matchedPatents = allPatents.filter(pat => {
+    return (pat.title || '').toLowerCase().includes(q) ||
+           (pat.applicationNumber || '').toLowerCase().includes(q) ||
+           (pat.grantNumber || '').toLowerCase().includes(q) ||
+           (pat.patentRecordNumber || '').toLowerCase().includes(q) ||
+           (pat.technologyDomain || '').toLowerCase().includes(q) ||
+           (pat.inventors || []).some(inv => (inv.name || '').toLowerCase().includes(q));
+  });
+
+  const matchedResearchers = allResearchers.filter(r => {
+    return (r.name || '').toLowerCase().includes(q) ||
+           (r.department || '').toLowerCase().includes(q) ||
+           (r.orcid || '').toLowerCase().includes(q) ||
+           (r.scopusAuthorId || '').toLowerCase().includes(q) ||
+           (r.wosResearcherId || '').toLowerCase().includes(q) ||
+           (r.vidwanId || '').toLowerCase().includes(q) ||
+           (r.facultyId || '').toLowerCase().includes(q);
+  });
+
+  return {
+    publications: matchedPubs,
+    patents: matchedPatents,
+    researchers: matchedResearchers,
+    totalCount: matchedPubs.length + matchedPatents.length + matchedResearchers.length
+  };
+}
+
+export function getMatchReviewQueue() {
+  const publications = getPublications();
+  return publications.filter(p => p.matchStatus === 'POSSIBLE_NEC_MATCH' || p.workflowStatus === 'IMPORTED_PENDING_REVIEW');
+}
+
+export function resolveResearchMatch(publicationId, authorOrder, facultyId, action, user) {
+  const items = loadStore(STORAGE_KEYS.PUBLICATIONS, INITIAL_PUBLICATIONS);
+  const pubIndex = items.findIndex(p => p.id === publicationId);
+  if (pubIndex === -1) return items;
+
+  const pub = items[pubIndex];
+  if (!Array.isArray(pub.authors)) pub.authors = [];
+
+  const authorIndex = pub.authors.findIndex(a => a.authorOrder === authorOrder);
+  if (authorIndex >= 0) {
+    if (action === 'LINK_FACULTY' && facultyId) {
+      const facultyList = getFacultyList();
+      const matchedFaculty = facultyList.find(f => f.id === facultyId);
+      pub.authors[authorIndex].facultyId = facultyId;
+      pub.authors[authorIndex].matchStatus = 'VERIFIED';
+      if (matchedFaculty) {
+        pub.authors[authorIndex].department = matchedFaculty.department;
+        pub.authors[authorIndex].departmentCode = matchedFaculty.department;
+        if (!pub.department) pub.department = matchedFaculty.department;
+      }
+      pub.matchStatus = 'VERIFIED_NEC_MATCH';
+      addAuditLog('AUTHOR_MATCH_RESOLVED', 'Publications', `Linked author "${pub.authors[authorIndex].name}" to faculty ID ${facultyId} for publication ${pub.publicationRecordNumber || pub.id}`, user);
+    } else if (action === 'MARK_EXTERNAL') {
+      pub.authors[authorIndex].matchStatus = 'EXTERNAL';
+      pub.authors[authorIndex].facultyId = null;
+      addAuditLog('AUTHOR_MARKED_EXTERNAL', 'Publications', `Marked author "${pub.authors[authorIndex].name}" as external contributor for publication ${pub.publicationRecordNumber || pub.id}`, user);
+    }
+  }
+
+  // Update overall match status
+  const hasVerified = pub.authors.some(a => a.matchStatus === 'EXACT' || a.matchStatus === 'VERIFIED');
+  pub.matchStatus = hasVerified ? 'VERIFIED_NEC_MATCH' : 'POSSIBLE_NEC_MATCH';
+  pub.updatedAt = new Date().toISOString();
+
+  items[pubIndex] = pub;
+  saveStore(STORAGE_KEYS.PUBLICATIONS, items);
+  return items.map((it, idx) => normalizePublicationRecord(it, idx));
+}
+
 
 // ─────────────────────────────────────────────────────────────
 // 2. PATENTS & IPR GOVERNANCE REPOSITORY

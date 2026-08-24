@@ -445,4 +445,242 @@ export const bulkMediaItems = pgTable('bulk_media_items', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
 });
 
+// 15. Scholarly Publications Table (Canonical Repository)
+export const publications = pgTable('publications', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  publicationRecordNumber: text('publication_record_number').notNull().unique(), // PUB-CSE-2026-0001
+  title: text('title').notNull(),
+  publicationType: text('publication_type').default('Journal Article').notNull(), // 'Journal Article' | 'Conference Paper' | 'Book Chapter' | 'Review Paper'
+  departmentCode: text('department_code'),
+  academicYear: text('academic_year'),
+  journalName: text('journal_name'),
+  conferenceName: text('conference_name'),
+  publisher: text('publisher'),
+  volume: text('volume'),
+  issue: text('issue'),
+  pages: text('pages'),
+  articleNumber: text('article_number'),
+  publicationDate: text('publication_date'),
+  publicationYear: integer('publication_year'),
+  issn: text('issn'),
+  eissn: text('eissn'),
+  isbn: text('isbn'),
+  
+  // Research Identifiers
+  doi: text('doi'), // Stored lowercase normalized
+  scopusEid: text('scopus_eid'),
+  wosUid: text('wos_uid'),
+  openalexWorkId: text('openalex_work_id'),
+  pubmedId: text('pubmed_id'),
+  url: text('url'),
+  
+  // Indexing & Metrics
+  indexing: jsonb('indexing'), // ['Scopus', 'Web of Science', 'IEEE Xplore', 'UGC CARE']
+  isScopusIndexed: boolean('is_scopus_indexed').default(false).notNull(),
+  isWosIndexed: boolean('is_wos_indexed').default(false).notNull(),
+  isOpenAccess: boolean('is_open_access').default(false).notNull(),
+  impactFactor: text('impact_factor'),
+  impactFactorSource: text('impact_factor_source'),
+  quartile: text('quartile'), // 'Q1' | 'Q2' | 'Q3' | 'Q4'
+  
+  abstract: text('abstract'),
+  keywords: text('keywords'),
+  researchDomain: text('research_domain'),
+  
+  // Provenance & Workflow
+  sources: jsonb('sources'), // ['OPENALEX', 'CROSSREF', 'SCOPUS_IMPORT', 'WOS_IMPORT']
+  workflowStatus: text('workflow_status').default('IMPORTED_PENDING_REVIEW').notNull(), // 'DRAFT' | 'IMPORTED_PENDING_REVIEW' | 'SUBMITTED' | 'UNDER_REVIEW' | 'APPROVED' | 'ARCHIVED' | 'REJECTED'
+  matchStatus: text('match_status').default('POSSIBLE_NEC_MATCH').notNull(), // 'VERIFIED_NEC_MATCH' | 'POSSIBLE_NEC_MATCH' | 'UNMATCHED' | 'REJECTED_MATCH'
+  publicVisibility: text('public_visibility').default('INTERNAL_ONLY').notNull(), // 'INTERNAL_ONLY' | 'APPROVED_PUBLIC'
+  
+  reviewHistory: jsonb('review_history'),
+  documents: jsonb('documents'),
+  
+  isDeleted: boolean('is_deleted').default(false).notNull(),
+  createdBy: text('created_by'),
+  verifiedBy: text('verified_by'),
+  verifiedAt: timestamp('verified_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+// 16. Publication Authors Relational Table
+export const publicationAuthors = pgTable('publication_authors', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  publicationId: uuid('publication_id').notNull().references(() => publications.id, { onDelete: 'cascade' }),
+  authorOrder: integer('author_order').notNull(),
+  name: text('name').notNull(),
+  affiliation: text('affiliation'),
+  isFirstAuthor: boolean('is_first_author').default(false).notNull(),
+  isCorresponding: boolean('is_corresponding').default(false).notNull(),
+  facultyId: text('faculty_id'), // Linked to institutional FACULTY_DATA / portalUsers
+  departmentCode: text('department_code'),
+  matchStatus: text('match_status').default('UNRESOLVED').notNull(), // 'EXACT' | 'VERIFIED' | 'POSSIBLE_MATCH' | 'UNRESOLVED' | 'EXTERNAL'
+  scopusAuthorId: text('scopus_author_id'),
+  orcid: text('orcid'),
+  openalexAuthorId: text('openalex_author_id'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+// 17. Patents & IPR Relational Table
+export const patents = pgTable('patents', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  patentRecordNumber: text('patent_record_number').notNull().unique(), // PAT-CSE-2026-0001
+  title: text('title').notNull(),
+  departmentCode: text('department_code'),
+  academicYear: text('academic_year'),
+  patentType: text('patent_type').default('Indian Patent').notNull(),
+  countryCode: text('country_code').default('IN').notNull(),
+  patentOffice: text('patent_office').default('Indian Patent Office (Chennai)'),
+  technologyDomain: text('technology_domain'),
+  abstract: text('abstract'),
+  keywords: text('keywords'),
+  
+  // Patent Numbers
+  applicationNumber: text('application_number').notNull(),
+  applicationDate: text('application_date'),
+  filingDate: text('filing_date'),
+  publicationNumber: text('publication_number'),
+  publicationDate: text('publication_date'),
+  grantNumber: text('grant_number'),
+  grantDate: text('grant_date'),
+  priorityDate: text('priority_date'),
+  ferDate: text('fer_date'),
+  expiryDate: text('expiry_date'),
+  
+  legalStatus: text('legal_status').default('PUBLISHED').notNull(), // 'FILED' | 'PUBLISHED' | 'FER_ISSUED' | 'HEARING' | 'GRANTED' | 'ABANDONED' | 'EXPIRED'
+  workflowStatus: text('workflow_status').default('APPROVED').notNull(),
+  applicantName: text('applicant_name').default('Narasaraopeta Engineering College (Autonomous)'),
+  ownershipType: text('ownership_type').default('Narasaraopeta Engineering College'),
+  partnerOrg: text('partner_org'),
+  ownershipPercent: integer('ownership_percent').default(100),
+  
+  publicVisibility: text('public_visibility').default('APPROVED_PUBLIC').notNull(),
+  reviewHistory: jsonb('review_history'),
+  documents: jsonb('documents'),
+  
+  isDeleted: boolean('is_deleted').default(false).notNull(),
+  createdBy: text('created_by'),
+  verifiedBy: text('verified_by'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+// 18. Faculty Research Profiles (Verified Research Identifiers)
+export const facultyResearchProfiles = pgTable('faculty_research_profiles', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  facultyId: text('faculty_id').notNull().unique(), // e.g. 'NEC-PER-0284'
+  orcid: text('orcid'),
+  scopusAuthorId: text('scopus_author_id'),
+  wosResearcherId: text('wos_researcher_id'),
+  googleScholarId: text('google_scholar_id'),
+  vidwanId: text('vidwan_id'),
+  openAlexAuthorId: text('openalex_author_id'),
+  
+  orcidVerified: boolean('orcid_verified').default(false).notNull(),
+  scopusVerified: boolean('scopus_verified').default(false).notNull(),
+  wosVerified: boolean('wos_verified').default(false).notNull(),
+  openAlexMatchStatus: text('openalex_match_status').default('NOT_DISCOVERED').notNull(),
+  
+  worksCount: integer('works_count').default(0).notNull(),
+  citedByCount: integer('cited_by_count').default(0).notNull(),
+  hIndex: integer('h_index').default(0).notNull(),
+  i10Index: integer('i10_index').default(0).notNull(),
+  
+  profileVerifiedBy: text('profile_verified_by'),
+  profileVerifiedAt: timestamp('profile_verified_at', { withTimezone: true }),
+  lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+// 19. Multi-Source Research Provenance Table
+export const researchRecordSources = pgTable('research_record_sources', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  canonicalRecordType: text('canonical_record_type').notNull(), // 'PUBLICATION' | 'RESEARCHER' | 'PATENT'
+  canonicalRecordId: text('canonical_record_id').notNull(),
+  source: text('source').notNull(), // 'OPENALEX' | 'CROSSREF' | 'ORCID' | 'SCOPUS_IMPORT' | 'WOS_IMPORT' | 'MANUAL' | 'VERIFIED_MASTER'
+  sourceRecordId: text('source_record_id'), // e.g. 'W4389102841', '10.1109/jbhi.2026.3541092', '2-s2.0-85199201923'
+  snapshotVersion: text('snapshot_version'),
+  rawMetadata: jsonb('raw_metadata'),
+  normalizedMetadata: jsonb('normalized_metadata'),
+  sourceChecksum: text('source_checksum'),
+  importJobId: uuid('import_job_id'),
+  matchedAt: timestamp('matched_at', { withTimezone: true }).defaultNow().notNull(),
+  matchMethod: text('match_method').default('DOI_EXACT').notNull(), // 'DOI_EXACT' | 'SCOPUS_EID' | 'WOS_UID' | 'OPENALEX_WORK_ID' | 'NORMALIZED_TITLE' | 'MANUAL_LINK'
+  matchConfidence: text('match_confidence').default('HIGH').notNull(), // 'EXACT' | 'HIGH' | 'MEDIUM' | 'MANUALLY_CONFIRMED'
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+// 20. Offline Research Snapshot Index Repository
+export const researchIndexRecords = pgTable('research_index_records', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  source: text('source').notNull(), // 'OPENALEX' | 'CROSSREF' | 'ORCID'
+  sourceRecordId: text('source_record_id').notNull(),
+  recordType: text('record_type').default('PUBLICATION').notNull(), // 'PUBLICATION' | 'RESEARCHER' | 'IDENTIFIER'
+  titleNormalized: text('title_normalized'),
+  publicationYear: integer('publication_year'),
+  doiNormalized: text('doi_normalized'),
+  orcid: text('orcid'),
+  openalexId: text('openalex_id'),
+  scopusEid: text('scopus_eid'),
+  wosUid: text('wos_uid'),
+  rawMetadata: jsonb('raw_metadata'),
+  snapshotVersion: text('snapshot_version').notNull(),
+  ingestedAt: timestamp('ingested_at', { withTimezone: true }).defaultNow().notNull(),
+  matchStatus: text('match_status').default('POSSIBLE_NEC_MATCH').notNull(), // 'UNMATCHED' | 'POSSIBLE_NEC_MATCH' | 'VERIFIED_NEC_MATCH' | 'REJECTED_MATCH'
+  canonicalPublicationId: text('canonical_publication_id'),
+  canonicalFacultyId: text('canonical_faculty_id'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+// 21. Source-Aware Metric Snapshots Table
+export const researchMetricSnapshots = pgTable('research_metric_snapshots', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  publicationId: text('publication_id').notNull(),
+  source: text('source').notNull(), // 'OPENALEX' | 'SCOPUS' | 'WOS' | 'CROSSREF' | 'GOOGLE_SCHOLAR'
+  metricType: text('metric_type').default('CITATIONS').notNull(), // 'CITATIONS' | 'ALT_METRIC' | 'VIEWS'
+  metricValue: integer('metric_value').default(0).notNull(),
+  snapshotDate: text('snapshot_date').notNull(),
+  datasetVersion: text('dataset_version'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+// 22. Research Import Jobs Table
+export const researchImportJobs = pgTable('research_import_jobs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  source: text('source').notNull(), // 'SCOPUS_IMPORT' | 'WOS_IMPORT' | 'OPENALEX_SNAPSHOT' | 'CROSSREF_SNAPSHOT' | 'ORCID_SNAPSHOT'
+  datasetVersion: text('dataset_version'),
+  filename: text('filename').notNull(),
+  sha256: text('sha256').notNull(),
+  status: text('status').default('COMPLETED').notNull(), // 'STAGED' | 'VALIDATED' | 'COMPLETED' | 'FAILED'
+  totalRows: integer('total_rows').default(0).notNull(),
+  normalizedRows: integer('normalized_rows').default(0).notNull(),
+  matchedRows: integer('matched_rows').default(0).notNull(),
+  unmatchedRows: integer('unmatched_rows').default(0).notNull(),
+  duplicateRows: integer('duplicate_rows').default(0).notNull(),
+  failedRows: integer('failed_rows').default(0).notNull(),
+  startedAt: timestamp('started_at', { withTimezone: true }).defaultNow().notNull(),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  createdBy: text('created_by'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+// 23. Research Import Staging Rows
+export const researchImportRows = pgTable('research_import_rows', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  importJobId: uuid('import_job_id').notNull().references(() => researchImportJobs.id, { onDelete: 'cascade' }),
+  sourceRowNumber: integer('source_row_number').notNull(),
+  sourceRecordId: text('source_record_id'),
+  rawPayload: jsonb('raw_payload').notNull(),
+  normalizedPayload: jsonb('normalized_payload').notNull(),
+  validationStatus: text('validation_status').default('VALID').notNull(), // 'VALID' | 'WARNING' | 'ERROR' | 'DUPLICATE'
+  matchStatus: text('match_status').default('UNRESOLVED').notNull(), // 'EXACT_MATCH' | 'POSSIBLE_MATCH' | 'UNRESOLVED'
+  canonicalRecordId: text('canonical_record_id'),
+  errors: jsonb('errors'),
+  warnings: jsonb('warnings'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+
 
