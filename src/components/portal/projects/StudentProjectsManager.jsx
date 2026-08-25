@@ -29,7 +29,7 @@ import {
   Zap,
   BookOpen
 } from 'lucide-react';
-import { DEPARTMENTS, FACULTY_DATA } from '../../../data/masterData.js';
+import { ET_DEPARTMENTS, FACULTY_DATA } from '../../../data/masterData.js';
 import { 
   getStudentProjects, 
   reviewStudentProject, 
@@ -38,6 +38,11 @@ import {
   exportToExcel,
   exportToPDF
 } from '../../../data/portalStore.js';
+import { 
+  getWorkflowBadge, 
+  getProjectStatusBadge, 
+  StatusBadge 
+} from '../../../lib/ui/statusBadges.jsx';
 import StudentProjectWizardModal from './StudentProjectWizardModal.jsx';
 import ConfirmDeleteDialog from '../common/ConfirmDeleteDialog.jsx';
 import { 
@@ -79,22 +84,9 @@ export default function StudentProjectsManager({ currentUser, onDataChange }) {
 
   const refresh = () => {
     setProjects(getStudentProjects());
+    setDataVersion(v => v + 1);
     if (onDataChange) onDataChange();
   };
-
-  // KPIs
-  const stats = useMemo(() => {
-    const total = projects.length;
-    const mini = projects.filter(p => p.projectType === 'Mini Project').length;
-    const major = projects.filter(p => p.projectType === 'Major Project').length;
-    const capstone = projects.filter(p => p.projectType === 'Capstone Project').length;
-    const inProgress = projects.filter(p => p.projectStatus === 'IN_PROGRESS' || p.projectStatus === 'Ongoing').length;
-    const completed = projects.filter(p => p.projectStatus === 'COMPLETED' || p.projectStatus === 'Completed').length;
-    const industry = projects.filter(p => p.industryAssociation?.isIndustryAssociated || p.isIndustryProject === 'Yes').length;
-    const pendingReview = projects.filter(p => p.workflowStatus === 'SUBMITTED' || p.workflowStatus === 'UNDER_REVIEW').length;
-
-    return { total, mini, major, capstone, inProgress, completed, industry, pendingReview };
-  }, [projects]);
 
   // Filtered Projects
   const filteredProjects = useMemo(() => {
@@ -107,7 +99,7 @@ export default function StudentProjectsManager({ currentUser, onDataChange }) {
         (item.teamMembers && item.teamMembers.some(m => m.name?.toLowerCase().includes(q) || m.rollNumber?.toLowerCase().includes(q)));
 
       const itemDept = item.department || '';
-      const matchDept = selectedDept === 'ALL' || itemDept.toLowerCase().includes(selectedDept.toLowerCase());
+      const matchDept = selectedDept === 'ALL' || itemDept === selectedDept;
       const matchType = selectedType === 'ALL' || item.projectType === selectedType;
       const matchStatus = selectedStatus === 'ALL' || item.projectStatus === selectedStatus;
       const matchWorkflow = selectedWorkflowStatus === 'ALL' || item.workflowStatus === selectedWorkflowStatus;
@@ -116,11 +108,25 @@ export default function StudentProjectsManager({ currentUser, onDataChange }) {
     });
   }, [projects, searchQuery, selectedDept, selectedType, selectedStatus, selectedWorkflowStatus]);
 
-  // Permissions
-  const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD' || currentUser?.role === 'FACULTY';
-  const canReview = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD';
+  // KPIs
+  const stats = useMemo(() => {
+    const total = filteredProjects.length;
+    const mini = filteredProjects.filter(p => p.projectType === 'Mini Project').length;
+    const major = filteredProjects.filter(p => p.projectType === 'Major Project').length;
+    const capstone = filteredProjects.filter(p => p.projectType === 'Capstone Project').length;
+    const inProgress = filteredProjects.filter(p => p.projectStatus === 'IN_PROGRESS' || p.projectStatus === 'Ongoing').length;
+    const completed = filteredProjects.filter(p => p.projectStatus === 'COMPLETED' || p.projectStatus === 'Completed').length;
+    const industry = filteredProjects.filter(p => p.industryAssociation?.isIndustryAssociated || p.isIndustryProject === 'Yes').length;
+    const pendingReview = filteredProjects.filter(p => p.workflowStatus === 'SUBMITTED' || p.workflowStatus === 'UNDER_REVIEW').length;
 
-  const handleExecuteReview = () => {
+    return { total, mini, major, capstone, inProgress, completed, industry, pendingReview };
+  }, [filteredProjects]);
+
+  // Permissions
+  const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'HOD' || currentUser?.role === 'FACULTY';
+  const canReview = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'HOD';
+
+  const handleReviewSubmit = () => {
     if (!reviewModalItem) return;
     reviewStudentProject(reviewModalItem.id, reviewAction, reviewRemarks, currentUser);
     setReviewModalItem(null);
@@ -143,36 +149,52 @@ export default function StudentProjectsManager({ currentUser, onDataChange }) {
     }
   };
 
-  const getWorkflowBadge = (status) => {
-    switch (status) {
-      case 'APPROVED':
-        return { bg: '#ECFDF5', text: '#047857', border: '#A7F3D0', icon: CheckCircle2, label: 'APPROVED' };
-      case 'SUBMITTED':
-      case 'UNDER_REVIEW':
-        return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', icon: Clock, label: 'UNDER REVIEW' };
-      case 'NEEDS_REVISION':
-        return { bg: '#FEF2F2', text: '#DC2626', border: '#FECACA', icon: AlertTriangle, label: 'REVISION REQ.' };
-      case 'ARCHIVED':
-        return { bg: '#F1F5F9', text: '#475569', border: '#CBD5E1', icon: Clock, label: 'ARCHIVED' };
-      case 'DRAFT':
-      default:
-        return { bg: '#FEFCE8', text: '#A16207', border: '#FEF08A', icon: Edit3, label: 'DRAFT' };
-    }
+  const handleExportCSV = () => {
+    const rows = filteredProjects.map(p => ({
+      'Project Number': p.projectNumber,
+      'Project Title': p.projectTitle,
+      'Project Type': p.projectType,
+      'Department': p.department,
+      'Batch': p.batch || '—',
+      'Team Lead': p.teamMembers?.[0]?.name || '—',
+      'Lead Roll No': p.teamMembers?.[0]?.rollNumber || '—',
+      'Guide Name': p.guide?.name || '—',
+      'Project Status': p.projectStatus,
+      'Workflow Status': p.workflowStatus || 'APPROVED'
+    }));
+    exportToCSV(rows, `ET_Student_Projects_${selectedDept}`, currentUser);
+    showToast(`Exported ${rows.length} student project records to CSV.`);
   };
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'COMPLETED':
-      case 'Completed':
-        return { bg: '#ECFDF5', text: '#065F46', border: '#A7F3D0', label: 'COMPLETED' };
-      case 'IN_PROGRESS':
-      case 'Ongoing':
-        return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', label: 'IN PROGRESS' };
-      case 'SUBMITTED':
-        return { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A', label: 'SUBMITTED' };
-      default:
-        return { bg: '#F1F5F9', text: '#475569', border: '#CBD5E1', label: status || 'ONGOING' };
-    }
+  const handleExportExcel = () => {
+    const rows = filteredProjects.map(p => ({
+      'Project Number': p.projectNumber,
+      'Project Title': p.projectTitle,
+      'Project Type': p.projectType,
+      'Department': p.department,
+      'Batch': p.batch || '—',
+      'Team Lead': p.teamMembers?.[0]?.name || '—',
+      'Lead Roll No': p.teamMembers?.[0]?.rollNumber || '—',
+      'Guide Name': p.guide?.name || '—',
+      'Project Status': p.projectStatus,
+      'Workflow Status': p.workflowStatus || 'APPROVED'
+    }));
+    exportToExcel(rows, `ET_Student_Projects_${selectedDept}`, 'Projects', currentUser);
+    showToast(`Exported ${rows.length} student project records to Excel.`);
+  };
+
+  const handleExportPDF = () => {
+    const rows = filteredProjects.map(p => ({
+      'Project No': p.projectNumber || '—',
+      'Title': p.projectTitle,
+      'Type': p.projectType,
+      'Dept': p.department,
+      'Lead': p.teamMembers?.[0]?.name || '—',
+      'Guide': p.guide?.name || '—',
+      'Status': p.workflowStatus || 'APPROVED'
+    }));
+    exportToPDF('ET_Student_Projects_Report', ['Project No', 'Title', 'Type', 'Dept', 'Lead', 'Guide', 'Status'], rows, 'Student Projects & Capstone Repository');
+    showToast(`Exported student projects report to PDF.`);
   };
 
   return (
@@ -183,18 +205,18 @@ export default function StudentProjectsManager({ currentUser, onDataChange }) {
           <span>{toastMessage}</span>
         </div>
       )}
-      {/* 1. Header & Actions */}
+      {/* 1. Header */}
       <ModulePageHeader
         breadcrumbs={[
           { label: 'Dashboard' },
           { label: 'Student Development' },
           { label: 'Student Projects' }
         ]}
-        title="Student Capstone & Major Projects"
-        subtitle="Manage mini, major, and capstone project lifecycles, guide mappings, milestone reviews, and research output linkages."
-        onExportCSV={() => exportToCSV('projects')}
-        onExportExcel={() => exportToExcel('projects')}
-        onExportPDF={() => exportToPDF('projects')}
+        title="Student Projects & Capstone Repository"
+        subtitle="Departmental repository for Major Projects, Mini Projects, Capstone Innovations, Industry Sponsored Projects & Evaluation Rubrics."
+        onExportCSV={handleExportCSV}
+        onExportExcel={handleExportExcel}
+        onExportPDF={handleExportPDF}
         primaryAction={canCreate ? {
           label: 'Register Project',
           icon: Plus,
@@ -202,26 +224,25 @@ export default function StudentProjectsManager({ currentUser, onDataChange }) {
         } : null}
       />
 
-      {/* 2. Staggered Animated KPI Summary Cards */}
-      <AnimatedKpiGrid minWidth="135px">
+      {/* 2. KPI Summary Cards */}
+      <AnimatedKpiGrid minWidth="140px">
         <MotionKpiCard label="Total Projects" value={stats.total} icon={Code2} color="#0F172A" bg="#F8FAFC" />
-        <MotionKpiCard label="Major Projects" value={stats.major} icon={Layers} color="#2563EB" bg="#EFF6FF" />
-        <MotionKpiCard label="Mini Projects" value={stats.mini} icon={Zap} color="#0D9488" bg="#F0FDFA" />
-        <MotionKpiCard label="Capstone Projects" value={stats.capstone} icon={Award} color="#7C3AED" bg="#F5F3FF" />
-        <MotionKpiCard label="In Progress" value={stats.inProgress} icon={Clock} color="#D97706" bg="#FEFCE8" />
-        <MotionKpiCard label="Completed" value={stats.completed} icon={CheckCircle2} color="#059669" bg="#ECFDF5" />
-        <MotionKpiCard label="Industry Associated" value={stats.industry} icon={Building2} color="#0284C7" bg="#F0F9FF" />
-        <MotionKpiCard label="Pending Review" value={stats.pendingReview} icon={Sparkles} color="#9333EA" bg="#FDF4FF" />
+        <MotionKpiCard label="Major Projects" value={stats.major} icon={BookOpen} color="#2563EB" bg="#EFF6FF" />
+        <MotionKpiCard label="Mini Projects" value={stats.mini} icon={Layers} color="#059669" bg="#ECFDF5" />
+        <MotionKpiCard label="Capstone" value={stats.capstone} icon={Zap} color="#7C3AED" bg="#F5F3FF" />
+        <MotionKpiCard label="Industry Linked" value={stats.industry} icon={Building2} color="#D97706" bg="#FEFCE8" />
+        <MotionKpiCard label="Completed" value={stats.completed} icon={CheckCircle2} color="#0D9488" bg="#F0FDFA" />
+        <MotionKpiCard label="Pending Review" value={stats.pendingReview} icon={AlertTriangle} color="#DC2626" bg="#FEF2F2" />
       </AnimatedKpiGrid>
 
-      {/* 3. Search & Multi-Filter Toolbar */}
+      {/* 3. Search & Filter Bar */}
       <div style={{ background: '#FFFFFF', padding: '1rem 1.25rem', borderRadius: '14px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
           <div style={{ flex: 1, minWidth: '240px', position: 'relative' }}>
             <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
             <input
               type="text"
-              placeholder="Search by project title, ID, student roll no, guide name..."
+              placeholder="Search by project number, title, guide, team member..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{ width: '100%', padding: '0.5rem 0.75rem 0.5rem 2.25rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.8rem', outline: 'none', color: '#0F172A', boxSizing: 'border-box' }}
@@ -235,8 +256,8 @@ export default function StudentProjectsManager({ currentUser, onDataChange }) {
               onChange={(e) => setSelectedDept(e.target.value)}
               style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', background: '#FFFFFF', color: '#0F172A', fontWeight: 600 }}
             >
-              <option value="ALL">All Departments</option>
-              {DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.code}</option>)}
+              <option value="ALL">All ET Departments</option>
+              {ET_DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.name} ({d.code})</option>)}
             </select>
 
             <select
@@ -319,7 +340,7 @@ export default function StudentProjectsManager({ currentUser, onDataChange }) {
               ) : (
                 filteredProjects.map((item, idx) => {
                   const wfBadge = getWorkflowBadge(item.workflowStatus);
-                  const stBadge = getStatusBadge(item.projectStatus);
+                  const stBadge = getProjectStatusBadge(item.projectStatus);
                   const WfIcon = wfBadge.icon;
                   const completedReviews = item.reviews?.filter(r => r.status === 'COMPLETED').length || 0;
                   const totalReviews = item.reviews?.length || 4;
@@ -401,7 +422,7 @@ export default function StudentProjectsManager({ currentUser, onDataChange }) {
                           fontWeight: 800,
                           whiteSpace: 'nowrap'
                         }}>
-                          <WfIcon size={11} /> {wfBadge.label}
+                          {WfIcon && <WfIcon size={11} />} {wfBadge.label}
                         </span>
                       </td>
 

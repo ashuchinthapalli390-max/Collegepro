@@ -19,9 +19,10 @@ import {
   Sparkles,
   Printer,
   Calendar,
-  Layers
+  Layers,
+  X
 } from 'lucide-react';
-import { DEPARTMENTS } from '../../../data/masterData.js';
+import { ET_DEPARTMENTS } from '../../../data/masterData.js';
 import { 
   getInternships, 
   reviewInternship, 
@@ -30,6 +31,11 @@ import {
   exportToExcel,
   exportToPDF
 } from '../../../data/portalStore.js';
+import { 
+  getWorkflowBadge, 
+  getInternshipStatusBadge, 
+  StatusBadge 
+} from '../../../lib/ui/statusBadges.jsx';
 import StudentInternshipWizardModal from './StudentInternshipWizardModal.jsx';
 import ConfirmDeleteDialog from '../common/ConfirmDeleteDialog.jsx';
 import { 
@@ -77,17 +83,6 @@ export default function StudentInternshipsManager({ currentUser, onDataChange })
     return getInternships();
   }, [dataVersion]);
 
-  // KPIs
-  const stats = useMemo(() => {
-    const total = internships.length;
-    const ongoing = internships.filter(i => i.internshipStatus === 'Ongoing').length;
-    const completed = internships.filter(i => i.internshipStatus === 'Completed' || i.workflowStatus === 'COMPLETED').length;
-    const paid = internships.filter(i => i.hasStipend === 'Yes' || i.stipend === 'Yes').length;
-    const industry = internships.filter(i => i.organizationType === 'Company' || i.organizationType === 'Startup' || !i.organizationType).length;
-    const pendingReview = internships.filter(i => i.workflowStatus === 'SUBMITTED' || i.workflowStatus === 'UNDER_REVIEW').length;
-    return { total, ongoing, completed, paid, industry, pendingReview };
-  }, [internships]);
-
   // Filtered internships
   const filteredInternships = useMemo(() => {
     return internships.filter(item => {
@@ -100,7 +95,7 @@ export default function StudentInternshipsManager({ currentUser, onDataChange })
         (item.domain && item.domain.toLowerCase().includes(q));
 
       const itemDept = item.department || '';
-      const matchDept = selectedDept === 'ALL' || itemDept.toLowerCase().includes(selectedDept.toLowerCase());
+      const matchDept = selectedDept === 'ALL' || itemDept === selectedDept;
       const matchAy = selectedAy === 'ALL' || item.academicYear === selectedAy;
       const matchMode = selectedMode === 'ALL' || item.mode === selectedMode;
       const matchType = selectedType === 'ALL' || item.internshipType === selectedType;
@@ -111,17 +106,27 @@ export default function StudentInternshipsManager({ currentUser, onDataChange })
     });
   }, [internships, searchQuery, selectedDept, selectedAy, selectedMode, selectedType, selectedStipend, selectedStatus]);
 
-  const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD' || currentUser?.role === 'FACULTY';
-  const canReview = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD';
+  // KPIs
+  const stats = useMemo(() => {
+    const total = filteredInternships.length;
+    const ongoing = filteredInternships.filter(i => i.internshipStatus === 'Ongoing').length;
+    const completed = filteredInternships.filter(i => i.internshipStatus === 'Completed' || i.workflowStatus === 'COMPLETED').length;
+    const paid = filteredInternships.filter(i => i.hasStipend === 'Yes' || i.stipend === 'Yes').length;
+    const industry = filteredInternships.filter(i => i.organizationType === 'Company' || i.organizationType === 'Startup' || !i.organizationType).length;
+    const pendingReview = filteredInternships.filter(i => i.workflowStatus === 'SUBMITTED' || i.workflowStatus === 'UNDER_REVIEW').length;
+    return { total, ongoing, completed, paid, industry, pendingReview };
+  }, [filteredInternships]);
 
-  const handleExecuteReview = () => {
+  const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'HOD' || currentUser?.role === 'FACULTY';
+  const canReview = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'HOD';
+
+  const handleReviewSubmit = () => {
     if (!reviewModalItem) return;
     reviewInternship(reviewModalItem.id, reviewAction, reviewRemarks, currentUser);
-    const name = reviewModalItem.studentName || reviewModalItem.id;
     setReviewModalItem(null);
     setReviewRemarks('');
     refresh();
-    showToast(`Internship verification decision submitted for "${name}".`);
+    showToast(`Internship verification decision submitted.`);
   };
 
   const handleDelete = (item) => {
@@ -131,24 +136,61 @@ export default function StudentInternshipsManager({ currentUser, onDataChange })
   const handleConfirmDelete = () => {
     if (deleteConfirmItem) {
       softDeleteInternship(deleteConfirmItem.id, currentUser);
-      const name = deleteConfirmItem.studentName || deleteConfirmItem.internshipNumber;
+      const name = deleteConfirmItem.studentName || deleteConfirmItem.internshipNumber || deleteConfirmItem.id;
       setDeleteConfirmItem(null);
       refresh();
       showToast(`Internship for "${name}" moved to Recycle Bin.`);
     }
   };
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'Completed':
-        return { bg: '#ECFDF5', text: '#065F46', border: '#A7F3D0', label: 'COMPLETED' };
-      case 'Ongoing':
-        return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', label: 'ONGOING' };
-      case 'Upcoming':
-        return { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A', label: 'UPCOMING' };
-      default:
-        return { bg: '#F1F5F9', text: '#475569', border: '#CBD5E1', label: status || 'ACTIVE' };
-    }
+  const handleExportCSV = () => {
+    const rows = filteredInternships.map(i => ({
+      'Roll Number': i.rollNumber,
+      'Student Name': i.studentName,
+      'Department': i.department || i.branch,
+      'Academic Year': i.academicYear || '—',
+      'Organization': i.organization,
+      'Domain': i.domain,
+      'Role / Title': i.internshipTitle,
+      'Duration': `${i.weeks || i.durationWeeks || 8} Weeks`,
+      'Stipend': (i.hasStipend === 'Yes' || i.stipend === 'Yes') ? `₹${i.stipendAmount}/mo` : 'Unpaid',
+      'Status': i.internshipStatus || 'Completed',
+      'Workflow Status': i.workflowStatus || 'APPROVED'
+    }));
+    exportToCSV(rows, `ET_Student_Internships_${selectedDept}`, currentUser);
+    showToast(`Exported ${rows.length} student internship records to CSV.`);
+  };
+
+  const handleExportExcel = () => {
+    const rows = filteredInternships.map(i => ({
+      'Roll Number': i.rollNumber,
+      'Student Name': i.studentName,
+      'Department': i.department || i.branch,
+      'Academic Year': i.academicYear || '—',
+      'Organization': i.organization,
+      'Domain': i.domain,
+      'Role / Title': i.internshipTitle,
+      'Duration': `${i.weeks || i.durationWeeks || 8} Weeks`,
+      'Stipend': (i.hasStipend === 'Yes' || i.stipend === 'Yes') ? `₹${i.stipendAmount}/mo` : 'Unpaid',
+      'Status': i.internshipStatus || 'Completed',
+      'Workflow Status': i.workflowStatus || 'APPROVED'
+    }));
+    exportToExcel(rows, `ET_Student_Internships_${selectedDept}`, 'Internships', currentUser);
+    showToast(`Exported ${rows.length} student internship records to Excel.`);
+  };
+
+  const handleExportPDF = () => {
+    const rows = filteredInternships.map(i => ({
+      'Roll No': i.rollNumber || '—',
+      'Student Name': i.studentName,
+      'Dept': i.department || i.branch,
+      'Organization': i.organization,
+      'Title': i.internshipTitle,
+      'Duration': `${i.weeks || 8} Wks`,
+      'Status': i.workflowStatus || 'APPROVED'
+    }));
+    exportToPDF('ET_Student_Internships_Report', ['Roll No', 'Student Name', 'Dept', 'Organization', 'Title', 'Duration', 'Status'], rows, 'Student Industry Internships Repository');
+    showToast(`Exported student internships report to PDF.`);
   };
 
   return (
@@ -168,9 +210,9 @@ export default function StudentInternshipsManager({ currentUser, onDataChange })
         ]}
         title="Industry Internships & Practical Training"
         subtitle="Comprehensive institutional record for Summer, Short-Term, Long-Term, and Industry Internships (NBA Criterion 4 Evidence)."
-        onExportCSV={() => exportToCSV('internships')}
-        onExportExcel={() => exportToExcel('internships')}
-        onExportPDF={() => exportToPDF('internships')}
+        onExportCSV={handleExportCSV}
+        onExportExcel={handleExportExcel}
+        onExportPDF={handleExportPDF}
         primaryAction={canCreate ? {
           label: 'Record Internship',
           icon: Plus,
@@ -203,7 +245,7 @@ export default function StudentInternshipsManager({ currentUser, onDataChange })
             <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
             <input
               type="text"
-              placeholder="Search by student roll no, company, domain, title..."
+              placeholder="Search by student name, roll number, organization, role..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{ width: '100%', padding: '0.5rem 0.75rem 0.5rem 2.25rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.8rem', outline: 'none', color: '#0F172A', boxSizing: 'border-box' }}
@@ -217,8 +259,8 @@ export default function StudentInternshipsManager({ currentUser, onDataChange })
               onChange={(e) => setSelectedDept(e.target.value)}
               style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', background: '#FFFFFF', color: '#0F172A', fontWeight: 600 }}
             >
-              <option value="ALL">All Departments</option>
-              {DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.code}</option>)}
+              <option value="ALL">All ET Departments</option>
+              {ET_DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.name} ({d.code})</option>)}
             </select>
 
             <select
@@ -243,13 +285,24 @@ export default function StudentInternshipsManager({ currentUser, onDataChange })
             </select>
 
             <select
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value)}
+              style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', background: '#FFFFFF', color: '#0F172A', fontWeight: 600 }}
+            >
+              <option value="ALL">All Types</option>
+              <option value="Summer Internship">Summer Internship</option>
+              <option value="Semester Internship">Semester Internship</option>
+              <option value="Short Term">Short Term</option>
+            </select>
+
+            <select
               value={selectedStipend}
               onChange={(e) => setSelectedStipend(e.target.value)}
               style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', background: '#FFFFFF', color: '#0F172A', fontWeight: 600 }}
             >
-              <option value="ALL">Stipend: All</option>
-              <option value="YES">Paid Only</option>
-              <option value="NO">Unpaid</option>
+              <option value="ALL">All Stipend</option>
+              <option value="PAID">Paid / Stipendiary</option>
+              <option value="UNPAID">Unpaid</option>
             </select>
           </div>
         </div>
@@ -266,7 +319,7 @@ export default function StudentInternshipsManager({ currentUser, onDataChange })
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
               <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                <th style={{ padding: '0.85rem 1rem' }}>Student & Roll No</th>
+                <th style={{ padding: '0.85rem 1rem' }}>Roll No & Student</th>
                 <th style={{ padding: '0.85rem 1rem' }}>Branch & AY</th>
                 <th style={{ padding: '0.85rem 1rem' }}>Organization & Domain</th>
                 <th style={{ padding: '0.85rem 1rem' }}>Role / Title</th>
@@ -286,7 +339,7 @@ export default function StudentInternshipsManager({ currentUser, onDataChange })
               ) : (
                 filteredInternships.map((item, idx) => {
                   const statusKey = item.workflowStatus || (item.status === 'Verified' ? 'VERIFIED' : 'DRAFT');
-                  const badge = getStatusBadge(statusKey);
+                  const badge = getWorkflowBadge(statusKey);
                   const BadgeIcon = badge.icon;
 
                   return (
@@ -344,7 +397,7 @@ export default function StudentInternshipsManager({ currentUser, onDataChange })
                           fontSize: '0.68rem',
                           fontWeight: 800
                         }}>
-                          <BadgeIcon size={11} /> {badge.label}
+                          {BadgeIcon && <BadgeIcon size={11} />} {badge.label}
                         </span>
                       </td>
 

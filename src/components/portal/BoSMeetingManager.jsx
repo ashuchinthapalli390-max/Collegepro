@@ -57,6 +57,10 @@ import {
   exportBoSReportToPDF
 } from '../../data/portalStore.js';
 import { ET_DEPARTMENTS } from '../../data/masterData.js';
+import { 
+  getWorkflowBadge, 
+  StatusBadge 
+} from '../../lib/ui/statusBadges.jsx';
 import BosWizardModal from './bos/BosWizardModal.jsx';
 import { 
   MotionPage, 
@@ -581,7 +585,7 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
                           alignItems: 'center',
                           gap: '0.3rem'
                         }}>
-                          <BadgeIcon size={11} /> {badge.label}
+                          {BadgeIcon && <BadgeIcon size={11} />} {badge.label}
                         </span>
                       </td>
 

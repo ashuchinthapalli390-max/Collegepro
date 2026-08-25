@@ -28,7 +28,7 @@ import {
   BookOpen,
   Layers
 } from 'lucide-react';
-import { DEPARTMENTS, FACULTY_DATA } from '../../../data/masterData.js';
+import { ET_DEPARTMENTS, FACULTY_DATA } from '../../../data/masterData.js';
 import { 
   getNPTEL, 
   reviewNPTEL, 
@@ -37,6 +37,10 @@ import {
   exportToExcel,
   exportToPDF
 } from '../../../data/portalStore.js';
+import { 
+  getWorkflowBadge, 
+  StatusBadge 
+} from '../../../lib/ui/statusBadges.jsx';
 import NptelCertificationWizardModal from './NptelCertificationWizardModal.jsx';
 import ConfirmDeleteDialog from '../common/ConfirmDeleteDialog.jsx';
 import { 
@@ -70,9 +74,10 @@ export default function NptelCertificationsManager({ currentUser, onDataChange }
   // Quick Tab Filter
   const [quickTab, setQuickTab] = useState('ALL');
 
-  // Multi-Filter Toolbar
+  // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDept, setSelectedDept] = useState(currentUser?.role === 'HOD' ? (currentUser.dept || 'ALL') : 'ALL');
+  const [selectedAy, setSelectedAy] = useState('ALL');
   const [selectedPlatform, setSelectedPlatform] = useState('ALL');
   const [selectedResult, setSelectedResult] = useState('ALL');
   const [selectedWorkflowStatus, setSelectedWorkflowStatus] = useState('ALL');
@@ -82,62 +87,64 @@ export default function NptelCertificationsManager({ currentUser, onDataChange }
     if (onDataChange) onDataChange();
   };
 
-  // Live Records
-  const certifications = useMemo(() => {
+  const nptelList = useMemo(() => {
     return getNPTEL();
   }, [dataVersion]);
 
-  // Aggregate Stats
-  const stats = useMemo(() => {
-    const total = certifications.length;
-    const elitePlusGold = certifications.filter(c => c.certificationType === 'Elite+Gold').length;
-    const elitePlusSilver = certifications.filter(c => c.certificationType === 'Elite+Silver').length;
-    const elite = certifications.filter(c => c.certificationType === 'Elite').length;
-    const successfullyCompleted = certifications.filter(c => c.certificationType === 'Successfully Completed').length;
-    const pendingReview = certifications.filter(c => c.workflowStatus === 'SUBMITTED' || c.workflowStatus === 'UNDER_REVIEW').length;
-    return { total, elitePlusGold, elitePlusSilver, elite, successfullyCompleted, pendingReview };
-  }, [certifications]);
-
-  // Filtered Records
-  const filteredCertifications = useMemo(() => {
-    return certifications.filter(item => {
+  // Filtered List
+  const filteredNptel = useMemo(() => {
+    return nptelList.filter(item => {
       const q = searchQuery.toLowerCase().trim();
       const matchSearch = !q ||
-        (item.certificateRecordNumber && item.certificateRecordNumber.toLowerCase().includes(q)) ||
+        (item.certificationRecordNumber && item.certificationRecordNumber.toLowerCase().includes(q)) ||
+        (item.learnerName && item.learnerName.toLowerCase().includes(q)) ||
+        (item.rollNumber && item.rollNumber.toLowerCase().includes(q)) ||
         (item.courseName && item.courseName.toLowerCase().includes(q)) ||
-        (item.candidateName && item.candidateName.toLowerCase().includes(q)) ||
-        (item.facultyName && item.facultyName.toLowerCase().includes(q)) ||
-        (item.rollNumber && item.rollNumber.toLowerCase().includes(q));
+        (item.certificateId && item.certificateId.toLowerCase().includes(q));
 
       const itemDept = item.department || '';
-      const matchDept = selectedDept === 'ALL' || itemDept.toLowerCase().includes(selectedDept.toLowerCase());
+      const matchDept = selectedDept === 'ALL' || itemDept === selectedDept;
+      const matchAy = selectedAy === 'ALL' || item.academicYear === selectedAy;
       const matchPlatform = selectedPlatform === 'ALL' || item.platform === selectedPlatform;
-      const matchResult = selectedResult === 'ALL' || item.certificationType === selectedResult;
+      const matchResult = selectedResult === 'ALL' || item.certificateType === selectedResult;
       const matchWorkflow = selectedWorkflowStatus === 'ALL' || item.workflowStatus === selectedWorkflowStatus;
 
-      // Quick Tab Filter
+      // Quick Tab
       let matchQuick = true;
-      if (quickTab === 'GOLD') matchQuick = item.certificationType === 'Elite+Gold';
-      else if (quickTab === 'SILVER') matchQuick = item.certificationType === 'Elite+Silver';
-      else if (quickTab === 'ELITE') matchQuick = item.certificationType === 'Elite';
+      if (quickTab === 'STUDENTS') matchQuick = item.learnerType === 'STUDENT';
+      else if (quickTab === 'FACULTY') matchQuick = item.learnerType === 'FACULTY';
+      else if (quickTab === 'NPTEL') matchQuick = item.platform === 'NPTEL' || item.platform === 'SWAYAM';
+      else if (quickTab === 'ELITE') matchQuick = item.certificateType && item.certificateType.includes('Elite');
       else if (quickTab === 'PENDING') matchQuick = item.workflowStatus === 'SUBMITTED' || item.workflowStatus === 'UNDER_REVIEW';
 
-      return matchSearch && matchDept && matchPlatform && matchResult && matchWorkflow && matchQuick;
+      return matchSearch && matchDept && matchAy && matchPlatform && matchResult && matchWorkflow && matchQuick;
     });
-  }, [certifications, searchQuery, selectedDept, selectedPlatform, selectedResult, selectedWorkflowStatus, quickTab]);
+  }, [nptelList, searchQuery, quickTab, selectedDept, selectedAy, selectedPlatform, selectedResult, selectedWorkflowStatus]);
 
-  // Permissions
-  const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD' || currentUser?.role === 'FACULTY';
-  const canReview = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD';
+  // KPIs
+  const stats = useMemo(() => {
+    const total = filteredNptel.length;
+    const students = filteredNptel.filter(n => n.learnerType === 'STUDENT').length;
+    const faculty = filteredNptel.filter(n => n.learnerType === 'FACULTY').length;
+    const nptel = filteredNptel.filter(n => n.platform === 'NPTEL' || n.platform === 'SWAYAM').length;
+    const elite = filteredNptel.filter(n => n.certificateType && n.certificateType.includes('Elite')).length;
+    const silver = filteredNptel.filter(n => n.certificateType && n.certificateType.includes('Silver')).length;
+    const gold = filteredNptel.filter(n => n.certificateType && (n.certificateType.includes('Gold') || n.certificateType.includes('Topper'))).length;
+    const pendingReview = filteredNptel.filter(n => n.workflowStatus === 'SUBMITTED' || n.workflowStatus === 'UNDER_REVIEW').length;
 
-  const handleExecuteReview = () => {
+    return { total, students, faculty, nptel, elite, silver, gold, pendingReview };
+  }, [filteredNptel]);
+
+  const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'HOD' || currentUser?.role === 'FACULTY';
+  const canReview = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'HOD';
+
+  const handleReviewSubmit = () => {
     if (!reviewModalItem) return;
     reviewNPTEL(reviewModalItem.id, reviewAction, reviewRemarks, currentUser);
-    const num = reviewModalItem.certificateRecordNumber || reviewModalItem.id;
     setReviewModalItem(null);
     setReviewRemarks('');
     refresh();
-    showToast(`Certification ${num} decision submitted.`);
+    showToast(`Certification decision recorded.`);
   };
 
   const handleDelete = (item) => {
@@ -147,43 +154,61 @@ export default function NptelCertificationsManager({ currentUser, onDataChange }
   const handleConfirmDelete = () => {
     if (deleteConfirmItem) {
       softDeleteNPTEL(deleteConfirmItem.id, currentUser);
-      const name = deleteConfirmItem.courseName;
+      const name = deleteConfirmItem.courseName || deleteConfirmItem.learnerName || deleteConfirmItem.id;
       setDeleteConfirmItem(null);
       refresh();
       showToast(`Certification "${name}" moved to Recycle Bin.`);
     }
   };
 
-  const getWorkflowBadge = (status) => {
-    switch (status) {
-      case 'APPROVED':
-        return { bg: '#ECFDF5', text: '#047857', border: '#A7F3D0', icon: CheckCircle2, label: 'APPROVED' };
-      case 'SUBMITTED':
-      case 'UNDER_REVIEW':
-        return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', icon: Clock, label: 'UNDER REVIEW' };
-      case 'NEEDS_REVISION':
-        return { bg: '#FEF2F2', text: '#DC2626', border: '#FECACA', icon: AlertTriangle, label: 'REVISION REQ.' };
-      case 'ARCHIVED':
-        return { bg: '#F1F5F9', text: '#475569', border: '#CBD5E1', icon: Clock, label: 'ARCHIVED' };
-      case 'DRAFT':
-      default:
-        return { bg: '#FEFCE8', text: '#A16207', border: '#FEF08A', icon: Edit3, label: 'DRAFT' };
-    }
+  const handleExportCSV = () => {
+    const rows = filteredNptel.map(n => ({
+      'Learner Name': n.learnerName,
+      'Learner Type': n.learnerType,
+      'Roll / Faculty ID': n.rollNumber || n.facultyId || '—',
+      'Department': n.department,
+      'Academic Year': n.academicYear || '—',
+      'Platform': n.platform,
+      'Course Name': n.courseName,
+      'Score': n.finalScore || '—',
+      'Certificate Type': n.certificateType || 'Completed',
+      'Credits': n.academicCredits?.creditsEarned || 0,
+      'Workflow Status': n.workflowStatus || 'APPROVED'
+    }));
+    exportToCSV(rows, `ET_NPTEL_Certifications_${selectedDept}`, currentUser);
+    showToast(`Exported ${rows.length} certification records to CSV.`);
   };
 
-  const getResultBadge = (result) => {
-    switch (result) {
-      case 'Elite + Gold':
-      case 'Topper':
-        return { bg: '#FEF3C7', text: '#B45309', border: '#FCD34D', label: 'ELITE + GOLD' };
-      case 'Elite + Silver':
-        return { bg: '#F1F5F9', text: '#334155', border: '#CBD5E1', label: 'ELITE + SILVER' };
-      case 'Elite':
-        return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', label: 'ELITE' };
-      case 'Successfully Completed':
-      default:
-        return { bg: '#ECFDF5', text: '#065F46', border: '#A7F3D0', label: 'COMPLETED' };
-    }
+  const handleExportExcel = () => {
+    const rows = filteredNptel.map(n => ({
+      'Learner Name': n.learnerName,
+      'Learner Type': n.learnerType,
+      'Roll / Faculty ID': n.rollNumber || n.facultyId || '—',
+      'Department': n.department,
+      'Academic Year': n.academicYear || '—',
+      'Platform': n.platform,
+      'Course Name': n.courseName,
+      'Score': n.finalScore || '—',
+      'Certificate Type': n.certificateType || 'Completed',
+      'Credits': n.academicCredits?.creditsEarned || 0,
+      'Workflow Status': n.workflowStatus || 'APPROVED'
+    }));
+    exportToExcel(rows, `ET_NPTEL_Certifications_${selectedDept}`, 'Certifications', currentUser);
+    showToast(`Exported ${rows.length} certification records to Excel.`);
+  };
+
+  const handleExportPDF = () => {
+    const rows = filteredNptel.map(n => ({
+      'Learner': n.learnerName,
+      'Type': n.learnerType,
+      'Dept': n.department,
+      'Platform': n.platform,
+      'Course': n.courseName,
+      'Score': `${n.finalScore || '—'}%`,
+      'Status': n.workflowStatus || 'APPROVED'
+    }));
+    exportToPDF('ET_NPTEL_Certifications_Report', ['Learner', 'Type', 'Dept', 'Platform', 'Course', 'Score', 'Status'], rows, 'NPTEL & MOOC Certifications Repository');
+    showToast(`Exported certification records report to PDF.`);
   };
 
   return (
@@ -203,9 +228,9 @@ export default function NptelCertificationsManager({ currentUser, onDataChange }
         ]}
         title="NPTEL & MOOC Certifications"
         subtitle="Manage verified online certifications for students and faculty across NPTEL, SWAYAM, Coursera, and edX."
-        onExportCSV={() => exportToCSV('nptel')}
-        onExportExcel={() => exportToExcel('nptel')}
-        onExportPDF={() => exportToPDF('nptel')}
+        onExportCSV={handleExportCSV}
+        onExportExcel={handleExportExcel}
+        onExportPDF={handleExportPDF}
         primaryAction={canCreate ? {
           label: 'Record Certification',
           icon: Plus,
@@ -277,8 +302,8 @@ export default function NptelCertificationsManager({ currentUser, onDataChange }
               onChange={(e) => setSelectedDept(e.target.value)}
               style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', background: '#FFFFFF', color: '#0F172A', fontWeight: 600 }}
             >
-              <option value="ALL">All Departments</option>
-              {DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.code}</option>)}
+              <option value="ALL">All ET Departments</option>
+              {ET_DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.name} ({d.code})</option>)}
             </select>
 
             <select
@@ -450,7 +475,7 @@ export default function NptelCertificationsManager({ currentUser, onDataChange }
                           fontWeight: 800,
                           whiteSpace: 'nowrap'
                         }}>
-                          <WfIcon size={11} /> {wfBadge.label}
+                          {WfIcon && <WfIcon size={11} />} {wfBadge.label}
                         </span>
                       </td>
 

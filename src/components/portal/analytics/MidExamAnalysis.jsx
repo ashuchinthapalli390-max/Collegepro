@@ -4,7 +4,7 @@ import {
   MotionPage, 
   ModulePageHeader, 
   MotionCard 
-} from '../motion/index.js';
+} from '../../motion/index.js';
 
 export default function MidExamAnalysis({ currentUser }) {
   return (

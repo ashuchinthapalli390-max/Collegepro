@@ -28,7 +28,7 @@ import {
   Layers,
   RefreshCw
 } from 'lucide-react';
-import { DEPARTMENTS } from '../../../data/masterData.js';
+import { ET_DEPARTMENTS } from '../../../data/masterData.js';
 import { 
   getPublications, 
   reviewPublication, 
@@ -37,6 +37,10 @@ import {
   exportToExcel,
   exportToPDF
 } from '../../../data/portalStore.js';
+import { 
+  getWorkflowBadge, 
+  StatusBadge 
+} from '../../../lib/ui/statusBadges.jsx';
 import PublicationWizardModal from './PublicationWizardModal.jsx';
 import ConfirmDeleteDialog from '../common/ConfirmDeleteDialog.jsx';
 import { 
@@ -72,14 +76,9 @@ export default function PublicationsManager({ currentUser, onDataChange, onOpenS
   const [deleteConfirmItem, setDeleteConfirmItem] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
 
-  const showToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
-  };
-
   // Filters State
-  const [selectedQuickTab, setSelectedQuickTab] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedQuickTab, setSelectedQuickTab] = useState('ALL');
   const [selectedDept, setSelectedDept] = useState(currentUser?.role === 'HOD' ? (currentUser.dept || 'ALL') : 'ALL');
   const [selectedAy, setSelectedAy] = useState('ALL');
   const [selectedType, setSelectedType] = useState('ALL');
@@ -164,23 +163,54 @@ export default function PublicationsManager({ currentUser, onDataChange, onOpenS
     }
   };
 
-  const getWorkflowBadge = (status) => {
-    switch (status) {
-      case 'APPROVED':
-        return { bg: '#ECFDF5', text: '#047857', border: '#A7F3D0', icon: CheckCircle2, label: 'APPROVED' };
-      case 'SUBMITTED':
-      case 'UNDER_REVIEW':
-        return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', icon: Clock, label: 'UNDER REVIEW' };
-      case 'IMPORTED_PENDING_REVIEW':
-        return { bg: '#FDF4FF', text: '#7E22CE', border: '#F5D0FE', icon: Sparkles, label: 'IMPORTED (PENDING)' };
-      case 'NEEDS_REVISION':
-        return { bg: '#FEF2F2', text: '#DC2626', border: '#FECACA', icon: AlertTriangle, label: 'REVISION REQ.' };
-      case 'ARCHIVED':
-        return { bg: '#F1F5F9', text: '#475569', border: '#CBD5E1', icon: Clock, label: 'ARCHIVED' };
-      case 'DRAFT':
-      default:
-        return { bg: '#FEFCE8', text: '#A16207', border: '#FEF08A', icon: Edit3, label: 'DRAFT' };
-    }
+  const handleExportCSV = () => {
+    const rows = filteredPublications.map(p => ({
+      'Publication Number': p.publicationNumber,
+      'Title': p.title,
+      'Department': p.department,
+      'Academic Year': p.academicYear || '—',
+      'Publication Type': p.publicationType,
+      'First Author': p.firstAuthor?.name || '—',
+      'Journal / Conference': p.journalName || p.conferenceName || '—',
+      'DOI': p.doi || '—',
+      'Scopus Indexed': p.isScopusIndexed ? 'Yes' : 'No',
+      'WoS Indexed': p.isWosIndexed ? 'Yes' : 'No',
+      'Workflow Status': p.workflowStatus || 'APPROVED'
+    }));
+    exportToCSV(rows, `ET_Publications_${selectedDept}`, currentUser);
+    showToast(`Exported ${rows.length} publication records to CSV.`);
+  };
+
+  const handleExportExcel = () => {
+    const rows = filteredPublications.map(p => ({
+      'Publication Number': p.publicationNumber,
+      'Title': p.title,
+      'Department': p.department,
+      'Academic Year': p.academicYear || '—',
+      'Publication Type': p.publicationType,
+      'First Author': p.firstAuthor?.name || '—',
+      'Journal / Conference': p.journalName || p.conferenceName || '—',
+      'DOI': p.doi || '—',
+      'Scopus Indexed': p.isScopusIndexed ? 'Yes' : 'No',
+      'WoS Indexed': p.isWosIndexed ? 'Yes' : 'No',
+      'Workflow Status': p.workflowStatus || 'APPROVED'
+    }));
+    exportToExcel(rows, `ET_Publications_${selectedDept}`, 'Publications', currentUser);
+    showToast(`Exported ${rows.length} publication records to Excel.`);
+  };
+
+  const handleExportPDF = () => {
+    const rows = filteredPublications.map(p => ({
+      'Pub No': p.publicationNumber || '—',
+      'Title': p.title,
+      'Dept': p.department,
+      'Author': p.firstAuthor?.name || '—',
+      'Venue': p.journalName || p.conferenceName || '—',
+      'Scopus': p.isScopusIndexed ? 'Yes' : 'No',
+      'Status': p.workflowStatus || 'APPROVED'
+    }));
+    exportToPDF('ET_Publications_Report', ['Pub No', 'Title', 'Dept', 'Author', 'Venue', 'Scopus', 'Status'], rows, 'Research Publications Repository');
+    showToast(`Exported publication records report to PDF.`);
   };
 
   return (
@@ -200,9 +230,9 @@ export default function PublicationsManager({ currentUser, onDataChange, onOpenS
         ]}
         title="Research Publications"
         subtitle="Manage faculty and student research papers, conference publications, indexing and research identifiers."
-        onExportCSV={() => exportToCSV('publications')}
-        onExportExcel={() => exportToExcel('publications')}
-        onExportPDF={() => exportToPDF('publications')}
+        onExportCSV={handleExportCSV}
+        onExportExcel={handleExportExcel}
+        onExportPDF={handleExportPDF}
         customActions={onOpenSyncModal ? (
           <button
             type="button"
@@ -295,8 +325,8 @@ export default function PublicationsManager({ currentUser, onDataChange, onOpenS
               onChange={(e) => setSelectedDept(e.target.value)}
               style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', background: '#FFFFFF', color: '#0F172A', fontWeight: 600 }}
             >
-              <option value="ALL">All Departments</option>
-              {DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.code}</option>)}
+              <option value="ALL">All ET Departments</option>
+              {ET_DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.name} ({d.code})</option>)}
             </select>
 
             <select
@@ -473,7 +503,7 @@ export default function PublicationsManager({ currentUser, onDataChange, onOpenS
                           fontWeight: 800,
                           whiteSpace: 'nowrap'
                         }}>
-                          <WfIcon size={11} /> {wfBadge.label}
+                          {WfIcon && <WfIcon size={11} />} {wfBadge.label}
                         </span>
                       </td>
 

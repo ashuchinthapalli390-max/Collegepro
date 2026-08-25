@@ -36,8 +36,8 @@ import {
   MotionEmptyState, 
   MotionButton,
   MotionModal
-} from '../motion/index.js';
-import { ET_DEPARTMENTS } from '../../data/masterData.js';
+} from '../../motion/index.js';
+import { ET_DEPARTMENTS } from '../../../data/masterData.js';
 import { 
   getCommunityProjects, 
   saveCommunityProject, 
@@ -45,7 +45,7 @@ import {
   getStudents,
   exportToCSV,
   exportToPDF
-} from '../../data/portalStore.js';
+} from '../../../data/portalStore.js';
 import ConfirmDeleteDialog from '../common/ConfirmDeleteDialog.jsx';
 
 export default function CommunityServiceProjectsManager({ currentUser, onDataChange }) {

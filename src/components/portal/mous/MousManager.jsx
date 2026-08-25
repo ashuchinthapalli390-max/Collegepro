@@ -30,7 +30,7 @@ import {
   Activity,
   GraduationCap
 } from 'lucide-react';
-import { DEPARTMENTS, FACULTY_DATA } from '../../../data/masterData.js';
+import { ET_DEPARTMENTS, FACULTY_DATA } from '../../../data/masterData.js';
 import { 
   getMoUs, 
   reviewMoU, 
@@ -40,6 +40,11 @@ import {
   exportToExcel,
   exportToPDF
 } from '../../../data/portalStore.js';
+import { 
+  getWorkflowBadge, 
+  getMouStatusBadge, 
+  StatusBadge 
+} from '../../../lib/ui/statusBadges.jsx';
 import MouWizardModal from './MouWizardModal.jsx';
 import ConfirmDeleteDialog from '../common/ConfirmDeleteDialog.jsx';
 
@@ -105,25 +110,6 @@ export default function MousManager({ currentUser, onDataChange }) {
     return getMoUs();
   }, [dataVersion]);
 
-  // Aggregate Stats
-  const stats = useMemo(() => {
-    const total = mous.length;
-    const active = mous.filter(m => (m.mouStatus === 'ACTIVE' || m.status === 'ACTIVE')).length;
-    const expiringSoon = mous.filter(m => (m.mouStatus === 'EXPIRING_SOON' || m.status === 'EXPIRING_SOON')).length;
-    const expired = mous.filter(m => (m.mouStatus === 'EXPIRED' || m.status === 'EXPIRED')).length;
-    const industry = mous.filter(m => (m.collaboratorType === 'INDUSTRY' || m.partnerType === 'Industry' || m.collaboratorType === 'Industry')).length;
-    const academic = mous.filter(m => (m.collaboratorType === 'ACADEMIC_INSTITUTION' || m.partnerType === 'University' || m.partnerType === 'College')).length;
-    const pendingReview = mous.filter(m => m.workflowStatus === 'SUBMITTED' || m.workflowStatus === 'UNDER_REVIEW').length;
-    
-    let totalAct = 0;
-    mous.forEach(m => {
-      const act = getMouActivitiesSummary(m);
-      totalAct += (act.total || 0);
-    });
-
-    return { total, active, expiringSoon, expired, industry, academic, pendingReview, totalAct };
-  }, [mous]);
-
   // Filtered Records (Safe Search & Field Filter Normalization)
   const filteredMoUs = useMemo(() => {
     return mous.filter(item => {
@@ -146,7 +132,7 @@ export default function MousManager({ currentUser, onDataChange }) {
       const matchSearch = !q || searchable.includes(q);
 
       const itemDept = item.department || '';
-      const matchDept = selectedDept === 'ALL' || itemDept.toLowerCase().includes(selectedDept.toLowerCase());
+      const matchDept = selectedDept === 'ALL' || itemDept === selectedDept;
       
       const partnerVal = (item.collaboratorType || item.partnerType || '').toLowerCase();
       const matchPartner = selectedPartnerType === 'ALL' || partnerVal.includes(selectedPartnerType.toLowerCase());
@@ -161,18 +147,36 @@ export default function MousManager({ currentUser, onDataChange }) {
     });
   }, [mous, searchQuery, selectedDept, selectedPartnerType, selectedStatus, selectedWorkflowStatus]);
 
-  // Permissions
-  const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD' || currentUser?.role === 'FACULTY';
-  const canReview = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD';
+  // Aggregate Stats
+  const stats = useMemo(() => {
+    const total = filteredMoUs.length;
+    const active = filteredMoUs.filter(m => (m.mouStatus === 'ACTIVE' || m.status === 'ACTIVE')).length;
+    const expiringSoon = filteredMoUs.filter(m => (m.mouStatus === 'EXPIRING_SOON' || m.status === 'EXPIRING_SOON')).length;
+    const expired = filteredMoUs.filter(m => (m.mouStatus === 'EXPIRED' || m.status === 'EXPIRED')).length;
+    const industry = filteredMoUs.filter(m => (m.collaboratorType === 'INDUSTRY' || m.partnerType === 'Industry' || m.collaboratorType === 'Industry')).length;
+    const academic = filteredMoUs.filter(m => (m.collaboratorType === 'ACADEMIC_INSTITUTION' || m.partnerType === 'University' || m.partnerType === 'College')).length;
+    const pendingReview = filteredMoUs.filter(m => m.workflowStatus === 'SUBMITTED' || m.workflowStatus === 'UNDER_REVIEW').length;
+    
+    let totalAct = 0;
+    filteredMoUs.forEach(m => {
+      const act = getMouActivitiesSummary(m);
+      totalAct += (act.total || 0);
+    });
 
-  const handleExecuteReview = () => {
+    return { total, active, expiringSoon, expired, industry, academic, pendingReview, totalAct };
+  }, [filteredMoUs]);
+
+  // Permissions
+  const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'HOD' || currentUser?.role === 'FACULTY';
+  const canReview = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'HOD';
+
+  const handleReviewSubmit = () => {
     if (!reviewModalItem) return;
     reviewMoU(reviewModalItem.id, reviewAction, reviewRemarks, currentUser);
-    const num = reviewModalItem.mouRecordNumber || reviewModalItem.mouCode || reviewModalItem.id;
     setReviewModalItem(null);
     setReviewRemarks('');
     refresh();
-    showToast(`MoU ${num} review decision recorded.`);
+    showToast(`MoU review decision recorded.`);
   };
 
   const handleDelete = (id, org) => {
@@ -189,36 +193,49 @@ export default function MousManager({ currentUser, onDataChange }) {
     }
   };
 
-  const getWorkflowBadge = (status) => {
-    switch (status) {
-      case 'APPROVED':
-        return { bg: '#ECFDF5', text: '#047857', border: '#A7F3D0', icon: CheckCircle2, label: 'APPROVED' };
-      case 'SUBMITTED':
-      case 'UNDER_REVIEW':
-        return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', icon: Clock, label: 'UNDER REVIEW' };
-      case 'NEEDS_REVISION':
-        return { bg: '#FEF2F2', text: '#DC2626', border: '#FECACA', icon: AlertTriangle, label: 'REVISION REQ.' };
-      case 'ARCHIVED':
-        return { bg: '#F1F5F9', text: '#475569', border: '#CBD5E1', icon: Clock, label: 'ARCHIVED' };
-      case 'DRAFT':
-      default:
-        return { bg: '#FEFCE8', text: '#A16207', border: '#FEF08A', icon: Edit3, label: 'DRAFT' };
-    }
+  const handleExportCSV = () => {
+    const rows = filteredMoUs.map(m => ({
+      'MoU Code': m.mouRecordNumber || m.mouCode,
+      'Partner Organization': m.organization || m.partnerOrganization || m.collaboratingAgency || m.industryName,
+      'Department': m.department || 'All Departments',
+      'Partner Type': m.collaboratorType || m.partnerType || 'Industry',
+      'Coordinator': m.primaryCoordinator || '—',
+      'Signed Date': m.signedDate || '—',
+      'Expiry Date': m.expiryDate || 'Ongoing',
+      'Status': m.mouStatus || m.status || 'ACTIVE',
+      'Workflow Status': m.workflowStatus || 'APPROVED'
+    }));
+    exportToCSV(rows, `ET_MoUs_${selectedDept}`, currentUser);
+    showToast(`Exported ${rows.length} MoU records to CSV.`);
   };
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'ACTIVE':
-        return { bg: '#ECFDF5', text: '#065F46', border: '#A7F3D0', label: 'ACTIVE' };
-      case 'EXPIRING_SOON':
-        return { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A', label: 'EXPIRING SOON' };
-      case 'EXPIRED':
-        return { bg: '#FEF2F2', text: '#DC2626', border: '#FECACA', label: 'EXPIRED' };
-      case 'TERMINATED':
-        return { bg: '#F1F5F9', text: '#475569', border: '#CBD5E1', label: 'TERMINATED' };
-      default:
-        return { bg: '#F1F5F9', text: '#475569', border: '#CBD5E1', label: 'ACTIVE' };
-    }
+  const handleExportExcel = () => {
+    const rows = filteredMoUs.map(m => ({
+      'MoU Code': m.mouRecordNumber || m.mouCode,
+      'Partner Organization': m.organization || m.partnerOrganization || m.collaboratingAgency || m.industryName,
+      'Department': m.department || 'All Departments',
+      'Partner Type': m.collaboratorType || m.partnerType || 'Industry',
+      'Coordinator': m.primaryCoordinator || '—',
+      'Signed Date': m.signedDate || '—',
+      'Expiry Date': m.expiryDate || 'Ongoing',
+      'Status': m.mouStatus || m.status || 'ACTIVE',
+      'Workflow Status': m.workflowStatus || 'APPROVED'
+    }));
+    exportToExcel(rows, `ET_MoUs_${selectedDept}`, 'MoUs', currentUser);
+    showToast(`Exported ${rows.length} MoU records to Excel.`);
+  };
+
+  const handleExportPDF = () => {
+    const rows = filteredMoUs.map(m => ({
+      'MoU Code': m.mouRecordNumber || m.mouCode || '—',
+      'Partner': m.organization || m.partnerOrganization || m.collaboratingAgency || m.industryName,
+      'Dept': m.department || 'All',
+      'Type': m.collaboratorType || m.partnerType || 'Industry',
+      'Expiry': m.expiryDate || 'Ongoing',
+      'Status': m.mouStatus || m.status || 'ACTIVE'
+    }));
+    exportToPDF('ET_MoUs_Report', ['MoU Code', 'Partner', 'Dept', 'Type', 'Expiry', 'Status'], rows, 'Industry MoUs & Collaborations');
+    showToast(`Exported MoU records report to PDF.`);
   };
 
   return (
@@ -239,9 +256,9 @@ export default function MousManager({ currentUser, onDataChange }) {
         ]}
         title="Industry MoUs & Collaborations"
         subtitle="Manage institutional bilateral agreements, industry tie-ups, validity tracking, and linked activities."
-        onExportCSV={() => exportToCSV('mous')}
-        onExportExcel={() => exportToExcel('mous')}
-        onExportPDF={() => exportToPDF('mous')}
+        onExportCSV={handleExportCSV}
+        onExportExcel={handleExportExcel}
+        onExportPDF={handleExportPDF}
         primaryAction={canCreate ? {
           label: 'Establish MoU',
           icon: Plus,
@@ -319,12 +336,13 @@ export default function MousManager({ currentUser, onDataChange }) {
 
             <select
               value={selectedDept}
+              disabled={currentUser?.role === 'HOD'}
               onChange={(e) => setSelectedDept(e.target.value)}
               style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', background: '#FFFFFF', color: '#0F172A', fontWeight: 600 }}
             >
-              <option value="ALL">All Departments</option>
+              <option value="ALL">All ET Departments</option>
               <option value="Institution">Institution-Level</option>
-              {DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.code}</option>)}
+              {ET_DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.name} ({d.code})</option>)}
             </select>
 
             <select
@@ -355,7 +373,7 @@ export default function MousManager({ currentUser, onDataChange }) {
                 type="button"
                 onClick={() => {
                   setSearchQuery('');
-                  setSelectedDept('ALL');
+                  if (currentUser?.role !== 'HOD') setSelectedDept('ALL');
                   setSelectedPartnerType('ALL');
                   setSelectedStatus('ALL');
                   setSelectedWorkflowStatus('ALL');
@@ -369,14 +387,16 @@ export default function MousManager({ currentUser, onDataChange }) {
         </div>
       </div>
 
-      {/* 5. MoUs Table / Empty State */}
+      {/* 5. Authoritative Data Table */}
       {filteredMoUs.length === 0 ? (
         <MotionEmptyState
           icon={Handshake}
-          title="No Industry MoUs Found"
-          description={searchQuery ? "No MoU records match your active search and filter criteria." : "No institutional MoUs recorded yet in the database."}
-          actionLabel={canCreate ? "Establish First MoU" : null}
-          onAction={canCreate ? () => { setEditingItem(null); setWizardOpen(true); } : null}
+          title="No MoU Records Found"
+          description="No collaborative agreements match the active search or filter criteria. Create a new MoU or reset the filters."
+          action={canCreate ? {
+            label: 'Register First MoU',
+            onClick: () => { setEditingItem(null); setWizardOpen(true); }
+          } : null}
         />
       ) : (
         <MotionTable>
@@ -397,7 +417,7 @@ export default function MousManager({ currentUser, onDataChange }) {
               <tbody>
                 {filteredMoUs.map((item, idx) => {
                   const activities = getMouActivitiesSummary(item);
-                  const stBadge = getStatusBadge(item.mouStatus || item.status);
+                  const stBadge = getMouStatusBadge(item.mouStatus || item.status);
                   const wfBadge = getWorkflowBadge(item.workflowStatus || 'APPROVED');
                   const WfIcon = wfBadge.icon || CheckCircle2;
                   const PartnerIcon = getPartnerTypeIcon(item.collaboratorType || item.partnerType);

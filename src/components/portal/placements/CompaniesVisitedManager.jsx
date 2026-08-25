@@ -32,15 +32,15 @@ import {
   MotionEmptyState, 
   MotionButton,
   MotionModal
-} from '../motion/index.js';
-import { ET_DEPARTMENTS } from '../../data/masterData.js';
+} from '../../motion/index.js';
+import { ET_DEPARTMENTS } from '../../../data/masterData.js';
 import { 
   getCompanyVisits, 
   saveCompanyVisit, 
   deleteCompanyVisit,
   exportToCSV,
   exportToPDF
-} from '../../data/portalStore.js';
+} from '../../../data/portalStore.js';
 import ConfirmDeleteDialog from '../common/ConfirmDeleteDialog.jsx';
 
 export default function CompaniesVisitedManager({ currentUser, onDataChange }) {

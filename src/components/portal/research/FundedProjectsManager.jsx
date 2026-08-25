@@ -16,18 +16,18 @@ import {
   X,
   AlertCircle
 } from 'lucide-react';
-import { DEPARTMENTS } from '../../../data/masterData.js';
+import { ET_DEPARTMENTS } from '../../../data/masterData.js';
 
 export default function FundedProjectsManager({ currentUser }) {
   const [search, setSearch] = useState('');
-  const [deptFilter, setDeptFilter] = useState('ALL');
+  const [deptFilter, setDeptFilter] = useState(currentUser?.role === 'HOD' ? (currentUser.dept || 'ALL') : 'ALL');
   const [modalOpen, setModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
 
   const [projectsList, setProjectsList] = useState([
-    { id: 'FND-2024-001', projectTitle: 'Design and Development of AI-powered Edge IoT Gateway for Smart Agriculture', fundingAgency: 'DST-SERB (Government of India)', sanctionedAmount: '₹ 28,50,000', principalInvestigator: 'Dr. S. Venkateswarlu', coPi: 'Dr. B. Jhansi Vazram', department: 'CSE', duration: '3 Years (2024-2027)', status: 'Ongoing', sanctionLetter: 'DST_SERB_Sanction_2024.pdf' },
-    { id: 'FND-2023-002', projectTitle: 'AICTE IDEA Lab Establishment for Hands-on Prototyping and STEM Education', fundingAgency: 'AICTE (New Delhi)', sanctionedAmount: '₹ 55,00,000', principalInvestigator: 'Dr. M. Sreenivasa Kumar', coPi: 'Dr. V. Venkata Rao', department: 'Institutional', duration: '2 Years (2023-2025)', status: 'Active & Operational', sanctionLetter: 'AICTE_IDEA_Lab_Grant.pdf' },
-    { id: 'FND-2022-003', projectTitle: 'Modernization of Advanced VLSI and Embedded Systems Laboratory (MODROBS)', fundingAgency: 'AICTE MODROBS Scheme', sanctionedAmount: '₹ 18,20,000', principalInvestigator: 'Dr. V. Venkata Rao', coPi: 'Dr. P. Lakshmanan', department: 'ECE', duration: '2 Years (2022-2024)', status: 'Successfully Completed', sanctionLetter: 'MODROBS_Sanction_ECE.pdf' }
+    { id: 'FND-2024-001', projectTitle: 'Design and Development of AI-powered Edge IoT Gateway for Smart Agriculture', fundingAgency: 'DST-SERB (Government of India)', sanctionedAmount: '₹ 28,50,000', principalInvestigator: 'Dr. S. Venkateswarlu', coPi: 'Dr. B. Jhansi Vazram', department: 'AI', duration: '3 Years (2024-2027)', status: 'Ongoing', sanctionLetter: 'DST_SERB_Sanction_2024.pdf' },
+    { id: 'FND-2023-002', projectTitle: 'AICTE IDEA Lab Establishment for Hands-on Prototyping and STEM Education', fundingAgency: 'AICTE (New Delhi)', sanctionedAmount: '₹ 55,00,000', principalInvestigator: 'Dr. M. Sreenivasa Kumar', coPi: 'Dr. V. Venkata Rao', department: 'AIML', duration: '2 Years (2023-2025)', status: 'Active & Operational', sanctionLetter: 'AICTE_IDEA_Lab_Grant.pdf' },
+    { id: 'FND-2022-003', projectTitle: 'Modernization of Advanced Cyber Defense and Threat Intelligence Laboratory', fundingAgency: 'AICTE MODROBS Scheme', sanctionedAmount: '₹ 18,20,000', principalInvestigator: 'Dr. V. Venkata Rao', coPi: 'Dr. P. Lakshmanan', department: 'CYS', duration: '2 Years (2022-2024)', status: 'Successfully Completed', sanctionLetter: 'MODROBS_Sanction_CYS.pdf' }
   ]);
 
   const [newProject, setNewProject] = useState({
@@ -36,7 +36,7 @@ export default function FundedProjectsManager({ currentUser }) {
     sanctionedAmount: '',
     principalInvestigator: '',
     coPi: '',
-    department: currentUser?.dept || 'CSE',
+    department: currentUser?.dept || 'AI',
     duration: '3 Years',
     status: 'Ongoing'
   });
@@ -146,11 +146,12 @@ export default function FundedProjectsManager({ currentUser }) {
         />
         <select
           value={deptFilter}
+          disabled={currentUser?.role === 'HOD'}
           onChange={(e) => setDeptFilter(e.target.value)}
           style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.82rem' }}
         >
-          <option value="ALL">All Departments</option>
-          {DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.code}</option>)}
+          <option value="ALL">All ET Departments</option>
+          {ET_DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.name} ({d.code})</option>)}
         </select>
       </div>
 

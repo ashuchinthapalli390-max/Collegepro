@@ -22,7 +22,7 @@ import {
   Users,
   Handshake
 } from 'lucide-react';
-import { DEPARTMENTS } from '../../../data/masterData.js';
+import { ET_DEPARTMENTS } from '../../../data/masterData.js';
 import { 
   getFDPs, 
   reviewFDP, 
@@ -31,6 +31,11 @@ import {
   exportToExcel,
   exportToPDF
 } from '../../../data/portalStore.js';
+import { 
+  getWorkflowBadge, 
+  getProgrammeStatusBadge, 
+  StatusBadge 
+} from '../../../lib/ui/statusBadges.jsx';
 import FdpOrganizedWizardModal from './FdpOrganizedWizardModal.jsx';
 import ConfirmDeleteDialog from '../common/ConfirmDeleteDialog.jsx';
 import { 
@@ -77,17 +82,6 @@ export default function FdpsOrganizedManager({ currentUser, onDataChange }) {
     return getFDPs();
   }, [dataVersion]);
 
-  // KPIs
-  const stats = useMemo(() => {
-    const total = fdps.length;
-    const completed = fdps.filter(f => f.programmeStatus === 'COMPLETED' || f.workflowStatus === 'APPROVED').length;
-    const ongoing = fdps.filter(f => f.programmeStatus === 'ONGOING' || f.programmeStatus === 'PLANNED').length;
-    const participants = fdps.reduce((sum, f) => sum + Number(f.noParticipants || 0), 0);
-    const mouAssociated = fdps.filter(f => f.isMouAssociated === 'Yes' || f.associatedMoU).length;
-    const totalFunding = fdps.reduce((sum, f) => sum + Number(f.amount || f.financials?.amount || 0), 0);
-    return { total, completed, ongoing, participants, mouAssociated, totalFunding };
-  }, [fdps]);
-
   // Filtered list
   const filteredFDPs = useMemo(() => {
     return fdps.filter(item => {
@@ -99,29 +93,36 @@ export default function FdpsOrganizedManager({ currentUser, onDataChange }) {
         (item.sponsoringAgency && item.sponsoringAgency.toLowerCase().includes(q));
 
       const itemDept = item.department || '';
-      const matchDept = selectedDept === 'ALL' || itemDept.toLowerCase().includes(selectedDept.toLowerCase());
+      const matchDept = selectedDept === 'ALL' || itemDept === selectedDept;
       const matchAy = selectedAy === 'ALL' || item.academicYear === selectedAy;
       const matchMode = selectedMode === 'ALL' || item.mode === selectedMode;
-      const matchType = selectedType === 'ALL' || item.programmeType === selectedType;
-      
-      const itemStatus = item.workflowStatus || (item.programmeStatus === 'COMPLETED' ? 'APPROVED' : 'DRAFT');
-      const matchStatus = selectedStatus === 'ALL' || itemStatus === selectedStatus;
+      const matchStatus = selectedStatus === 'ALL' || item.workflowStatus === selectedStatus;
 
-      return matchSearch && matchDept && matchAy && matchMode && matchType && matchStatus;
+      return matchSearch && matchDept && matchAy && matchMode && matchStatus;
     });
-  }, [fdps, searchQuery, selectedDept, selectedAy, selectedMode, selectedType, selectedStatus]);
+  }, [fdps, searchQuery, selectedDept, selectedAy, selectedMode, selectedStatus]);
 
-  const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD' || currentUser?.role === 'FACULTY';
-  const canReview = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD';
+  // KPIs
+  const stats = useMemo(() => {
+    const total = filteredFDPs.length;
+    const completed = filteredFDPs.filter(f => f.programmeStatus === 'COMPLETED' || f.workflowStatus === 'APPROVED').length;
+    const ongoing = filteredFDPs.filter(f => f.programmeStatus === 'ONGOING' || f.programmeStatus === 'PLANNED').length;
+    const participants = filteredFDPs.reduce((sum, f) => sum + Number(f.noParticipants || 0), 0);
+    const mouAssociated = filteredFDPs.filter(f => f.isMouAssociated === 'Yes' || f.associatedMoU).length;
+    const totalFunding = filteredFDPs.reduce((sum, f) => sum + Number(f.amount || f.financials?.amount || 0), 0);
+    return { total, completed, ongoing, participants, mouAssociated, totalFunding };
+  }, [filteredFDPs]);
 
-  const handleExecuteReview = () => {
+  const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'HOD' || currentUser?.role === 'FACULTY';
+  const canReview = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'HOD';
+
+  const handleReviewSubmit = () => {
     if (!reviewModalItem) return;
     reviewFDP(reviewModalItem.id, reviewAction, reviewRemarks, currentUser);
-    const title = reviewModalItem.fdpTitle;
     setReviewModalItem(null);
     setReviewRemarks('');
     refresh();
-    showToast(`FDP decision submitted for "${title}".`);
+    showToast(`FDP decision submitted.`);
   };
 
   const handleDelete = (item) => {
@@ -131,26 +132,61 @@ export default function FdpsOrganizedManager({ currentUser, onDataChange }) {
   const handleConfirmDelete = () => {
     if (deleteConfirmItem) {
       softDeleteFDP(deleteConfirmItem.id, currentUser);
-      const title = deleteConfirmItem.fdpTitle;
+      const name = deleteConfirmItem.fdpTitle || deleteConfirmItem.id;
       setDeleteConfirmItem(null);
       refresh();
-      showToast(`FDP "${title}" moved to Recycle Bin.`);
+      showToast(`FDP "${name}" moved to Recycle Bin.`);
     }
   };
 
-  const getWorkflowBadge = (status) => {
-    switch (status) {
-      case 'APPROVED':
-        return { bg: '#ECFDF5', text: '#047857', border: '#A7F3D0', icon: CheckCircle2, label: 'APPROVED' };
-      case 'SUBMITTED':
-      case 'UNDER_REVIEW':
-        return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', icon: Clock, label: 'SUBMITTED' };
-      case 'NEEDS_REVISION':
-        return { bg: '#FEF2F2', text: '#DC2626', border: '#FECACA', icon: AlertTriangle, label: 'REVISION REQ.' };
-      case 'DRAFT':
-      default:
-        return { bg: '#FEFCE8', text: '#A16207', border: '#FEF08A', icon: Edit3, label: 'DRAFT' };
-    }
+  const handleExportCSV = () => {
+    const rows = filteredFDPs.map(f => ({
+      'FDP Title': f.fdpTitle,
+      'Programme Type': f.programmeType || 'FDP',
+      'Department': f.department,
+      'Academic Year': f.academicYear || '—',
+      'Coordinator': f.coordinatorName || f.coordinator,
+      'Start Date': f.startDate,
+      'End Date': f.endDate,
+      'Mode': f.mode || 'Offline',
+      'Participants': f.noParticipants || 0,
+      'MoU Associated': f.isMouAssociated || 'No',
+      'Workflow Status': f.workflowStatus || 'APPROVED'
+    }));
+    exportToCSV(rows, `ET_FDPs_Organized_${selectedDept}`, currentUser);
+    showToast(`Exported ${rows.length} organized FDP records to CSV.`);
+  };
+
+  const handleExportExcel = () => {
+    const rows = filteredFDPs.map(f => ({
+      'FDP Title': f.fdpTitle,
+      'Programme Type': f.programmeType || 'FDP',
+      'Department': f.department,
+      'Academic Year': f.academicYear || '—',
+      'Coordinator': f.coordinatorName || f.coordinator,
+      'Start Date': f.startDate,
+      'End Date': f.endDate,
+      'Mode': f.mode || 'Offline',
+      'Participants': f.noParticipants || 0,
+      'MoU Associated': f.isMouAssociated || 'No',
+      'Workflow Status': f.workflowStatus || 'APPROVED'
+    }));
+    exportToExcel(rows, `ET_FDPs_Organized_${selectedDept}`, 'Organized FDPs', currentUser);
+    showToast(`Exported ${rows.length} organized FDP records to Excel.`);
+  };
+
+  const handleExportPDF = () => {
+    const rows = filteredFDPs.map(f => ({
+      'FDP Title': f.fdpTitle,
+      'Dept': f.department,
+      'AY': f.academicYear || '—',
+      'Coordinator': f.coordinatorName || f.coordinator,
+      'Dates': `${f.startDate} to ${f.endDate}`,
+      'Participants': String(f.noParticipants || 0),
+      'Status': f.workflowStatus || 'APPROVED'
+    }));
+    exportToPDF('ET_FDPs_Organized_Report', ['FDP Title', 'Dept', 'AY', 'Coordinator', 'Dates', 'Participants', 'Status'], rows, 'Institutional Organized FDPs & Workshops');
+    showToast(`Exported organized FDP report to PDF.`);
   };
 
   return (
@@ -170,9 +206,9 @@ export default function FdpsOrganizedManager({ currentUser, onDataChange }) {
         ]}
         title="Faculty Development Programmes (FDPs Organized)"
         subtitle="Institutional repository for college/department-organized FDPs, AICTE/UGC sponsored workshops, training programmes, and MoU collaborations."
-        onExportCSV={() => exportToCSV('fdps')}
-        onExportExcel={() => exportToExcel('fdps')}
-        onExportPDF={() => exportToPDF('fdps')}
+        onExportCSV={handleExportCSV}
+        onExportExcel={handleExportExcel}
+        onExportPDF={handleExportPDF}
         primaryAction={canCreate ? {
           label: 'Record Organized FDP',
           icon: Plus,
@@ -211,8 +247,8 @@ export default function FdpsOrganizedManager({ currentUser, onDataChange }) {
               onChange={(e) => setSelectedDept(e.target.value)}
               style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', background: '#FFFFFF', color: '#0F172A', fontWeight: 600 }}
             >
-              <option value="ALL">All Departments</option>
-              {DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.code}</option>)}
+              <option value="ALL">All ET Departments</option>
+              {ET_DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.name} ({d.code})</option>)}
             </select>
 
             <select
@@ -276,7 +312,7 @@ export default function FdpsOrganizedManager({ currentUser, onDataChange }) {
               ) : (
                 filteredFDPs.map((item, idx) => {
                   const statusKey = item.workflowStatus || (item.status === 'Approved' ? 'APPROVED' : 'DRAFT');
-                  const badge = getStatusBadge(statusKey);
+                  const badge = getWorkflowBadge(statusKey);
                   const BadgeIcon = badge.icon;
 
                   return (
@@ -341,7 +377,7 @@ export default function FdpsOrganizedManager({ currentUser, onDataChange }) {
                           fontSize: '0.68rem',
                           fontWeight: 800
                         }}>
-                          <BadgeIcon size={11} /> {badge.label}
+                          {BadgeIcon && <BadgeIcon size={11} />} {badge.label}
                         </span>
                       </td>
 

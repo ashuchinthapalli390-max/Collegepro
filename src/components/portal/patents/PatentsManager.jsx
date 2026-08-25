@@ -25,7 +25,7 @@ import {
   FileCheck,
   Globe
 } from 'lucide-react';
-import { DEPARTMENTS } from '../../../data/masterData.js';
+import { ET_DEPARTMENTS } from '../../../data/masterData.js';
 import { 
   getPatents, 
   reviewPatent, 
@@ -35,6 +35,11 @@ import {
   exportToExcel,
   exportToPDF
 } from '../../../data/portalStore.js';
+import { 
+  getWorkflowBadge, 
+  getLegalStatusBadge, 
+  StatusBadge 
+} from '../../../lib/ui/statusBadges.jsx';
 import PatentWizardModal from './PatentWizardModal.jsx';
 import ConfirmDeleteDialog from '../common/ConfirmDeleteDialog.jsx';
 import { 
@@ -60,75 +65,72 @@ export default function PatentsManager({ currentUser, onDataChange }) {
   const [deleteConfirmItem, setDeleteConfirmItem] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
 
-  const showToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
-  };
-
-  // Filters State
+  // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDept, setSelectedDept] = useState(currentUser?.role === 'HOD' ? (currentUser.dept || 'ALL') : 'ALL');
   const [selectedAy, setSelectedAy] = useState('ALL');
   const [selectedLegalStatus, setSelectedLegalStatus] = useState('ALL');
   const [selectedWorkflowStatus, setSelectedWorkflowStatus] = useState('ALL');
-  const [selectedDomain, setSelectedDomain] = useState('ALL');
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   const refresh = () => {
     setDataVersion(v => v + 1);
     if (onDataChange) onDataChange();
   };
 
-  // Live Records
   const patents = useMemo(() => {
     return getPatents();
   }, [dataVersion]);
 
-  // KPIs
-  const stats = useMemo(() => {
-    const total = patents.length;
-    const filed = patents.filter(p => p.legalStatus === 'FILED').length;
-    const published = patents.filter(p => p.legalStatus === 'PUBLISHED').length;
-    const granted = patents.filter(p => p.legalStatus === 'GRANTED').length;
-    const examination = patents.filter(p => p.legalStatus === 'UNDER_EXAMINATION').length;
-    const pendingReview = patents.filter(p => p.workflowStatus === 'SUBMITTED' || p.workflowStatus === 'UNDER_REVIEW').length;
-    const thisYear = patents.filter(p => p.academicYear === '2025-26' || p.academicYear === '2024-25').length;
-    return { total, filed, published, granted, examination, pendingReview, thisYear };
-  }, [patents]);
-
-  // Filtered Records
+  // Filtered Patents
   const filteredPatents = useMemo(() => {
     return patents.filter(item => {
       const q = searchQuery.toLowerCase().trim();
       const matchSearch = !q ||
-        (item.patentRecordNumber && item.patentRecordNumber.toLowerCase().includes(q)) ||
+        (item.patentNumber && item.patentNumber.toLowerCase().includes(q)) ||
         (item.title && item.title.toLowerCase().includes(q)) ||
         (item.applicationNumber && item.applicationNumber.toLowerCase().includes(q)) ||
         (item.grantNumber && item.grantNumber.toLowerCase().includes(q)) ||
-        (item.inventors && item.inventors.some(inv => inv.name && inv.name.toLowerCase().includes(q)));
+        (item.leadInventor?.name && item.leadInventor.name.toLowerCase().includes(q)) ||
+        (item.inventors && item.inventors.some(inv => inv.name?.toLowerCase().includes(q)));
 
       const itemDept = item.department || '';
-      const matchDept = selectedDept === 'ALL' || itemDept.toLowerCase().includes(selectedDept.toLowerCase());
+      const matchDept = selectedDept === 'ALL' || itemDept === selectedDept;
       const matchAy = selectedAy === 'ALL' || item.academicYear === selectedAy;
       const matchLegal = selectedLegalStatus === 'ALL' || item.legalStatus === selectedLegalStatus;
       const matchWorkflow = selectedWorkflowStatus === 'ALL' || item.workflowStatus === selectedWorkflowStatus;
-      const matchDomain = selectedDomain === 'ALL' || item.technologyDomain === selectedDomain;
 
-      return matchSearch && matchDept && matchAy && matchLegal && matchWorkflow && matchDomain;
+      return matchSearch && matchDept && matchAy && matchLegal && matchWorkflow;
     });
-  }, [patents, searchQuery, selectedDept, selectedAy, selectedLegalStatus, selectedWorkflowStatus, selectedDomain]);
+  }, [patents, searchQuery, selectedDept, selectedAy, selectedLegalStatus, selectedWorkflowStatus]);
 
-  // Permissions
-  const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD' || currentUser?.role === 'FACULTY';
-  const canReview = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD';
+  // KPIs
+  const stats = useMemo(() => {
+    const total = filteredPatents.length;
+    const filed = filteredPatents.filter(p => p.legalStatus === 'FILED').length;
+    const published = filteredPatents.filter(p => p.legalStatus === 'PUBLISHED').length;
+    const granted = filteredPatents.filter(p => p.legalStatus === 'GRANTED').length;
+    const examination = filteredPatents.filter(p => p.legalStatus === 'UNDER_EXAMINATION' || p.legalStatus === 'EXAMINATION').length;
+    const pendingReview = filteredPatents.filter(p => p.workflowStatus === 'SUBMITTED' || p.workflowStatus === 'UNDER_REVIEW').length;
+    const thisYear = filteredPatents.filter(p => p.academicYear === '2025-26' || p.academicYear === '2024-25').length;
 
-  const handleExecuteReview = () => {
+    return { total, filed, published, granted, examination, pendingReview, thisYear };
+  }, [filteredPatents]);
+
+  const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'HOD' || currentUser?.role === 'FACULTY';
+  const canReview = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'HOD';
+
+  const handleReviewSubmit = () => {
     if (!reviewModalItem) return;
     reviewPatent(reviewModalItem.id, reviewAction, reviewRemarks, currentUser);
-    const num = reviewModalItem.patentRecordNumber || reviewModalItem.id;
     setReviewModalItem(null);
     setReviewRemarks('');
     refresh();
-    showToast(`Patent ${num} decision submitted.`);
+    showToast(`Patent decision recorded.`);
   };
 
   const handleDelete = (item) => {
@@ -145,35 +147,50 @@ export default function PatentsManager({ currentUser, onDataChange }) {
     }
   };
 
-  const getLegalStatusBadge = (status) => {
-    switch (status) {
-      case 'GRANTED':
-        return { bg: '#ECFDF5', text: '#047857', border: '#A7F3D0', icon: CheckCircle2, label: 'GRANTED' };
-      case 'PUBLISHED':
-        return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', icon: Globe, label: 'PUBLISHED' };
-      case 'UNDER_EXAMINATION':
-        return { bg: '#FEFCE8', text: '#A16207', border: '#FDE68A', icon: Clock, label: 'EXAMINATION' };
-      case 'FILED':
-      default:
-        return { bg: '#F8FAFC', text: '#475569', border: '#CBD5E1', icon: FileCheck, label: 'FILED' };
-    }
+  const handleExportCSV = () => {
+    const rows = filteredPatents.map(p => ({
+      'Patent Number': p.patentNumber,
+      'Title': p.title,
+      'Department': p.department,
+      'Academic Year': p.academicYear || '—',
+      'Lead Inventor': p.leadInventor?.name || '—',
+      'Application Number': p.applicationNumber || '—',
+      'Filing Date': p.filingDate || '—',
+      'Legal Status': p.legalStatus || 'FILED',
+      'Workflow Status': p.workflowStatus || 'APPROVED'
+    }));
+    exportToCSV(rows, `ET_Patents_${selectedDept}`, currentUser);
+    showToast(`Exported ${rows.length} patent records to CSV.`);
   };
 
-  const getWorkflowBadge = (status) => {
-    switch (status) {
-      case 'APPROVED':
-        return { bg: '#ECFDF5', text: '#047857', border: '#A7F3D0', icon: CheckCircle2, label: 'APPROVED' };
-      case 'SUBMITTED':
-      case 'UNDER_REVIEW':
-        return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', icon: Clock, label: 'UNDER REVIEW' };
-      case 'NEEDS_REVISION':
-        return { bg: '#FEF2F2', text: '#DC2626', border: '#FECACA', icon: AlertTriangle, label: 'REVISION REQ.' };
-      case 'ARCHIVED':
-        return { bg: '#F1F5F9', text: '#475569', border: '#CBD5E1', icon: Clock, label: 'ARCHIVED' };
-      case 'DRAFT':
-      default:
-        return { bg: '#FEFCE8', text: '#A16207', border: '#FEF08A', icon: Edit3, label: 'DRAFT' };
-    }
+  const handleExportExcel = () => {
+    const rows = filteredPatents.map(p => ({
+      'Patent Number': p.patentNumber,
+      'Title': p.title,
+      'Department': p.department,
+      'Academic Year': p.academicYear || '—',
+      'Lead Inventor': p.leadInventor?.name || '—',
+      'Application Number': p.applicationNumber || '—',
+      'Filing Date': p.filingDate || '—',
+      'Legal Status': p.legalStatus || 'FILED',
+      'Workflow Status': p.workflowStatus || 'APPROVED'
+    }));
+    exportToExcel(rows, `ET_Patents_${selectedDept}`, 'Patents', currentUser);
+    showToast(`Exported ${rows.length} patent records to Excel.`);
+  };
+
+  const handleExportPDF = () => {
+    const rows = filteredPatents.map(p => ({
+      'Patent No': p.patentNumber || '—',
+      'Title': p.title,
+      'Dept': p.department,
+      'Lead': p.leadInventor?.name || '—',
+      'Filing Date': p.filingDate || '—',
+      'Legal Status': p.legalStatus || 'FILED',
+      'Status': p.workflowStatus || 'APPROVED'
+    }));
+    exportToPDF('ET_Patents_Report', ['Patent No', 'Title', 'Dept', 'Lead', 'Filing Date', 'Legal Status', 'Status'], rows, 'Patents & Intellectual Property Repository');
+    showToast(`Exported patent records report to PDF.`);
   };
 
   return (
@@ -184,7 +201,7 @@ export default function PatentsManager({ currentUser, onDataChange }) {
           <span>{toastMessage}</span>
         </div>
       )}
-      {/* 1. Header & Actions */}
+      
       <ModulePageHeader
         breadcrumbs={[
           { label: 'Dashboard' },
@@ -193,9 +210,9 @@ export default function PatentsManager({ currentUser, onDataChange }) {
         ]}
         title="Patents & Intellectual Property"
         subtitle="Manage faculty, student and institutional patent applications, publications and grants."
-        onExportCSV={() => exportToCSV('patents')}
-        onExportExcel={() => exportToExcel('patents')}
-        onExportPDF={() => exportToPDF('patents')}
+        onExportCSV={handleExportCSV}
+        onExportExcel={handleExportExcel}
+        onExportPDF={handleExportPDF}
         primaryAction={canCreate ? {
           label: 'Record Patent',
           icon: Plus,
@@ -203,7 +220,6 @@ export default function PatentsManager({ currentUser, onDataChange }) {
         } : null}
       />
 
-      {/* 2. Staggered Animated KPI Summary Cards */}
       <AnimatedKpiGrid minWidth="140px">
         <MotionKpiCard label="Total Patents" value={stats.total} icon={Award} color="#0F172A" bg="#F8FAFC" />
         <MotionKpiCard label="Filed" value={stats.filed} icon={FileCheck} color="#2563EB" bg="#EFF6FF" />
@@ -214,7 +230,6 @@ export default function PatentsManager({ currentUser, onDataChange }) {
         <MotionKpiCard label="This Academic Year" value={stats.thisYear} icon={Building2} color="#0D9488" bg="#F0FDFA" />
       </AnimatedKpiGrid>
 
-      {/* 3. Search & Multi-Filter Toolbar */}
       <div style={{ background: '#FFFFFF', padding: '1rem 1.25rem', borderRadius: '14px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
           <div style={{ flex: 1, minWidth: '240px', position: 'relative' }}>
@@ -235,8 +250,8 @@ export default function PatentsManager({ currentUser, onDataChange }) {
               onChange={(e) => setSelectedDept(e.target.value)}
               style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', background: '#FFFFFF', color: '#0F172A', fontWeight: 600 }}
             >
-              <option value="ALL">All Departments</option>
-              {DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.code}</option>)}
+              <option value="ALL">All ET Departments</option>
+              {ET_DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.name} ({d.code})</option>)}
             </select>
 
             <select
@@ -403,7 +418,7 @@ export default function PatentsManager({ currentUser, onDataChange }) {
                           fontWeight: 800,
                           whiteSpace: 'nowrap'
                         }}>
-                          <WfIcon size={11} /> {wfBadge.label}
+                          {WfIcon && <WfIcon size={11} />} {wfBadge.label}
                         </span>
                       </td>
 

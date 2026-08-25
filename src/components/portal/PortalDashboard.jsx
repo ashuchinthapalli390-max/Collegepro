@@ -104,6 +104,11 @@ import MousManager from './mous/MousManager.jsx';
 import StudentProjectsManager from './projects/StudentProjectsManager.jsx';
 import NptelCertificationsManager from './nptel/NptelCertificationsManager.jsx';
 import AttendanceRiskManager from './attendance/AttendanceRiskManager.jsx';
+import MidExamAnalysis from './analytics/MidExamAnalysis.jsx';
+import ExternalExamAnalysis from './analytics/ExternalExamAnalysis.jsx';
+import CommunityServiceProjectsManager from './community-service/CommunityServiceProjectsManager.jsx';
+import CampusPlacementsManager from './placements/CampusPlacementsManager.jsx';
+import CompaniesVisitedManager from './placements/CompaniesVisitedManager.jsx';
 
 // Dedicated Governance, Intelligence & Compliance Suites
 import AnalyticsView from './dashboard/AnalyticsView.jsx';
@@ -946,7 +951,34 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
           )}
 
           {/* ────────────────────────────────────────────────────────── */}
-          {/* VIEW 21: RECYCLE BIN & AUDIT LOGS */}
+          {/* VIEW 21.5: ACADEMIC ANALYTICS & STUDENT / PLACEMENT MODULES */}
+          {/* ────────────────────────────────────────────────────────── */}
+          {activeModule === 'mid-exam-analysis' && (
+            <MidExamAnalysis currentUser={currentUser} />
+          )}
+
+          {activeModule === 'external-exam-analysis' && (
+            <ExternalExamAnalysis currentUser={currentUser} />
+          )}
+
+          {activeModule === 'attendance-risk' && (
+            <AttendanceRiskManager currentUser={currentUser} />
+          )}
+
+          {activeModule === 'community-service' && (
+            <CommunityServiceProjectsManager currentUser={currentUser} />
+          )}
+
+          {activeModule === 'campus-placements' && (
+            <CampusPlacementsManager currentUser={currentUser} />
+          )}
+
+          {activeModule === 'companies-visited' && (
+            <CompaniesVisitedManager currentUser={currentUser} />
+          )}
+
+          {/* ────────────────────────────────────────────────────────── */}
+          {/* VIEW 21.6: RECYCLE BIN & AUDIT LOGS */}
           {/* ────────────────────────────────────────────────────────── */}
           {activeModule === 'recycle-bin' && (
             <RecycleBin currentUser={currentUser} onRestored={refreshData} />
@@ -971,6 +1003,12 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
             'guest-lectures',
             'hackathons',
             'codeathons',
+            'mid-exam-analysis',
+            'external-exam-analysis',
+            'attendance-risk',
+            'community-service',
+            'campus-placements',
+            'companies-visited',
             'gallery-media',
             'circulars-notices',
             'faculty-memberships',

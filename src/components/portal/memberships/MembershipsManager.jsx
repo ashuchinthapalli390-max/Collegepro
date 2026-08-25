@@ -26,7 +26,7 @@ import {
   Globe,
   RefreshCw
 } from 'lucide-react';
-import { DEPARTMENTS, FACULTY_DATA } from '../../../data/masterData.js';
+import { ET_DEPARTMENTS, FACULTY_DATA } from '../../../data/masterData.js';
 import { 
   getMemberships, 
   reviewMembership, 
@@ -35,6 +35,12 @@ import {
   exportToExcel,
   exportToPDF
 } from '../../../data/portalStore.js';
+import { 
+  getWorkflowBadge, 
+  getMembershipValidityBadge, 
+  getValidityBadge, 
+  StatusBadge 
+} from '../../../lib/ui/statusBadges.jsx';
 import MembershipWizardModal from './MembershipWizardModal.jsx';
 import ConfirmDeleteDialog from '../common/ConfirmDeleteDialog.jsx';
 import FacultyAvatar from '../../common/FacultyAvatar.jsx';
@@ -80,50 +86,56 @@ export default function MembershipsManager({ currentUser, onDataChange }) {
     if (onDataChange) onDataChange();
   };
 
-  // Live Records
-  const memberships = useMemo(() => {
+  const rawMemberships = useMemo(() => {
     return getMemberships();
   }, [dataVersion]);
 
-  // Aggregate Stats
+  // Filter Logic
+  const filteredMemberships = useMemo(() => {
+    return rawMemberships.filter(m => {
+      // Dept
+      if (selectedDept !== 'ALL' && m.department !== selectedDept) return false;
+      // Org
+      if (selectedOrg !== 'ALL' && m.organization !== selectedOrg && m.organizationName !== selectedOrg) return false;
+      // Type
+      if (selectedType !== 'ALL' && m.membershipType !== selectedType) return false;
+      // Status
+      if (selectedStatus !== 'ALL' && m.membershipStatus !== selectedStatus) return false;
+      // Workflow
+      if (selectedWorkflowStatus !== 'ALL' && m.workflowStatus !== selectedWorkflowStatus) return false;
+      // Search
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const faculty = (m.facultyName || '').toLowerCase();
+        const memNum = (m.membershipNumber || '').toLowerCase();
+        const org = (m.organization || m.organizationName || '').toLowerCase();
+        const dept = (m.department || '').toLowerCase();
+        if (!faculty.includes(q) && !memNum.includes(q) && !org.includes(q) && !dept.includes(q)) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [rawMemberships, selectedDept, selectedOrg, selectedType, selectedStatus, selectedWorkflowStatus, searchQuery]);
+
+  // KPI Calculations
   const stats = useMemo(() => {
-    const total = memberships.length;
-    const active = memberships.filter(m => m.membershipStatus === 'ACTIVE').length;
-    const expiringSoon = memberships.filter(m => m.membershipStatus === 'EXPIRING_SOON').length;
-    const life = memberships.filter(m => m.membershipType === 'LIFE').length;
-    const annual = memberships.filter(m => m.membershipType === 'Annual' || m.membershipType === 'ANNUAL').length;
-    const expired = memberships.filter(m => m.status === 'Expired' || m.status === 'EXPIRED').length;
-    const pendingReview = memberships.filter(m => m.workflowStatus === 'SUBMITTED' || m.workflowStatus === 'UNDER_REVIEW').length;
+    const total = filteredMemberships.length;
+    const active = filteredMemberships.filter(m => m.membershipStatus === 'ACTIVE' || m.membershipStatus === 'Active').length;
+    const life = filteredMemberships.filter(m => m.membershipType === 'Life Membership').length;
+    const annual = filteredMemberships.filter(m => m.membershipType === 'Annual Membership').length;
+    const expiringSoon = filteredMemberships.filter(m => m.membershipStatus === 'EXPIRING_SOON').length;
+    const expired = filteredMemberships.filter(m => m.membershipStatus === 'EXPIRED' || m.membershipStatus === 'Expired').length;
+    const pendingReview = filteredMemberships.filter(m => m.workflowStatus === 'UNDER_REVIEW' || m.workflowStatus === 'SUBMITTED').length;
 
     return { total, active, life, annual, expiringSoon, expired, pendingReview };
-  }, [memberships]);
-
-  // Filtered Memberships
-  const filteredMemberships = useMemo(() => {
-    return memberships.filter(item => {
-      const q = searchQuery.toLowerCase().trim();
-      const matchSearch = !q ||
-        (item.membershipRecordNumber && item.membershipRecordNumber.toLowerCase().includes(q)) ||
-        (item.facultyName && item.facultyName.toLowerCase().includes(q)) ||
-        (item.membershipNumber && item.membershipNumber.toLowerCase().includes(q)) ||
-        (item.organizationName && item.organizationName.toLowerCase().includes(q));
-
-      const itemDept = item.department || '';
-      const matchDept = selectedDept === 'ALL' || itemDept.toLowerCase().includes(selectedDept.toLowerCase());
-      const matchOrg = selectedOrg === 'ALL' || item.organizationName === selectedOrg || item.organizationAcronym === selectedOrg;
-      const matchType = selectedType === 'ALL' || item.membershipType === selectedType;
-      const matchStatus = selectedStatus === 'ALL' || item.membershipStatus === selectedStatus;
-      const matchWorkflow = selectedWorkflowStatus === 'ALL' || item.workflowStatus === selectedWorkflowStatus;
-
-      return matchSearch && matchDept && matchOrg && matchType && matchStatus && matchWorkflow;
-    });
-  }, [memberships, searchQuery, selectedDept, selectedOrg, selectedType, selectedStatus, selectedWorkflowStatus]);
+  }, [filteredMemberships]);
 
   // Permissions
-  const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD' || currentUser?.role === 'FACULTY';
-  const canReview = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD';
+  const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'HOD' || currentUser?.role === 'FACULTY';
+  const canReview = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'HOD';
 
-  const handleExecuteReview = () => {
+  const handleReviewSubmit = () => {
     if (!reviewModalItem) return;
     reviewMembership(reviewModalItem.id, reviewAction, reviewRemarks, currentUser);
     const num = reviewModalItem.membershipNumber || reviewModalItem.id;
@@ -147,36 +159,56 @@ export default function MembershipsManager({ currentUser, onDataChange }) {
     }
   };
 
-  const getWorkflowBadge = (status) => {
-    switch (status) {
-      case 'APPROVED':
-        return { bg: '#ECFDF5', text: '#047857', border: '#A7F3D0', icon: CheckCircle2, label: 'APPROVED' };
-      case 'SUBMITTED':
-      case 'UNDER_REVIEW':
-        return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', icon: Clock, label: 'UNDER REVIEW' };
-      case 'NEEDS_REVISION':
-        return { bg: '#FEF2F2', text: '#DC2626', border: '#FECACA', icon: AlertTriangle, label: 'REVISION REQ.' };
-      case 'ARCHIVED':
-        return { bg: '#F1F5F9', text: '#475569', border: '#CBD5E1', icon: Clock, label: 'ARCHIVED' };
-      case 'DRAFT':
-      default:
-        return { bg: '#FEFCE8', text: '#A16207', border: '#FEF08A', icon: Edit3, label: 'DRAFT' };
-    }
+  const handleExportCSV = () => {
+    const rows = filteredMemberships.map(m => ({
+      'Membership ID': m.membershipRecordNumber || m.id,
+      'Membership Number': m.membershipNumber || 'Pending',
+      'Faculty Name': m.facultyName,
+      'Designation': m.designation || '—',
+      'Department': m.department,
+      'Academic Year': m.academicYear || '—',
+      'Professional Body': m.organizationName || m.organization,
+      'Membership Type': m.membershipType,
+      'Validity Status': m.membershipStatus,
+      'Workflow Status': m.workflowStatus || 'APPROVED',
+      'Start Date': m.startDate || '—',
+      'End Date': m.endDate || 'Lifetime'
+    }));
+    exportToCSV(rows, `ET_Faculty_Memberships_${selectedDept}`, currentUser);
+    showToast(`Exported ${rows.length} membership records to CSV.`);
   };
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'ACTIVE':
-      case 'Active':
-        return { bg: '#ECFDF5', text: '#065F46', border: '#A7F3D0', label: 'ACTIVE' };
-      case 'EXPIRING_SOON':
-        return { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A', label: 'EXPIRING SOON' };
-      case 'EXPIRED':
-      case 'Expired':
-        return { bg: '#FEF2F2', text: '#DC2626', border: '#FECACA', label: 'EXPIRED' };
-      default:
-        return { bg: '#F1F5F9', text: '#475569', border: '#CBD5E1', label: status || 'ACTIVE' };
-    }
+  const handleExportExcel = () => {
+    const rows = filteredMemberships.map(m => ({
+      'Membership ID': m.membershipRecordNumber || m.id,
+      'Membership Number': m.membershipNumber || 'Pending',
+      'Faculty Name': m.facultyName,
+      'Designation': m.designation || '—',
+      'Department': m.department,
+      'Academic Year': m.academicYear || '—',
+      'Professional Body': m.organizationName || m.organization,
+      'Membership Type': m.membershipType,
+      'Validity Status': m.membershipStatus,
+      'Workflow Status': m.workflowStatus || 'APPROVED',
+      'Start Date': m.startDate || '—',
+      'End Date': m.endDate || 'Lifetime'
+    }));
+    exportToExcel(rows, `ET_Faculty_Memberships_${selectedDept}`, 'Memberships', currentUser);
+    showToast(`Exported ${rows.length} membership records to Excel.`);
+  };
+
+  const handleExportPDF = () => {
+    const rows = filteredMemberships.map(m => ({
+      'Faculty Name': m.facultyName,
+      'Dept': m.department,
+      'Organization': m.organizationName || m.organization,
+      'Type': m.membershipType,
+      'Mem. Number': m.membershipNumber || 'Pending',
+      'Validity': m.membershipStatus,
+      'Status': m.workflowStatus || 'APPROVED'
+    }));
+    exportToPDF('ET_Faculty_Memberships_Report', ['Faculty Name', 'Dept', 'Organization', 'Type', 'Mem. Number', 'Validity', 'Status'], rows, 'Faculty Professional Memberships Repository');
+    showToast(`Exported membership report to PDF.`);
   };
 
   return (
@@ -196,9 +228,9 @@ export default function MembershipsManager({ currentUser, onDataChange }) {
         ]}
         title="Faculty Professional Memberships"
         subtitle="Manage faculty professional memberships, renewals, certificates and verification records."
-        onExportCSV={() => exportToCSV('memberships')}
-        onExportExcel={() => exportToExcel('memberships')}
-        onExportPDF={() => exportToPDF('memberships')}
+        onExportCSV={handleExportCSV}
+        onExportExcel={handleExportExcel}
+        onExportPDF={handleExportPDF}
         primaryAction={canCreate ? {
           label: 'Record Membership',
           icon: Plus,
@@ -238,8 +270,8 @@ export default function MembershipsManager({ currentUser, onDataChange }) {
               onChange={(e) => setSelectedDept(e.target.value)}
               style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', background: '#FFFFFF', color: '#0F172A', fontWeight: 600 }}
             >
-              <option value="ALL">All Departments</option>
-              {DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.code}</option>)}
+              <option value="ALL">All ET Departments</option>
+              {ET_DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.name} ({d.code})</option>)}
             </select>
 
             <select
@@ -434,7 +466,7 @@ export default function MembershipsManager({ currentUser, onDataChange }) {
                           fontWeight: 800,
                           whiteSpace: 'nowrap'
                         }}>
-                          <WfIcon size={11} /> {wfBadge.label}
+                          {WfIcon && <WfIcon size={11} />} {wfBadge.label}
                         </span>
                       </td>
 

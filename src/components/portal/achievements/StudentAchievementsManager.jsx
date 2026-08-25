@@ -22,7 +22,7 @@ import {
   Archive,
   RefreshCw
 } from 'lucide-react';
-import { DEPARTMENTS } from '../../../data/masterData.js';
+import { ET_DEPARTMENTS } from '../../../data/masterData.js';
 import { 
   getStudentAchievements, 
   reviewStudentAchievement, 
@@ -31,6 +31,10 @@ import {
   exportToExcel,
   exportToPDF
 } from '../../../data/portalStore.js';
+import { 
+  getWorkflowBadge, 
+  StatusBadge 
+} from '../../../lib/ui/statusBadges.jsx';
 import StudentAchievementWizardModal from './StudentAchievementWizardModal.jsx';
 import ConfirmDeleteDialog from '../common/ConfirmDeleteDialog.jsx';
 import { 
@@ -79,17 +83,6 @@ export default function StudentAchievementsManager({ currentUser, onDataChange }
     return getStudentAchievements();
   }, [dataVersion]);
 
-  // KPIs
-  const stats = useMemo(() => {
-    const total = achievements.length;
-    const pending = achievements.filter(a => a.workflowStatus === 'SUBMITTED' || a.workflowStatus === 'UNDER_REVIEW').length;
-    const approved = achievements.filter(a => a.workflowStatus === 'APPROVED' || a.workflowStatus === 'VERIFIED' || a.status === 'Approved').length;
-    const national = achievements.filter(a => a.level === 'National' || a.level === 'International').length;
-    const prizeWinners = achievements.filter(a => a.hasPrize === 'Yes' || a.prize === 'Yes').length;
-    const thisYear = achievements.filter(a => a.academicYear === '2025-26' || a.academicYear === '2024-25').length;
-    return { total, pending, approved, national, prizeWinners, thisYear };
-  }, [achievements]);
-
   // Filtered Achievements
   const filteredAchievements = useMemo(() => {
     return achievements.filter(item => {
@@ -103,7 +96,7 @@ export default function StudentAchievementsManager({ currentUser, onDataChange }
         (item.organizingInstitute && item.organizingInstitute.toLowerCase().includes(q));
 
       const itemDept = item.department || item.branch || '';
-      const matchDept = selectedDept === 'ALL' || itemDept.toLowerCase().includes(selectedDept.toLowerCase());
+      const matchDept = selectedDept === 'ALL' || itemDept === selectedDept;
       const matchAy = selectedAy === 'ALL' || item.academicYear === selectedAy;
       const matchCategory = selectedCategory === 'ALL' || item.category === selectedCategory || item.achievementType === selectedCategory;
       const matchLevel = selectedLevel === 'ALL' || item.level === selectedLevel;
@@ -118,19 +111,29 @@ export default function StudentAchievementsManager({ currentUser, onDataChange }
     });
   }, [achievements, searchQuery, selectedDept, selectedAy, selectedCategory, selectedLevel, selectedPrize, selectedStatus]);
 
+  // KPIs
+  const stats = useMemo(() => {
+    const total = filteredAchievements.length;
+    const pending = filteredAchievements.filter(a => a.workflowStatus === 'SUBMITTED' || a.workflowStatus === 'UNDER_REVIEW').length;
+    const approved = filteredAchievements.filter(a => a.workflowStatus === 'APPROVED' || a.workflowStatus === 'VERIFIED' || a.status === 'Approved').length;
+    const national = filteredAchievements.filter(a => a.level === 'National' || a.level === 'International').length;
+    const prizeWinners = filteredAchievements.filter(a => a.hasPrize === 'Yes' || a.prize === 'Yes').length;
+    const thisYear = filteredAchievements.filter(a => a.academicYear === '2025-26' || a.academicYear === '2024-25').length;
+    return { total, pending, approved, national, prizeWinners, thisYear };
+  }, [filteredAchievements]);
+
   // Permissions
-  const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD' || currentUser?.role === 'FACULTY' || currentUser?.role === 'DATA_ENTRY';
-  const canReview = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD';
+  const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'HOD' || currentUser?.role === 'FACULTY' || currentUser?.role === 'DATA_ENTRY';
+  const canReview = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'HOD';
 
   // Handle Review Execution
-  const handleExecuteReview = () => {
+  const handleReviewSubmit = () => {
     if (!reviewModalItem) return;
     reviewStudentAchievement(reviewModalItem.id, reviewAction, reviewRemarks, currentUser);
-    const title = reviewModalItem.awardTitle || reviewModalItem.eventName;
     setReviewModalItem(null);
     setReviewRemarks('');
     refresh();
-    showToast(`Achievement decision submitted for "${title}".`);
+    showToast(`Achievement decision submitted.`);
   };
 
   // Handle Soft Delete
@@ -141,27 +144,63 @@ export default function StudentAchievementsManager({ currentUser, onDataChange }
   const handleConfirmDelete = () => {
     if (deleteConfirmItem) {
       softDeleteStudentAchievement(deleteConfirmItem.id, currentUser);
-      const title = deleteConfirmItem.awardTitle || deleteConfirmItem.eventName;
+      const title = deleteConfirmItem.awardTitle || deleteConfirmItem.eventName || deleteConfirmItem.id;
       setDeleteConfirmItem(null);
       refresh();
       showToast(`Achievement "${title}" moved to Recycle Bin.`);
     }
   };
 
-  const getWorkflowBadge = (status) => {
-    switch (status) {
-      case 'APPROVED':
-      case 'VERIFIED':
-        return { bg: '#ECFDF5', text: '#047857', border: '#A7F3D0', icon: CheckCircle2, label: 'VERIFIED' };
-      case 'SUBMITTED':
-      case 'UNDER_REVIEW':
-        return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', icon: Clock, label: 'SUBMITTED' };
-      case 'NEEDS_REVISION':
-        return { bg: '#FEF2F2', text: '#DC2626', border: '#FECACA', icon: AlertTriangle, label: 'REVISION REQ.' };
-      case 'DRAFT':
-      default:
-        return { bg: '#FEFCE8', text: '#A16207', border: '#FEF08A', icon: Edit3, label: 'DRAFT' };
-    }
+  const handleExportCSV = () => {
+    const rows = filteredAchievements.map(a => ({
+      'Roll Number': a.rollNumber,
+      'Student Name': a.studentName,
+      'Department': a.department || a.branch,
+      'Academic Year': a.academicYear || '—',
+      'Event / Award Title': a.title || a.eventName || a.awardTitle,
+      'Organized By': a.organizingInstitute || a.organizedBy,
+      'Category': a.achievementType || a.category,
+      'Level': a.level,
+      'Prize': a.prizePosition || (a.hasPrize === 'Yes' ? 'Winner' : 'Participation'),
+      'Prize Amount': a.prizeAmount || 0,
+      'Date': a.achievementDate || a.eventDate,
+      'Workflow Status': a.workflowStatus || 'APPROVED'
+    }));
+    exportToCSV(rows, `ET_Student_Achievements_${selectedDept}`, currentUser);
+    showToast(`Exported ${rows.length} student achievement records to CSV.`);
+  };
+
+  const handleExportExcel = () => {
+    const rows = filteredAchievements.map(a => ({
+      'Roll Number': a.rollNumber,
+      'Student Name': a.studentName,
+      'Department': a.department || a.branch,
+      'Academic Year': a.academicYear || '—',
+      'Event / Award Title': a.title || a.eventName || a.awardTitle,
+      'Organized By': a.organizingInstitute || a.organizedBy,
+      'Category': a.achievementType || a.category,
+      'Level': a.level,
+      'Prize': a.prizePosition || (a.hasPrize === 'Yes' ? 'Winner' : 'Participation'),
+      'Prize Amount': a.prizeAmount || 0,
+      'Date': a.achievementDate || a.eventDate,
+      'Workflow Status': a.workflowStatus || 'APPROVED'
+    }));
+    exportToExcel(rows, `ET_Student_Achievements_${selectedDept}`, 'Student Achievements', currentUser);
+    showToast(`Exported ${rows.length} student achievement records to Excel.`);
+  };
+
+  const handleExportPDF = () => {
+    const rows = filteredAchievements.map(a => ({
+      'Roll No': a.rollNumber || '—',
+      'Student Name': a.studentName,
+      'Dept': a.department || a.branch,
+      'Event / Title': a.title || a.eventName || a.awardTitle,
+      'Level': a.level,
+      'Prize': a.prizePosition || (a.hasPrize === 'Yes' ? 'Winner' : 'Participation'),
+      'Status': a.workflowStatus || 'APPROVED'
+    }));
+    exportToPDF('ET_Student_Achievements_Report', ['Roll No', 'Student Name', 'Dept', 'Event / Title', 'Level', 'Prize', 'Status'], rows, 'Student Achievements & Honors Repository');
+    showToast(`Exported student achievements report to PDF.`);
   };
 
   return (
@@ -181,9 +220,9 @@ export default function StudentAchievementsManager({ currentUser, onDataChange }
         ]}
         title="Student Achievements & Honors Repository"
         subtitle="Official departmental evidence for hackathons, paper presentations, sports medals, awards, and certifications."
-        onExportCSV={() => exportToCSV('achievements')}
-        onExportExcel={() => exportToExcel('achievements')}
-        onExportPDF={() => exportToPDF('achievements')}
+        onExportCSV={handleExportCSV}
+        onExportExcel={handleExportExcel}
+        onExportPDF={handleExportPDF}
         primaryAction={canCreate ? {
           label: 'Record Achievement',
           icon: Plus,
@@ -242,8 +281,8 @@ export default function StudentAchievementsManager({ currentUser, onDataChange }
               onChange={(e) => setSelectedDept(e.target.value)}
               style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', background: '#FFFFFF', color: '#0F172A', fontWeight: 600 }}
             >
-              <option value="ALL">All Departments</option>
-              {DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.code}</option>)}
+              <option value="ALL">All ET Departments</option>
+              {ET_DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.name} ({d.code})</option>)}
             </select>
 
             {/* Academic Year */}
@@ -356,7 +395,7 @@ export default function StudentAchievementsManager({ currentUser, onDataChange }
               ) : (
                 filteredAchievements.map((item, idx) => {
                   const statusKey = item.workflowStatus || (item.status === 'Approved' ? 'APPROVED' : 'DRAFT');
-                  const badge = getStatusBadge(statusKey);
+                  const badge = getWorkflowBadge(statusKey);
                   const BadgeIcon = badge.icon;
 
                   return (
@@ -442,7 +481,7 @@ export default function StudentAchievementsManager({ currentUser, onDataChange }
                           fontSize: '0.68rem',
                           fontWeight: 800
                         }}>
-                          <BadgeIcon size={11} /> {badge.label}
+                          {BadgeIcon && <BadgeIcon size={11} />} {badge.label}
                         </span>
                       </td>
 

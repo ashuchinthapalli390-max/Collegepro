@@ -20,7 +20,7 @@ import {
   Award,
   BookOpen
 } from 'lucide-react';
-import { DEPARTMENTS } from '../../../data/masterData.js';
+import { ET_DEPARTMENTS } from '../../../data/masterData.js';
 import { 
   getFacultyAchievements, 
   reviewFacultyAchievement, 
@@ -29,6 +29,10 @@ import {
   exportToExcel,
   exportToPDF
 } from '../../../data/portalStore.js';
+import { 
+  getWorkflowBadge, 
+  StatusBadge 
+} from '../../../lib/ui/statusBadges.jsx';
 import FacultyAchievementWizardModal from './FacultyAchievementWizardModal.jsx';
 import ConfirmDeleteDialog from '../common/ConfirmDeleteDialog.jsx';
 import { 
@@ -75,17 +79,6 @@ export default function FacultyAchievementsManager({ currentUser, onDataChange }
     return getFacultyAchievements();
   }, [dataVersion]);
 
-  // KPIs
-  const stats = useMemo(() => {
-    const total = achievements.length;
-    const uniqueFaculty = new Set(achievements.map(a => a.facultyName || a.facultyId)).size;
-    const fdps = achievements.filter(a => a.type && a.type.includes('FDP')).length;
-    const training = achievements.filter(a => a.type && a.type.includes('Training')).length;
-    const awards = achievements.filter(a => a.type && (a.type.includes('Award') || a.type.includes('Certification'))).length;
-    const pending = achievements.filter(a => a.workflowStatus === 'SUBMITTED' || a.workflowStatus === 'UNDER_REVIEW').length;
-    return { total, uniqueFaculty, fdps, training, awards, pending };
-  }, [achievements]);
-
   // Filtered List
   const filteredAchievements = useMemo(() => {
     return achievements.filter(item => {
@@ -99,7 +92,7 @@ export default function FacultyAchievementsManager({ currentUser, onDataChange }
         (item.organization && item.organization.toLowerCase().includes(q));
 
       const itemDept = item.department || '';
-      const matchDept = selectedDept === 'ALL' || itemDept.toLowerCase().includes(selectedDept.toLowerCase());
+      const matchDept = selectedDept === 'ALL' || itemDept === selectedDept;
       const matchAy = selectedAy === 'ALL' || item.academicYear === selectedAy;
       const matchType = selectedType === 'ALL' || item.type === selectedType;
       const matchRole = selectedRole === 'ALL' || item.role === selectedRole;
@@ -109,17 +102,27 @@ export default function FacultyAchievementsManager({ currentUser, onDataChange }
     });
   }, [achievements, searchQuery, selectedDept, selectedAy, selectedType, selectedRole, selectedStatus]);
 
-  const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD' || currentUser?.role === 'FACULTY' || currentUser?.role === 'DATA_ENTRY';
-  const canReview = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD';
+  // KPIs
+  const stats = useMemo(() => {
+    const total = filteredAchievements.length;
+    const uniqueFaculty = new Set(filteredAchievements.map(a => a.facultyName || a.facultyId)).size;
+    const fdps = filteredAchievements.filter(a => a.type && a.type.includes('FDP')).length;
+    const training = filteredAchievements.filter(a => a.type && a.type.includes('Training')).length;
+    const awards = filteredAchievements.filter(a => a.type && (a.type.includes('Award') || a.type.includes('Certification'))).length;
+    const pending = filteredAchievements.filter(a => a.workflowStatus === 'SUBMITTED' || a.workflowStatus === 'UNDER_REVIEW').length;
+    return { total, uniqueFaculty, fdps, training, awards, pending };
+  }, [filteredAchievements]);
 
-  const handleExecuteReview = () => {
+  const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'HOD' || currentUser?.role === 'FACULTY' || currentUser?.role === 'DATA_ENTRY';
+  const canReview = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'HOD';
+
+  const handleReviewSubmit = () => {
     if (!reviewModalItem) return;
     reviewFacultyAchievement(reviewModalItem.id, reviewAction, reviewRemarks, currentUser);
-    const title = reviewModalItem.title || reviewModalItem.eventTitle;
     setReviewModalItem(null);
     setReviewRemarks('');
     refresh();
-    showToast(`Achievement decision submitted for "${title}".`);
+    showToast(`Achievement decision submitted.`);
   };
 
   const handleDelete = (item) => {
@@ -129,27 +132,61 @@ export default function FacultyAchievementsManager({ currentUser, onDataChange }
   const handleConfirmDelete = () => {
     if (deleteConfirmItem) {
       softDeleteFacultyAchievement(deleteConfirmItem.id, currentUser);
-      const title = deleteConfirmItem.title || deleteConfirmItem.eventTitle;
+      const title = deleteConfirmItem.title || deleteConfirmItem.eventTitle || deleteConfirmItem.id;
       setDeleteConfirmItem(null);
       refresh();
       showToast(`Achievement "${title}" moved to Recycle Bin.`);
     }
   };
 
-  const getWorkflowBadge = (status) => {
-    switch (status) {
-      case 'APPROVED':
-      case 'VERIFIED':
-        return { bg: '#ECFDF5', text: '#047857', border: '#A7F3D0', icon: CheckCircle2, label: 'VERIFIED' };
-      case 'SUBMITTED':
-      case 'UNDER_REVIEW':
-        return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', icon: Clock, label: 'SUBMITTED' };
-      case 'NEEDS_REVISION':
-        return { bg: '#FEF2F2', text: '#DC2626', border: '#FECACA', icon: AlertTriangle, label: 'REVISION REQ.' };
-      case 'DRAFT':
-      default:
-        return { bg: '#FEFCE8', text: '#A16207', border: '#FEF08A', icon: Edit3, label: 'DRAFT' };
-    }
+  const handleExportCSV = () => {
+    const rows = filteredAchievements.map(a => ({
+      'Faculty Name': a.facultyName,
+      'Faculty ID': a.facultyId || '—',
+      'Department': a.department,
+      'Academic Year': a.academicYear || '—',
+      'Activity Type': a.type || 'FDP',
+      'Title': a.title || a.eventTitle,
+      'Organized By': a.organizedBy || a.organization,
+      'Role': a.participationRole || 'Participant',
+      'Start Date': a.startDate,
+      'End Date': a.endDate,
+      'Workflow Status': a.workflowStatus || 'APPROVED'
+    }));
+    exportToCSV(rows, `ET_Faculty_Achievements_${selectedDept}`, currentUser);
+    showToast(`Exported ${rows.length} faculty achievement records to CSV.`);
+  };
+
+  const handleExportExcel = () => {
+    const rows = filteredAchievements.map(a => ({
+      'Faculty Name': a.facultyName,
+      'Faculty ID': a.facultyId || '—',
+      'Department': a.department,
+      'Academic Year': a.academicYear || '—',
+      'Activity Type': a.type || 'FDP',
+      'Title': a.title || a.eventTitle,
+      'Organized By': a.organizedBy || a.organization,
+      'Role': a.participationRole || 'Participant',
+      'Start Date': a.startDate,
+      'End Date': a.endDate,
+      'Workflow Status': a.workflowStatus || 'APPROVED'
+    }));
+    exportToExcel(rows, `ET_Faculty_Achievements_${selectedDept}`, 'Faculty Achievements', currentUser);
+    showToast(`Exported ${rows.length} faculty achievement records to Excel.`);
+  };
+
+  const handleExportPDF = () => {
+    const rows = filteredAchievements.map(a => ({
+      'Faculty Name': a.facultyName,
+      'Dept': a.department,
+      'AY': a.academicYear || '—',
+      'Type': a.type || 'FDP',
+      'Title': a.title || a.eventTitle,
+      'Dates': `${a.startDate} to ${a.endDate}`,
+      'Status': a.workflowStatus || 'APPROVED'
+    }));
+    exportToPDF('ET_Faculty_Achievements_Report', ['Faculty Name', 'Dept', 'AY', 'Type', 'Title', 'Dates', 'Status'], rows, 'Faculty Achievements & Professional Development');
+    showToast(`Exported faculty achievements report to PDF.`);
   };
 
   return (
@@ -169,9 +206,9 @@ export default function FacultyAchievementsManager({ currentUser, onDataChange }
         ]}
         title="Faculty Achievements & Professional Development"
         subtitle="Individual faculty professional achievements: FDP attendance, external workshops, certifications, invited lectures, and awards (NAAC Criterion 6 Evidence)."
-        onExportCSV={() => exportToCSV('faculty-ach')}
-        onExportExcel={() => exportToExcel('faculty-ach')}
-        onExportPDF={() => exportToPDF('faculty-ach')}
+        onExportCSV={handleExportCSV}
+        onExportExcel={handleExportExcel}
+        onExportPDF={handleExportPDF}
         primaryAction={canCreate ? {
           label: 'Record Faculty Achievement',
           icon: Plus,
@@ -210,8 +247,8 @@ export default function FacultyAchievementsManager({ currentUser, onDataChange }
               onChange={(e) => setSelectedDept(e.target.value)}
               style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', background: '#FFFFFF', color: '#0F172A', fontWeight: 600 }}
             >
-              <option value="ALL">All Departments</option>
-              {DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.code}</option>)}
+              <option value="ALL">All ET Departments</option>
+              {ET_DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.name} ({d.code})</option>)}
             </select>
 
             <select
@@ -278,7 +315,7 @@ export default function FacultyAchievementsManager({ currentUser, onDataChange }
               ) : (
                 filteredAchievements.map((item, idx) => {
                   const statusKey = item.workflowStatus || (item.status === 'Verified' ? 'VERIFIED' : 'DRAFT');
-                  const badge = getStatusBadge(statusKey);
+                  const badge = getWorkflowBadge(statusKey);
                   const BadgeIcon = badge.icon;
 
                   return (
@@ -335,7 +372,7 @@ export default function FacultyAchievementsManager({ currentUser, onDataChange }
                           fontSize: '0.68rem',
                           fontWeight: 800
                         }}>
-                          <BadgeIcon size={11} /> {badge.label}
+                          {BadgeIcon && <BadgeIcon size={11} />} {badge.label}
                         </span>
                       </td>
 
