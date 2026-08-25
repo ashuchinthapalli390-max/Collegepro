@@ -113,13 +113,13 @@ export default function TopHeader({
                 overflow: 'hidden',
                 textOverflow: 'ellipsis'
               }}>
-                NEC PORTAL
+                ET PORTAL
               </div>
               <div 
                 className="desktop-only"
                 style={{ fontSize: '0.66rem', color: '#D4AF37', fontWeight: 600, whiteSpace: 'nowrap' }}
               >
-                Academic & Research Administration
+                Emerging Technologies Administration
               </div>
             </div>
           </div>

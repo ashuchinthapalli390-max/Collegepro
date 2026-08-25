@@ -26,8 +26,25 @@ import {
   ShieldAlert, 
   Sparkles,
   Database,
-  AlertTriangle
+  AlertTriangle,
+  HeartHandshake,
+  Building2
 } from 'lucide-react';
+
+// Central Visibility Configuration (Easily toggleable)
+export const MODULE_VISIBILITY_FLAGS = {
+  HIDE_NAAC_SSR: true,
+  HIDE_NBA_TIER1: true,
+  HIDE_NIRF_DATA: true,
+  HIDE_COMPLIANCE_EXPORTS: true
+};
+
+export const HIDDEN_MODULE_IDS = new Set([
+  'naac-portal',
+  'nba-tier1',
+  'nirf-data',
+  'export-hub'
+]);
 
 export const NAVIGATION_CATEGORIES = [
   {
@@ -39,6 +56,46 @@ export const NAVIGATION_CATEGORIES = [
       { id: 'analytics', label: 'Quick Analytics', icon: BarChart3 },
       { id: 'alerts', label: 'Alerts & Notices', icon: Bell, dynamicBadgeKey: 'alerts' },
       { id: 'activity', label: 'Recent Activity', icon: Activity }
+    ]
+  },
+  {
+    id: 'cat-academic-analytics',
+    label: 'Academic Analytics',
+    icon: BarChart3,
+    items: [
+      { id: 'mid-exam-analysis', label: 'Mid Exam Analysis', icon: BarChart3, badge: 'Pending' },
+      { id: 'external-exam-analysis', label: 'External Exam Analysis', icon: FileSpreadsheet, badge: 'Pending' }
+    ]
+  },
+  {
+    id: 'cat-students-dev',
+    label: 'Student Development',
+    icon: Trophy,
+    items: [
+      { id: 'attendance-risk', label: 'Attendance Risk & Parent Contact', icon: AlertTriangle },
+      { id: 'student-projects', label: 'Student Projects & Capstone', icon: Code },
+      { id: 'student-achievements', label: 'Student Achievements & Honors', icon: Trophy },
+      { id: 'internships', label: 'Student Internships & Training', icon: Briefcase },
+      { id: 'community-service', label: 'Community Service Projects', icon: HeartHandshake }
+    ]
+  },
+  {
+    id: 'cat-placements',
+    label: 'Placements & Career',
+    icon: Briefcase,
+    items: [
+      { id: 'companies-visited', label: 'Companies Visited', icon: Building2 },
+      { id: 'campus-placements', label: 'Campus Placements', icon: Award }
+    ]
+  },
+  {
+    id: 'cat-governance',
+    label: 'Academic Governance',
+    icon: BookOpen,
+    items: [
+      { id: 'bos-meetings', label: 'Board of Studies (BoS)', icon: BookOpen },
+      { id: 'academic-council', label: 'Academic Council', icon: Award },
+      { id: 'regulations-hub', label: 'Curriculum & Regulations', icon: FileText }
     ]
   },
   {
@@ -65,27 +122,6 @@ export const NAVIGATION_CATEGORIES = [
     ]
   },
   {
-    id: 'cat-students-dev',
-    label: 'Student Development',
-    icon: Trophy,
-    items: [
-      { id: 'attendance-risk', label: 'Attendance Risk & Parent Contact', icon: AlertTriangle },
-      { id: 'student-projects', label: 'Student Projects & Capstone', icon: Code },
-      { id: 'student-achievements', label: 'Student Achievements & Honors', icon: Trophy },
-      { id: 'internships', label: 'Student Internships & Training', icon: Briefcase }
-    ]
-  },
-  {
-    id: 'cat-governance',
-    label: 'Academic Governance',
-    icon: BookOpen,
-    items: [
-      { id: 'bos-meetings', label: 'Board of Studies (BoS)', icon: BookOpen },
-      { id: 'academic-council', label: 'Academic Council', icon: Award },
-      { id: 'regulations-hub', label: 'Curriculum & Regulations', icon: FileText }
-    ]
-  },
-  {
     id: 'cat-research',
     label: 'Research & Publications',
     icon: Lightbulb,
@@ -102,11 +138,8 @@ export const NAVIGATION_CATEGORIES = [
     label: 'Accreditation & Data',
     icon: FileSpreadsheet,
     items: [
-      { id: 'nptel-certifications', label: 'NPTEL & MOOC Certifications', icon: GraduationCap },
-      { id: 'naac-portal', label: 'NAAC SSR Documentation', icon: Award },
-      { id: 'nba-tier1', label: 'NBA Tier-1 Compliance', icon: FileText },
-      { id: 'nirf-data', label: 'NIRF Data Repository', icon: BarChart3 },
-      { id: 'export-hub', label: 'Compliance Data Exports', icon: Download }
+      { id: 'nptel-certifications', label: 'NPTEL & MOOC Certifications', icon: GraduationCap }
+      // Hidden per specification: naac-portal, nba-tier1, nirf-data, export-hub
     ]
   },
   {

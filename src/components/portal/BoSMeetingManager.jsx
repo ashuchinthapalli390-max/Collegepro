@@ -56,7 +56,7 @@ import {
   exportBoSToPDF,
   exportBoSReportToPDF
 } from '../../data/portalStore.js';
-import { DEPARTMENTS, BRANDING_LOGOS } from '../../data/masterData.js';
+import { ET_DEPARTMENTS } from '../../data/masterData.js';
 import BosWizardModal from './bos/BosWizardModal.jsx';
 import { 
   MotionPage, 
@@ -65,7 +65,7 @@ import {
   MotionKpiCard, 
   MotionTable, 
   MotionTableRow, 
-  MotionEmptyState,
+  MotionEmptyState, 
   MotionButton 
 } from '../motion/index.js';
 
@@ -73,7 +73,7 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
   const [meetings, setMeetings] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDeptFilter, setSelectedDeptFilter] = useState(
-    currentUser?.role === 'HOD' ? (currentUser.dept || 'CSE') : 'ALL'
+    currentUser?.role === 'HOD' ? (currentUser.dept || 'CYS') : 'ALL'
   );
   const [selectedRegulationFilter, setSelectedRegulationFilter] = useState('ALL');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState('ALL');
@@ -109,7 +109,7 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
   // Regulations Master List
   const availableRegulations = ['R16', 'R19', 'R20', 'R23', 'R26'];
 
-  // PDF Export Handlers
+  // Real Export Handlers
   const handleExportFilteredPDF = () => {
     exportBoSReportToPDF(filteredMeetings, currentUser, {
       dept: selectedDeptFilter,
@@ -117,6 +117,24 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
       ay: selectedAcademicYearFilter
     });
     showToast(`Exported formal BoS report for ${filteredMeetings.length} meetings.`);
+  };
+
+  const handleExportExcel = () => {
+    const exportRows = filteredMeetings.map(m => ({
+      'BoS Number': m.bosNumber,
+      'Department': m.department,
+      'Academic Year': m.academicYear,
+      'Meeting Date': m.bosDate,
+      'Start Time': m.startTime || 'N/A',
+      'End Time': m.endTime || 'N/A',
+      'Mode': m.meetingMode,
+      'Regulations': (m.regulations || []).join(', '),
+      'Chairman': m.chairmanName || m.chairman || 'N/A',
+      'Nominee': m.universityNominee?.name || 'N/A',
+      'Status': m.workflowStatus
+    }));
+    exportToExcel(exportRows, `ET_BoS_Meetings_${selectedDeptFilter}`);
+    showToast(`Exported ${filteredMeetings.length} BoS meetings to Excel.`);
   };
 
   const handleExportSingleMeetingPDF = (meeting) => {
@@ -366,7 +384,7 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
             <button
               type="button"
-              onClick={() => showToast('Exporting Board of Studies dataset to Excel...')}
+              onClick={handleExportExcel}
               style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: '#F8FAFC', border: '1px solid #CBD5E1', color: '#334155', padding: '0.5rem 0.75rem', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}
               className="hover:bg-slate-100"
             >
@@ -374,7 +392,7 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
             </button>
             <button
               type="button"
-              onClick={() => showToast('Generating formal BoS governance PDF summary...')}
+              onClick={handleExportFilteredPDF}
               style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: '#F8FAFC', border: '1px solid #CBD5E1', color: '#334155', padding: '0.5rem 0.75rem', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}
               className="hover:bg-slate-100"
             >
@@ -395,8 +413,8 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
               onChange={(e) => setSelectedDeptFilter(e.target.value)}
               style={{ width: '100%', padding: '0.45rem', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.78rem', outline: 'none', background: currentUser?.role === 'HOD' ? '#F1F5F9' : '#FFFFFF' }}
             >
-              {currentUser?.role !== 'HOD' && <option value="ALL">All Departments</option>}
-              {DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.name} ({d.code})</option>)}
+              {currentUser?.role !== 'HOD' && <option value="ALL">All ET Departments</option>}
+              {ET_DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.name} ({d.code})</option>)}
             </select>
           </div>
 

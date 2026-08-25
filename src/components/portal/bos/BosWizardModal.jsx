@@ -19,7 +19,7 @@ import {
   Globe,
   MapPin
 } from 'lucide-react';
-import { DEPARTMENTS } from '../../../data/masterData.js';
+import { ET_DEPARTMENTS } from '../../../data/masterData.js';
 import BosStepper from './BosStepper.jsx';
 import MembersStep from './MembersStep.jsx';
 import FormField from '../../ui/form/FormField.jsx';
@@ -48,6 +48,9 @@ export default function BosWizardModal({
     if (initialData) {
       return {
         ...initialData,
+        startTime: initialData.startTime || '10:00',
+        endTime: initialData.endTime || '13:00',
+        rescheduleHistory: initialData.rescheduleHistory || [],
         universityNominee: initialData.universityNominee || { name: '', institution: '', designation: '', email: '', phone: '', isSaved: false },
         academicians: initialData.academicians || [],
         industryMember: initialData.industryMember || { name: '', company: '', designation: '', isSaved: false },
@@ -57,7 +60,7 @@ export default function BosWizardModal({
       };
     }
 
-    const defaultDept = currentUser?.role === 'HOD' ? (currentUser.dept || 'CSE') : 'CSE';
+    const defaultDept = currentUser?.role === 'HOD' ? (currentUser.dept || 'CYS') : 'CYS';
 
     return {
       department: defaultDept,
@@ -65,18 +68,25 @@ export default function BosWizardModal({
       academicYear: '2025-26',
       title: '',
       bosDate: new Date().toISOString().split('T')[0],
-      startTime: '',
-      endTime: '',
+      startTime: '10:00',
+      endTime: '13:00',
       meetingMode: 'Hybrid', // 'Hybrid' | 'Offline' | 'Online'
       venue: '',
       meetingLink: '',
       meetingStatus: 'SCHEDULED',
+      rescheduleHistory: [],
+      newBosDate: '',
+      newStartTime: '',
+      newEndTime: '',
+      postponeReason: '',
+      postponeRemarks: '',
 
-      // Members - 100% EMPTY
+      // Members - Direct Manual Form Defaults
       chairmanFacultyId: '',
       chairmanName: '',
-      chairmanDesignation: '',
-      chairmanDepartment: '',
+      chairmanDesignation: 'Professor & HOD',
+      chairmanDepartment: defaultDept,
+      chairmanInstitution: 'Narasaraopeta Engineering College (Autonomous)',
       chairmanEmail: '',
       chairmanPhone: '',
       chairmanPhoto: null,
@@ -119,7 +129,7 @@ export default function BosWizardModal({
 
       // Agenda & Documents
       agendaItems: [
-        { itemNo: 1, title: '', description: '', decision: '' }
+        { itemNo: 1, title: '', description: '', decision: '', startTime: '10:00', endTime: '10:45' }
       ],
       documents: [],
       internalNotes: ''
@@ -148,7 +158,7 @@ export default function BosWizardModal({
       ...prev,
       agendaItems: [
         ...prev.agendaItems,
-        { itemNo: prev.agendaItems.length + 1, title: '', description: '', decision: '' }
+        { itemNo: prev.agendaItems.length + 1, title: '', description: '', decision: '', startTime: '', endTime: '' }
       ]
     }));
   };
@@ -168,6 +178,20 @@ export default function BosWizardModal({
     }));
   };
 
+  // Shift Agenda Times Helper
+  const handleShiftAgendaTimes = () => {
+    if (!formData.newStartTime) return;
+    setFormData(prev => {
+      return {
+        ...prev,
+        agendaItems: prev.agendaItems.map((item, idx) => ({
+          ...item,
+          startTime: idx === 0 ? prev.newStartTime : item.startTime
+        }))
+      };
+    });
+  };
+
   // Document Upload
   const handleFileUpload = (e, type = 'MINUTES') => {
     const file = e.target.files[0];
@@ -184,7 +208,7 @@ export default function BosWizardModal({
       title: type === 'MINUTES' ? 'Minutes of Meeting (Signed)' : file.name.replace('.pdf', ''),
       filename: file.name,
       type,
-      sizeBytes: file.size || 3145728,
+      sizeBytes: file.size || 1048576,
       version: 'v1.0',
       uploadedAt: new Date().toISOString(),
       uploadedBy: currentUser?.name || 'Administrator'
@@ -204,10 +228,21 @@ export default function BosWizardModal({
       if (!formData.department) errors.department = 'Department is required';
       if (!formData.regulations || formData.regulations.length === 0) errors.regulations = 'Select at least one regulation';
       if (!formData.bosDate) errors.bosDate = 'Meeting date is required';
+      if (formData.startTime && formData.endTime && formData.startTime >= formData.endTime) {
+        errors.meetingTimes = 'Start time must be earlier than End time';
+      }
     } else if (step === 2) {
-      if (!formData.chairmanName) errors.chairman = 'Please select a BoS Chairman from the directory';
-      if (!formData.universityNominee?.name || !formData.universityNominee?.institution) {
+      if (!formData.chairmanName?.trim()) errors.chairman = 'Chairman name is required';
+      if (!formData.chairmanDesignation?.trim()) errors.chairmanDesignation = 'Chairman designation is required';
+      if (!formData.universityNominee?.name?.trim() || !formData.universityNominee?.institution?.trim()) {
         errors.universityNominee = 'University Nominee name and institution are required';
+      }
+    } else if (step === 3) {
+      if (formData.meetingStatus === 'POSTPONED') {
+        if (!formData.newBosDate) errors.postpone = 'Please specify the rescheduled meeting date';
+        if (formData.newStartTime && formData.newEndTime && formData.newStartTime >= formData.newEndTime) {
+          errors.postponeTimes = 'Rescheduled Start time must be earlier than End time';
+        }
       }
     }
 
@@ -370,7 +405,7 @@ export default function BosWizardModal({
                         onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                         error={!!validationErrors.department}
                       >
-                        {DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.name} ({d.code})</option>)}
+                        {ET_DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.name} ({d.code})</option>)}
                       </Select>
                     </FormField>
 
@@ -450,6 +485,26 @@ export default function BosWizardModal({
                     </FormField>
                   </div>
 
+                  {/* Meeting Time Slots */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <FormField label="START TIME (24h or HH:MM)" error={validationErrors.meetingTimes}>
+                      <Input
+                        type="time"
+                        value={formData.startTime}
+                        onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                        icon={Clock}
+                      />
+                    </FormField>
+                    <FormField label="END TIME (24h or HH:MM)">
+                      <Input
+                        type="time"
+                        value={formData.endTime}
+                        onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                        icon={Clock}
+                      />
+                    </FormField>
+                  </div>
+
                   {/* Conditional Animated Venue / Meeting Link Sections */}
                   <AnimatePresence>
                     {(formData.meetingMode === 'Offline' || formData.meetingMode === 'Hybrid') && (
@@ -511,8 +566,7 @@ export default function BosWizardModal({
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
                     <FormField label="START TIME">
                       <Input
-                        type="text"
-                        placeholder="10:00 AM"
+                        type="time"
                         value={formData.startTime}
                         onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
                         icon={Clock}
@@ -521,8 +575,7 @@ export default function BosWizardModal({
 
                     <FormField label="END TIME">
                       <Input
-                        type="text"
-                        placeholder="01:30 PM"
+                        type="time"
                         value={formData.endTime}
                         onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
                         icon={Clock}
@@ -541,6 +594,100 @@ export default function BosWizardModal({
                       </Select>
                     </FormField>
                   </div>
+
+                  {/* Rescheduled Section on POSTPONED */}
+                  {formData.meetingStatus === 'POSTPONED' && (
+                    <div style={{
+                      background: 'rgba(245, 158, 11, 0.08)',
+                      border: '1.5px dashed rgba(245, 158, 11, 0.4)',
+                      borderRadius: '12px',
+                      padding: '1.25rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.85rem'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#B45309', fontWeight: 800, fontSize: '0.88rem' }}>
+                          <AlertCircle size={16} /> Rescheduled Meeting Schedule
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleShiftAgendaTimes}
+                          style={{
+                            padding: '0.35rem 0.75rem',
+                            borderRadius: '6px',
+                            background: '#FFFFFF',
+                            border: '1px solid #CBD5E1',
+                            fontSize: '0.74rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            color: '#0F172A'
+                          }}
+                        >
+                          Shift Agenda Times to New Start Time
+                        </button>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '0.25rem' }}>
+                            NEW MEETING DATE <span style={{ color: '#DC2626' }}>*</span>
+                          </label>
+                          <DateInput
+                            value={formData.newBosDate || ''}
+                            onChange={(e) => setFormData({ ...formData, newBosDate: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '0.25rem' }}>
+                            NEW START TIME
+                          </label>
+                          <Input
+                            type="time"
+                            value={formData.newStartTime || ''}
+                            onChange={(e) => setFormData({ ...formData, newStartTime: e.target.value })}
+                            icon={Clock}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '0.25rem' }}>
+                            NEW END TIME
+                          </label>
+                          <Input
+                            type="time"
+                            value={formData.newEndTime || ''}
+                            onChange={(e) => setFormData({ ...formData, newEndTime: e.target.value })}
+                            icon={Clock}
+                          />
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '0.25rem' }}>
+                            REASON FOR POSTPONEMENT
+                          </label>
+                          <Input
+                            type="text"
+                            placeholder="e.g. University Nominee availability conflict"
+                            value={formData.postponeReason || ''}
+                            onChange={(e) => setFormData({ ...formData, postponeReason: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '0.25rem' }}>
+                            REMARKS
+                          </label>
+                          <Input
+                            type="text"
+                            placeholder="Additional notes for members..."
+                            value={formData.postponeRemarks || ''}
+                            onChange={(e) => setFormData({ ...formData, postponeRemarks: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Agenda Table */}
                   <div style={{ background: '#F8FAFC', padding: '1.1rem', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
@@ -561,7 +708,24 @@ export default function BosWizardModal({
                       {formData.agendaItems.map((item, idx) => (
                         <div key={idx} style={{ background: '#FFFFFF', padding: '0.85rem', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-                            <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#D4AF37' }}>ITEM #{item.itemNo}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                              <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#D4AF37' }}>ITEM #{item.itemNo}</span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                <input
+                                  type="time"
+                                  value={item.startTime || ''}
+                                  onChange={(e) => handleUpdateAgenda(idx, 'startTime', e.target.value)}
+                                  style={{ padding: '0.2rem 0.4rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #CBD5E1' }}
+                                />
+                                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>to</span>
+                                <input
+                                  type="time"
+                                  value={item.endTime || ''}
+                                  onChange={(e) => handleUpdateAgenda(idx, 'endTime', e.target.value)}
+                                  style={{ padding: '0.2rem 0.4rem', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid #CBD5E1' }}
+                                />
+                              </div>
+                            </div>
                             <button
                               type="button"
                               onClick={() => handleRemoveAgenda(idx)}

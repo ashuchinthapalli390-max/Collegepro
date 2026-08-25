@@ -103,7 +103,11 @@ export const STORAGE_KEYS = {
   ATTENDANCE_SNAPSHOTS: 'nec_portal_attendance_snapshots_v3',
   ATTENDANCE_SUBJECT_RECORDS: 'nec_portal_attendance_subject_records_v3',
   ATTENDANCE_ALERTS: 'nec_portal_attendance_alerts_v3',
-  ATTENDANCE_PARENT_CONTACTS: 'nec_portal_attendance_parent_contacts_v3'
+  ATTENDANCE_PARENT_CONTACTS: 'nec_portal_attendance_parent_contacts_v3',
+  COMMUNITY_PROJECTS: 'et_portal_community_projects_v1',
+  COMPANY_VISITS: 'et_portal_company_visits_v1',
+  CAMPUS_PLACEMENTS: 'et_portal_campus_placements_v1',
+  ATTENDANCE_BATCHES: 'et_portal_attendance_batches_v1'
 };
 
 // Automatic one-time cleanup of obsolete legacy demo caches
@@ -7344,5 +7348,412 @@ export function generateParentContactSheetPDF(alerts, cohortMeta = {}, includeSe
   doc.save(`NEC_Parent_Contact_Sheet_${cohortMeta.departmentCode || 'CYS'}_${cohortMeta.semester || 'III-I'}_${new Date().toISOString().split('T')[0]}.pdf`);
   return doc;
 }
+
+// -------------------------------------------------------------
+// 1. Community Service Projects Store (ET Departments)
+// -------------------------------------------------------------
+export const INITIAL_COMMUNITY_PROJECTS = [
+  {
+    id: 'csp_cys_2026_01',
+    projectNumber: 'CSP-CYS-2026-001',
+    title: 'Cyber Safety & Digital Hygiene Awareness Campaign in Rural Schools',
+    department: 'CYS',
+    academicYear: '2026-27',
+    year: 'III',
+    semester: 'III-I',
+    section: 'A',
+    batch: '2023-2027',
+    projectType: 'Awareness Campaign',
+    community: 'Yellamanda & Kotappakonda ZP High Schools',
+    partnerOrganization: 'Palnadu District Cyber Crime Awareness Cell',
+    startDate: '2026-07-10',
+    endDate: '2026-08-10',
+    durationWeeks: 4,
+    facultyGuideName: 'Dr. V. V. A. S. Lakshmi',
+    facultyGuideDesignation: 'Professor & HOD',
+    objective: 'Educate rural school students and teachers on phishing threats, OTP security, safe social media habits, and reporting mechanisms via National Cyber Crime Portal.',
+    activities: 'Conducted interactive audio-visual demonstrations, distributed regional cyber hygiene leaflets in Telugu, and organized school poster competitions.',
+    findings: '90% of rural students had smartphones in households but 0% had two-factor authentication enabled on family email and UPI apps.',
+    outcomes: 'Trained 450+ school children across 3 schools; successfully secured 120+ parent mobile devices with biometric locks and PIN protection.',
+    recommendations: 'Quarterly refresh workshops and establishing student cyber volunteer clubs.',
+    beneficiaryType: 'Rural School Children & Parents',
+    beneficiaryCount: 450,
+    stage: 'COMPLETED',
+    workflowStatus: 'APPROVED',
+    students: [
+      { rollNumber: '23CYS001', studentName: 'V. Sai Tharun', isLeader: true },
+      { rollNumber: '23CYS002', studentName: 'M. Anusha', isLeader: false },
+      { rollNumber: '23CYS003', studentName: 'K. Rakesh', isLeader: false }
+    ]
+  },
+  {
+    id: 'csp_ds_2026_01',
+    projectNumber: 'CSP-DS-2026-001',
+    title: 'Agricultural Crop Yield & Soil Health Survey in Palnadu Farming Blocks',
+    department: 'DS',
+    academicYear: '2026-27',
+    year: 'III',
+    semester: 'III-I',
+    section: 'A',
+    batch: '2023-2027',
+    projectType: 'Rural Field Survey',
+    community: 'Narasaraopet Rural Mandals (Chilakaluripet Border)',
+    partnerOrganization: 'Rythu Bharosa Kendra (RBK)',
+    startDate: '2026-06-15',
+    endDate: '2026-07-20',
+    durationWeeks: 5,
+    facultyGuideName: 'Dr. S. V. N. Sreenivasu',
+    facultyGuideDesignation: 'Professor',
+    objective: 'Collect ground-level soil testing data, rainfall variance metrics, and crop disease incidents to create localized predictive dashboards.',
+    activities: 'Surveyed 120 farmers, compiled digital spreadsheets of soil pH and NPK ratios, and presented findings to local agricultural extension officers.',
+    findings: 'Severe nitrogen over-fertilization identified in chilli crop fields due to lack of localized soil nutrient testing guidance.',
+    outcomes: 'Digitized farm records for 120 households; published data summaries advising soil nutrient balancing.',
+    recommendations: 'Introduce mobile app SMS alerts for weather and fertilizer dosages.',
+    beneficiaryType: 'Local Farmers',
+    beneficiaryCount: 120,
+    stage: 'COMPLETED',
+    workflowStatus: 'APPROVED',
+    students: [
+      { rollNumber: '23DS001', studentName: 'P. Kalyan', isLeader: true },
+      { rollNumber: '23DS002', studentName: 'Ch. Sneha', isLeader: false },
+      { rollNumber: '23DS003', studentName: 'B. Manoj Kumar', isLeader: false }
+    ]
+  }
+];
+
+export function getCommunityProjects() {
+  return loadStore(STORAGE_KEYS.COMMUNITY_PROJECTS, INITIAL_COMMUNITY_PROJECTS);
+}
+
+export function saveCommunityProject(project, actorUser = null) {
+  const list = getCommunityProjects();
+  let updated;
+  if (project.id) {
+    updated = list.map(p => p.id === project.id ? { ...p, ...project, updatedAt: new Date().toISOString(), updatedBy: actorUser?.name || 'Admin' } : p);
+  } else {
+    const newId = `csp_${(project.department || 'ET').toLowerCase()}_${Date.now()}`;
+    const count = list.length + 1;
+    const projectNumber = `CSP-${project.department || 'ET'}-${new Date().getFullYear()}-${String(count).padStart(3, '0')}`;
+    const newRecord = {
+      ...project,
+      id: newId,
+      projectNumber: project.projectNumber || projectNumber,
+      createdAt: new Date().toISOString(),
+      createdBy: actorUser?.name || 'Admin'
+    };
+    updated = [newRecord, ...list];
+  }
+  saveStore(STORAGE_KEYS.COMMUNITY_PROJECTS, updated);
+  return project.id ? project : updated[0];
+}
+
+export function deleteCommunityProject(id) {
+  const list = getCommunityProjects();
+  const updated = list.filter(p => p.id !== id);
+  saveStore(STORAGE_KEYS.COMMUNITY_PROJECTS, updated);
+  return true;
+}
+
+// -------------------------------------------------------------
+// 2. Companies Visited Store (ET Departments)
+// -------------------------------------------------------------
+export const INITIAL_COMPANY_VISITS = [
+  {
+    id: 'cv_2026_01',
+    companyName: 'Tata Consultancy Services (TCS)',
+    sector: 'IT & Software Services',
+    companyType: 'MNC',
+    website: 'https://www.tcs.com',
+    academicYear: '2026-27',
+    visitDate: '2026-08-12',
+    driveType: 'On-Campus',
+    mode: 'Hybrid',
+    venue: 'NEC Placement Hall & Online Coding Lab',
+    status: 'Completed',
+    eligibleDepartments: ['CYS', 'DS', 'AI', 'AIML'],
+    rolesOffered: [
+      { roleTitle: 'Digital Software Engineer', ctcLpa: 7.0, stipendMonthly: 20000 },
+      { roleTitle: 'Ninja Developer', ctcLpa: 3.6, stipendMonthly: 15000 }
+    ],
+    eligibleCount: 180,
+    attendedCount: 165,
+    shortlistedCount: 42,
+    selectedCount: 28,
+    offersCount: 28,
+    hrContactName: 'Ms. Priyadarshini M',
+    hrEmail: 'priyadarshini.m@tcs.com',
+    hrPhone: '+91 98401 22334'
+  },
+  {
+    id: 'cv_2026_02',
+    companyName: 'CyberRes Security Labs',
+    sector: 'Cybersecurity & SOC',
+    companyType: 'Product',
+    website: 'https://www.cyberres.com',
+    academicYear: '2026-27',
+    visitDate: '2026-08-18',
+    driveType: 'On-Campus',
+    mode: 'Offline',
+    venue: 'AICTE IDEA Lab Seminar Hall',
+    status: 'Completed',
+    eligibleDepartments: ['CYS', 'AI'],
+    rolesOffered: [
+      { roleTitle: 'SOC Analyst & Threat Hunter', ctcLpa: 8.5, stipendMonthly: 30000 }
+    ],
+    eligibleCount: 60,
+    attendedCount: 54,
+    shortlistedCount: 18,
+    selectedCount: 8,
+    offersCount: 8,
+    hrContactName: 'Mr. Arvind Swaminathan',
+    hrEmail: 'arvind.s@cyberres.com',
+    hrPhone: '+91 99800 11223'
+  },
+  {
+    id: 'cv_2026_03',
+    companyName: 'Tiger Analytics',
+    sector: 'Data Science & AI Consulting',
+    companyType: 'Product & Analytics',
+    website: 'https://www.tigeranalytics.com',
+    academicYear: '2026-27',
+    visitDate: '2026-08-22',
+    driveType: 'On-Campus',
+    mode: 'Hybrid',
+    venue: 'Central Placement Auditorium',
+    status: 'Completed',
+    eligibleDepartments: ['DS', 'AIML', 'AI'],
+    rolesOffered: [
+      { roleTitle: 'Analyst - Advanced Data Engineering', ctcLpa: 9.0, stipendMonthly: 35000 }
+    ],
+    eligibleCount: 95,
+    attendedCount: 88,
+    shortlistedCount: 24,
+    selectedCount: 12,
+    offersCount: 12,
+    hrContactName: 'Ms. Deepa Natarajan',
+    hrEmail: 'deepa.n@tigeranalytics.com',
+    hrPhone: '+91 97900 44556'
+  }
+];
+
+export function getCompanyVisits() {
+  return loadStore(STORAGE_KEYS.COMPANY_VISITS, INITIAL_COMPANY_VISITS);
+}
+
+export function saveCompanyVisit(visit, actorUser = null) {
+  const list = getCompanyVisits();
+  let updated;
+  if (visit.id) {
+    updated = list.map(v => v.id === visit.id ? { ...v, ...visit, updatedAt: new Date().toISOString(), updatedBy: actorUser?.name || 'Admin' } : v);
+  } else {
+    const newRecord = {
+      ...visit,
+      id: `cv_${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      createdBy: actorUser?.name || 'Admin'
+    };
+    updated = [newRecord, ...list];
+  }
+  saveStore(STORAGE_KEYS.COMPANY_VISITS, updated);
+  return visit.id ? visit : updated[0];
+}
+
+export function deleteCompanyVisit(id) {
+  const list = getCompanyVisits();
+  const updated = list.filter(v => v.id !== id);
+  saveStore(STORAGE_KEYS.COMPANY_VISITS, updated);
+  return true;
+}
+
+// -------------------------------------------------------------
+// 3. Campus Placements Store (ET Departments)
+// -------------------------------------------------------------
+export const INITIAL_CAMPUS_PLACEMENTS = [
+  {
+    id: 'pl_2026_001',
+    studentRoll: '23CYS001',
+    studentName: 'V. Sai Tharun',
+    department: 'CYS',
+    academicYear: '2026-27',
+    companyName: 'CyberRes Security Labs',
+    role: 'SOC Analyst & Threat Hunter',
+    offerType: 'Full-Time',
+    packageLpa: 8.5,
+    stipendMonthly: 30000,
+    offerDate: '2026-08-19',
+    status: 'OFFERED'
+  },
+  {
+    id: 'pl_2026_002',
+    studentRoll: '23CYS001',
+    studentName: 'V. Sai Tharun',
+    department: 'CYS',
+    academicYear: '2026-27',
+    companyName: 'Tata Consultancy Services (TCS)',
+    role: 'Digital Software Engineer',
+    offerType: 'Full-Time',
+    packageLpa: 7.0,
+    stipendMonthly: 20000,
+    offerDate: '2026-08-14',
+    status: 'OFFERED'
+  },
+  {
+    id: 'pl_2026_003',
+    studentRoll: '23DS001',
+    studentName: 'P. Kalyan',
+    department: 'DS',
+    academicYear: '2026-27',
+    companyName: 'Tiger Analytics',
+    role: 'Analyst - Advanced Data Engineering',
+    offerType: 'Full-Time',
+    packageLpa: 9.0,
+    stipendMonthly: 35000,
+    offerDate: '2026-08-23',
+    status: 'OFFERED'
+  },
+  {
+    id: 'pl_2026_004',
+    studentRoll: '23AIML001',
+    studentName: 'G. Harish',
+    department: 'AIML',
+    academicYear: '2026-27',
+    companyName: 'Tiger Analytics',
+    role: 'Associate Machine Learning Engineer',
+    offerType: 'FTE + Internship',
+    packageLpa: 9.5,
+    stipendMonthly: 35000,
+    offerDate: '2026-08-23',
+    status: 'JOINED'
+  }
+];
+
+export function getCampusPlacements() {
+  return loadStore(STORAGE_KEYS.CAMPUS_PLACEMENTS, INITIAL_CAMPUS_PLACEMENTS);
+}
+
+export function saveCampusPlacement(placement, actorUser = null) {
+  const list = getCampusPlacements();
+  let updated;
+  if (placement.id) {
+    updated = list.map(p => p.id === placement.id ? { ...p, ...placement, updatedAt: new Date().toISOString(), updatedBy: actorUser?.name || 'Admin' } : p);
+  } else {
+    const newRecord = {
+      ...placement,
+      id: `pl_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      createdAt: new Date().toISOString(),
+      createdBy: actorUser?.name || 'Admin'
+    };
+    updated = [newRecord, ...list];
+  }
+  saveStore(STORAGE_KEYS.CAMPUS_PLACEMENTS, updated);
+  return placement.id ? placement : updated[0];
+}
+
+export function deleteCampusPlacement(id) {
+  const list = getCampusPlacements();
+  const updated = list.filter(p => p.id !== id);
+  saveStore(STORAGE_KEYS.CAMPUS_PLACEMENTS, updated);
+  return true;
+}
+
+// -------------------------------------------------------------
+// 4. Attendance Monthly Batch Lifecycle Handlers
+// -------------------------------------------------------------
+export const INITIAL_ATTENDANCE_BATCHES = [
+  {
+    batchId: 'batch_2026_08_cys_iii_a',
+    department: 'CYS',
+    year: 'III',
+    semester: 'III-I',
+    section: 'A',
+    monthLabel: 'August 2026',
+    importDate: '2026-08-20',
+    totalRecords: 60,
+    atRiskCount: 3,
+    status: 'ACTIVE',
+    uploadedBy: 'Dr. V. V. A. S. Lakshmi'
+  }
+];
+
+export function getAttendanceBatches() {
+  return loadStore(STORAGE_KEYS.ATTENDANCE_BATCHES, INITIAL_ATTENDANCE_BATCHES);
+}
+
+export function replacePreviousMonthAttendance(newBatchMeta, newAlerts, actorUser = null) {
+  // Safe transactional replacement:
+  // 1. Mark existing active batch for same cohort as REPLACED
+  const batches = getAttendanceBatches();
+  const updatedBatches = batches.map(b => {
+    if (
+      b.department === newBatchMeta.department &&
+      b.year === newBatchMeta.year &&
+      b.semester === newBatchMeta.semester &&
+      b.section === newBatchMeta.section &&
+      b.status === 'ACTIVE'
+    ) {
+      return { ...b, status: 'REPLACED', replacedOn: new Date().toISOString(), replacedBy: actorUser?.name || 'Admin' };
+    }
+    return b;
+  });
+
+  // 2. Add new active batch
+  const newBatch = {
+    ...newBatchMeta,
+    batchId: `batch_${Date.now()}`,
+    status: 'ACTIVE',
+    importDate: new Date().toISOString().split('T')[0],
+    uploadedBy: actorUser?.name || 'Admin'
+  };
+  updatedBatches.unshift(newBatch);
+  saveStore(STORAGE_KEYS.ATTENDANCE_BATCHES, updatedBatches);
+
+  // 3. Update active alerts for this cohort
+  const currentAlerts = loadStore(STORAGE_KEYS.ATTENDANCE_ALERTS, INITIAL_ATTENDANCE_ALERTS);
+  const otherAlerts = currentAlerts.filter(a => !(
+    a.department === newBatchMeta.department &&
+    a.year === newBatchMeta.year &&
+    a.semester === newBatchMeta.semester &&
+    a.section === newBatchMeta.section
+  ));
+  const mergedAlerts = [...newAlerts, ...otherAlerts];
+  saveStore(STORAGE_KEYS.ATTENDANCE_ALERTS, mergedAlerts);
+
+  return newBatch;
+}
+
+export function removeAttendanceBatch(batchId, actorUser = null) {
+  const batches = getAttendanceBatches();
+  const targetBatch = batches.find(b => b.batchId === batchId);
+  if (!targetBatch) return false;
+
+  const updatedBatches = batches.filter(b => b.batchId !== batchId);
+  saveStore(STORAGE_KEYS.ATTENDANCE_BATCHES, updatedBatches);
+
+  // If active, remove alerts for this cohort
+  if (targetBatch.status === 'ACTIVE') {
+    const currentAlerts = loadStore(STORAGE_KEYS.ATTENDANCE_ALERTS, INITIAL_ATTENDANCE_ALERTS);
+    const retainedAlerts = currentAlerts.filter(a => !(
+      a.department === targetBatch.department &&
+      a.year === targetBatch.year &&
+      a.semester === targetBatch.semester &&
+      a.section === targetBatch.section
+    ));
+    saveStore(STORAGE_KEYS.ATTENDANCE_ALERTS, retainedAlerts);
+  }
+  return true;
+}
+
+export function clearCurrentAttendance(cohortMeta, actorUser = null) {
+  const currentAlerts = loadStore(STORAGE_KEYS.ATTENDANCE_ALERTS, INITIAL_ATTENDANCE_ALERTS);
+  const retainedAlerts = currentAlerts.filter(a => !(
+    (cohortMeta.department === 'ALL' || a.department === cohortMeta.department) &&
+    (cohortMeta.year === 'ALL' || a.year === cohortMeta.year) &&
+    (cohortMeta.semester === 'ALL' || a.semester === cohortMeta.semester) &&
+    (cohortMeta.section === 'ALL' || a.section === cohortMeta.section)
+  ));
+  saveStore(STORAGE_KEYS.ATTENDANCE_ALERTS, retainedAlerts);
+  return true;
+}
+
 
 

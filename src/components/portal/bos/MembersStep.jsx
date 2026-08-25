@@ -46,16 +46,17 @@ export default function MembersStep({
   // Active editing index for academic experts
   const [editingExpertIdx, setEditingExpertIdx] = useState(null);
 
-  // 1. Chairman Select Handler
+  // 1. Chairman Select Handler (Optional directory autofill helper)
   const handleSelectChairman = (faculty) => {
     setFormData(prev => ({
       ...prev,
-      chairmanFacultyId: faculty.id,
-      chairmanName: faculty.name,
-      chairmanDesignation: faculty.designation,
-      chairmanDepartment: faculty.department,
-      chairmanEmail: faculty.email || `${faculty.id.toLowerCase()}@nrtec.in`,
-      chairmanPhone: '+91 8647 239903',
+      chairmanFacultyId: faculty.id || '',
+      chairmanName: faculty.name || '',
+      chairmanDesignation: faculty.designation || 'Professor & HOD',
+      chairmanDepartment: faculty.department || 'CYS',
+      chairmanInstitution: 'Narasaraopeta Engineering College (Autonomous)',
+      chairmanEmail: faculty.email || '',
+      chairmanPhone: faculty.phone || '',
       chairmanPhoto: faculty.photo || null
     }));
     if (validationErrors.chairman) {
@@ -70,6 +71,7 @@ export default function MembersStep({
       chairmanName: '',
       chairmanDesignation: '',
       chairmanDepartment: '',
+      chairmanInstitution: 'Narasaraopeta Engineering College (Autonomous)',
       chairmanEmail: '',
       chairmanPhone: '',
       chairmanPhoto: null
@@ -316,7 +318,7 @@ export default function MembersStep({
           boxShadow: '0 2px 8px rgba(0, 0, 0, 0.02)'
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.65rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.85rem' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
               <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0F172A' }}>
@@ -326,15 +328,15 @@ export default function MembersStep({
                 REQUIRED *
               </span>
               <span style={{ fontSize: '0.7rem', fontWeight: 700, background: '#EFF6FF', color: '#1D4ED8', padding: '0.1rem 0.45rem', borderRadius: '4px' }}>
-                Internal NEC Faculty
+                Manual Entry / ET HOD
               </span>
             </div>
             <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '0.2rem 0 0 0' }}>
-              Select the Department HOD or authorized senior professor who chairs this meeting.
+              Enter Chairman details directly below, or optionally autofill from Faculty Directory.
             </p>
           </div>
 
-          {!isChairmanFilled && (
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button
               type="button"
               onClick={() => setFacultyModalOpen(true)}
@@ -344,18 +346,37 @@ export default function MembersStep({
                 gap: '0.35rem',
                 background: '#070F1E',
                 color: '#F1C40F',
-                padding: '0.45rem 0.9rem',
+                padding: '0.45rem 0.85rem',
                 borderRadius: '8px',
-                fontSize: '0.78rem',
+                fontSize: '0.76rem',
                 fontWeight: 700,
                 border: 'none',
                 cursor: 'pointer'
               }}
               className="hover:scale-105 transition-transform"
             >
-              <Search size={13} /> Select from Directory
+              <Search size={13} /> Autofill from Directory
             </button>
-          )}
+            {isChairmanFilled && (
+              <button
+                type="button"
+                onClick={handleRemoveChairman}
+                title="Clear Chairman Fields"
+                style={{
+                  padding: '0.45rem 0.65rem',
+                  borderRadius: '8px',
+                  background: '#FEE2E2',
+                  border: '1px solid #FECACA',
+                  color: '#DC2626',
+                  fontSize: '0.76rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                <Trash2 size={13} />
+              </button>
+            )}
+          </div>
         </div>
 
         {validationErrors.chairman && (
@@ -364,79 +385,149 @@ export default function MembersStep({
           </div>
         )}
 
-        {isChairmanFilled ? (
-          <div style={{
-            background: '#F8FAFC',
-            borderRadius: '12px',
-            padding: '0.85rem 1rem',
-            border: '1px solid #E2E8F0',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '0.75rem'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-              <FacultyAvatar
-                faculty={{
-                  id: formData.chairmanFacultyId,
-                  name: formData.chairmanName,
-                  department: formData.chairmanDepartment,
-                  photo: formData.chairmanPhoto
+        {/* Direct Editable Inputs for Chairman */}
+        <div style={{
+          background: '#F8FAFC',
+          borderRadius: '12px',
+          padding: '1rem',
+          border: '1px solid #E2E8F0',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.85rem'
+        }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem' }}>
+                Chairman Full Name <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.chairmanName || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, chairmanName: e.target.value }))}
+                placeholder="e.g. Dr. V. V. A. S. Lakshmi"
+                style={{
+                  width: '100%',
+                  padding: '0.5rem 0.75rem',
+                  background: '#FFFFFF',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: '6px',
+                  fontSize: '0.85rem',
+                  color: '#0F172A'
                 }}
-                size={48}
-                showBadge={false}
-                shape="circle"
-                ringColor={formData.chairmanPhoto ? '#10B981' : '#D4AF37'}
               />
-              <div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0F172A' }}>
-                  {formData.chairmanName}
-                </div>
-                <div style={{ fontSize: '0.76rem', color: '#64748B' }}>
-                  {formData.chairmanDesignation} • <strong style={{ color: '#D4AF37' }}>Department of {formData.chairmanDepartment}</strong>
-                </div>
-                <div style={{ fontSize: '0.72rem', color: '#94A3B8', marginTop: '0.15rem' }}>
-                  {formData.chairmanEmail} • {formData.chairmanPhone}
-                </div>
-              </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '0.45rem' }}>
-              <button
-                type="button"
-                onClick={() => setFacultyModalOpen(true)}
-                style={{ padding: '0.4rem 0.85rem', borderRadius: '8px', background: '#FFFFFF', border: '1px solid #CBD5E1', fontSize: '0.76rem', fontWeight: 700, color: '#0F172A', cursor: 'pointer' }}
-                className="hover:bg-slate-50"
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem' }}>
+                Designation <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.chairmanDesignation || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, chairmanDesignation: e.target.value }))}
+                placeholder="e.g. Professor & HOD"
+                style={{
+                  width: '100%',
+                  padding: '0.5rem 0.75rem',
+                  background: '#FFFFFF',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: '6px',
+                  fontSize: '0.85rem',
+                  color: '#0F172A'
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '0.25rem' }}>
+                Department <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <select
+                value={formData.chairmanDepartment || 'CYS'}
+                onChange={(e) => setFormData(prev => ({ ...prev, chairmanDepartment: e.target.value }))}
+                style={{
+                  width: '100%',
+                  padding: '0.5rem 0.75rem',
+                  background: '#FFFFFF',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: '6px',
+                  fontSize: '0.85rem',
+                  color: '#0F172A'
+                }}
               >
-                Change Chairman
-              </button>
-              <button
-                type="button"
-                onClick={handleRemoveChairman}
-                title="Remove Chairman"
-                aria-label="Remove Chairman"
-                style={{ padding: '0.4rem 0.7rem', borderRadius: '8px', background: '#FEE2E2', border: '1px solid #FECACA', color: '#DC2626', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                className="hover:bg-red-200"
-              >
-                <Trash2 size={14} />
-              </button>
+                <option value="CYS">CSE (Cyber Security) - CYS</option>
+                <option value="DS">CSE (Data Science) - DS</option>
+                <option value="AI">Artificial Intelligence - AI</option>
+                <option value="AIML">AI & Machine Learning - AIML</option>
+              </select>
             </div>
           </div>
-        ) : (
-          <div style={{
-            background: '#F8FAFC',
-            borderRadius: '10px',
-            padding: '1.25rem',
-            textAlign: 'center',
-            border: '1px dashed #CBD5E1',
-            color: '#64748B'
-          }}>
-            <UserCheck size={28} style={{ color: '#CBD5E1', margin: '0 auto 0.35rem auto' }} />
-            <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155' }}>No chairman selected yet</div>
-            <div style={{ fontSize: '0.74rem', marginTop: '0.15rem' }}>Click "Select from Directory" to assign the internal BoS chair.</div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#64748B', marginBottom: '0.25rem' }}>
+                Institution
+              </label>
+              <input
+                type="text"
+                value={formData.chairmanInstitution || 'Narasaraopeta Engineering College (Autonomous)'}
+                onChange={(e) => setFormData(prev => ({ ...prev, chairmanInstitution: e.target.value }))}
+                placeholder="Institution Name"
+                style={{
+                  width: '100%',
+                  padding: '0.5rem 0.75rem',
+                  background: '#FFFFFF',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: '6px',
+                  fontSize: '0.85rem',
+                  color: '#0F172A'
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#64748B', marginBottom: '0.25rem' }}>
+                Email (Optional)
+              </label>
+              <input
+                type="email"
+                value={formData.chairmanEmail || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, chairmanEmail: e.target.value }))}
+                placeholder="e.g. hod.cys@nrtec.in"
+                style={{
+                  width: '100%',
+                  padding: '0.5rem 0.75rem',
+                  background: '#FFFFFF',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: '6px',
+                  fontSize: '0.85rem',
+                  color: '#0F172A'
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#64748B', marginBottom: '0.25rem' }}>
+                Phone (Optional)
+              </label>
+              <input
+                type="tel"
+                value={formData.chairmanPhone || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, chairmanPhone: e.target.value }))}
+                placeholder="e.g. +91 94400 12345"
+                style={{
+                  width: '100%',
+                  padding: '0.5rem 0.75rem',
+                  background: '#FFFFFF',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: '6px',
+                  fontSize: '0.85rem',
+                  color: '#0F172A'
+                }}
+              />
+            </div>
           </div>
-        )}
+        </div>
       </motion.div>
 
       {/* ────────────────────────────────────────────────────────── */}

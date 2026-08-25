@@ -45,9 +45,13 @@ import {
   exportAttendanceRiskList,
   generateParentContactSheetPDF,
   getStudents,
-  maskPhoneNumber
+  maskPhoneNumber,
+  getAttendanceBatches,
+  replacePreviousMonthAttendance,
+  removeAttendanceBatch,
+  clearCurrentAttendance
 } from '../../../data/portalStore.js';
-import { DEPARTMENTS } from '../../../data/masterData.js';
+import { ET_DEPARTMENTS } from '../../../data/masterData.js';
 
 export default function AttendanceRiskManager({ currentUser }) {
   // Navigation tabs
@@ -518,8 +522,8 @@ export default function AttendanceRiskManager({ currentUser }) {
               disabled={currentUser?.role === 'HOD' && currentUser?.dept && currentUser?.dept !== 'Management & Governance'}
               style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.82rem' }}
             >
-              <option value="ALL">All Departments</option>
-              {DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.name} ({d.code})</option>)}
+              <option value="ALL">All ET Departments</option>
+              {ET_DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.name} ({d.code})</option>)}
             </select>
 
             <select
@@ -810,7 +814,7 @@ export default function AttendanceRiskManager({ currentUser }) {
                     onChange={(e) => setCohortMeta({ ...cohortMeta, departmentCode: e.target.value })}
                     style={{ width: '100%', padding: '0.45rem', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.8rem' }}
                   >
-                    {DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.name} ({d.code})</option>)}
+                    {ET_DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.name} ({d.code})</option>)}
                   </select>
                 </div>
                 <div>

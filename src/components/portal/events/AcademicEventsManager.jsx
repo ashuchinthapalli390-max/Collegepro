@@ -31,7 +31,7 @@ import {
   X,
   UploadCloud
 } from 'lucide-react';
-import { DEPARTMENTS } from '../../../data/masterData.js';
+import { ET_DEPARTMENTS } from '../../../data/masterData.js';
 import { 
   getAcademicEvents, 
   reviewAcademicEvent, 

@@ -93,6 +93,153 @@ export const LEADERSHIP_PROFILES = [
   }
 ];
 
+// -------------------------------------------------------------
+// Canonical Emerging Technologies Departments (ET Scope Only)
+// -------------------------------------------------------------
+export const ET_DEPARTMENTS = [
+  {
+    id: "cys",
+    code: "CYS",
+    name: "CSE (Cyber Security)",
+    shortName: "Cyber Security",
+    established: 2021,
+    intake: 60,
+    hodName: "Dr. V. V. A. S. Lakshmi",
+    programs: ["B.Tech Computer Science & Engineering (Cyber Security)"],
+    bosRegulations: ["R20", "R23", "R26"]
+  },
+  {
+    id: "ds",
+    code: "DS",
+    name: "CSE (Data Science)",
+    shortName: "Data Science",
+    established: 2020,
+    intake: 120,
+    hodName: "Dr. V. V. A. S. Lakshmi",
+    programs: ["B.Tech Computer Science & Engineering (Data Science)"],
+    bosRegulations: ["R20", "R23", "R26"]
+  },
+  {
+    id: "ai",
+    code: "AI",
+    name: "Artificial Intelligence",
+    shortName: "AI",
+    established: 2020,
+    intake: 120,
+    hodName: "Dr. B. Jhansi Vazram",
+    programs: ["B.Tech Computer Science & Engineering (Artificial Intelligence)"],
+    bosRegulations: ["R20", "R23", "R26"]
+  },
+  {
+    id: "aiml",
+    code: "AIML",
+    name: "Artificial Intelligence & Machine Learning",
+    shortName: "AI & ML",
+    established: 2020,
+    intake: 180,
+    hodName: "Dr. V. V. A. S. Lakshmi",
+    programs: ["B.Tech Computer Science & Engineering (AI & ML)"],
+    bosRegulations: ["R20", "R23", "R26"]
+  }
+];
+
+export const ET_DEPARTMENT_CODES = ['CYS', 'DS', 'AI', 'AIML'];
+
+/**
+ * Robust Department Alias Normalizer & ET Boundary Guard
+ * Maps diverse input variants to canonical ET codes: CYS, DS, AI, AIML
+ * Flags plain CSE as 'NEEDS_MAPPING' (never assumes CYS)
+ * Flags non-ET departments as 'OUT_OF_SCOPE_DEPARTMENT'
+ */
+export function normalizeDepartment(raw) {
+  if (!raw || typeof raw !== 'string') return { code: 'NEEDS_MAPPING', raw: raw || '', isET: false };
+  const s = raw.trim().toLowerCase().replace(/[\s\-_]+/g, ' ');
+  
+  // 1. CYS Aliases
+  if (
+    s === 'cys' || 
+    s === 'cse (cyber security)' || 
+    s === 'cse(cyber security)' || 
+    s === 'cse cyber security' || 
+    s === 'cyber security' || 
+    s === 'cyber' || 
+    s === 'cse(cs)' || 
+    s === 'cse (cs)' || 
+    s === 'cse cs' ||
+    s === 'cse-cys' ||
+    s === 'cse_cys' ||
+    s === 'b.tech cse (cyber security)' ||
+    s === 'b.tech (cyber security)'
+  ) {
+    return { code: 'CYS', name: 'CSE (Cyber Security)', isET: true };
+  }
+
+  // 2. DS Aliases
+  if (
+    s === 'ds' || 
+    s === 'cse (data science)' || 
+    s === 'cse(data science)' || 
+    s === 'cse data science' || 
+    s === 'data science' || 
+    s === 'data science engineering' || 
+    s === 'cse(ds)' || 
+    s === 'cse (ds)' || 
+    s === 'cse ds' ||
+    s === 'cse-ds' ||
+    s === 'cse_ds' ||
+    s === 'b.tech cse (data science)' ||
+    s === 'b.tech (data science)'
+  ) {
+    return { code: 'DS', name: 'CSE (Data Science)', isET: true };
+  }
+
+  // 3. AI Aliases
+  if (
+    s === 'ai' || 
+    s === 'cse (ai)' || 
+    s === 'cse(ai)' || 
+    s === 'cse ai' || 
+    s === 'artificial intelligence' ||
+    s === 'cse-ai' ||
+    s === 'b.tech cse (ai)' ||
+    s === 'b.tech artificial intelligence'
+  ) {
+    return { code: 'AI', name: 'Artificial Intelligence', isET: true };
+  }
+
+  // 4. AIML Aliases
+  if (
+    s === 'aiml' || 
+    s === 'ai&ml' || 
+    s === 'ai & ml' || 
+    s === 'ai and ml' || 
+    s === 'cse (ai & ml)' || 
+    s === 'cse(ai & ml)' || 
+    s === 'cse(aiml)' || 
+    s === 'cse (aiml)' || 
+    s === 'cse aiml' ||
+    s === 'cse-aiml' ||
+    s === 'artificial intelligence & machine learning' ||
+    s === 'artificial intelligence and machine learning' ||
+    s === 'b.tech cse (ai & ml)'
+  ) {
+    return { code: 'AIML', name: 'Artificial Intelligence & Machine Learning', isET: true };
+  }
+
+  // 5. Plain CSE is Ambiguous -> NEEDS_MAPPING (Never assume CYS)
+  if (s === 'cse' || s === 'computer science' || s === 'computer science & engineering' || s === 'computer science and engineering') {
+    return { code: 'NEEDS_MAPPING', raw, isET: false, reason: 'Plain CSE requires manual mapping to specific ET specialization (AI, AIML, CYS, or DS).' };
+  }
+
+  // 6. Non-ET departments
+  const nonET = ['ece', 'eee', 'mec', 'mech', 'mechanical', 'ce', 'civil', 'it', 'information technology', 'mba', 'mca', 'bsh', 'bs&h'];
+  if (nonET.some(net => s.includes(net))) {
+    return { code: 'OUT_OF_SCOPE_DEPARTMENT', raw, isET: false, reason: 'Department is outside the Emerging Technologies portal scope.' };
+  }
+
+  return { code: 'NEEDS_MAPPING', raw, isET: false, reason: 'Unrecognized department format.' };
+}
+
 export const DEPARTMENTS = [
   {
     id: "cse",
