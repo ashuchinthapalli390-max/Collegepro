@@ -106,19 +106,19 @@ export default function CompaniesVisitedManager({ currentUser, onDataChange }) {
   // Wizard Form State
   const [formData, setFormData] = useState({
     companyName: '',
-    sector: 'IT & Software Services',
-    companyType: 'MNC',
+    sector: '',
+    companyType: '',
     website: '',
     academicYear: '2026-27',
     visitDate: new Date().toISOString().split('T')[0],
     driveType: 'On-Campus',
-    mode: 'Hybrid',
-    venue: 'Campus Placement Centre (Block-3)',
-    status: 'Completed',
+    mode: 'In-Person',
+    venue: '',
+    status: 'SCHEDULED',
     eligibleDepartments: ['CYS', 'DS', 'AI', 'AIML'],
-    roleTitle: 'Cyber Security Analyst / Software Engineer',
-    ctcLpa: '6.5',
-    stipendMonthly: '25000',
+    roleTitle: '',
+    ctcLpa: '',
+    stipendMonthly: '',
     eligibleCount: '',
     attendedCount: '',
     shortlistedCount: '',
@@ -133,19 +133,19 @@ export default function CompaniesVisitedManager({ currentUser, onDataChange }) {
     setEditingVisit(null);
     setFormData({
       companyName: '',
-      sector: 'IT & Software Services',
-      companyType: 'MNC',
+      sector: '',
+      companyType: '',
       website: '',
       academicYear: '2026-27',
       visitDate: new Date().toISOString().split('T')[0],
       driveType: 'On-Campus',
-      mode: 'Hybrid',
-      venue: 'Campus Placement Centre (Block-3)',
-      status: 'Completed',
+      mode: 'In-Person',
+      venue: '',
+      status: 'SCHEDULED',
       eligibleDepartments: ['CYS', 'DS', 'AI', 'AIML'],
-      roleTitle: 'Software Engineer',
-      ctcLpa: '6.5',
-      stipendMonthly: '20000',
+      roleTitle: '',
+      ctcLpa: '',
+      stipendMonthly: '',
       eligibleCount: '',
       attendedCount: '',
       shortlistedCount: '',
@@ -260,44 +260,26 @@ export default function CompaniesVisitedManager({ currentUser, onDataChange }) {
   return (
     <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       <ModulePageHeader
-        badge="Placements & Career"
-        badgeIcon={Building2}
+        breadcrumbs={[
+          { label: 'Dashboard' },
+          { label: 'Placements & Career' },
+          { label: 'Companies Visited' }
+        ]}
         title="Companies Visited"
-        description="Recruitment drives, hiring schedules, corporate partner visits, and selection rounds for ET cohorts."
-        actions={
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <MotionButton
-              variant="outline"
-              size="sm"
-              icon={Download}
-              onClick={handleExportCSV}
-            >
-              Export CSV
-            </MotionButton>
-            <MotionButton
-              variant="outline"
-              size="sm"
-              icon={Download}
-              onClick={handleExportPDF}
-            >
-              Export PDF
-            </MotionButton>
-            <MotionButton
-              variant="primary"
-              size="sm"
-              icon={Plus}
-              onClick={handleOpenCreate}
-            >
-              Record Company Drive
-            </MotionButton>
-          </div>
-        }
+        subtitle="Recruitment drives, hiring schedules, corporate partner visits, and selection rounds for ET cohorts."
+        onExportCSV={handleExportCSV}
+        onExportPDF={handleExportPDF}
+        primaryAction={{
+          label: 'Record Company Drive',
+          icon: Plus,
+          onClick: handleOpenCreate
+        }}
       />
 
       {/* KPI Grid */}
       <AnimatedKpiGrid>
         <MotionKpiCard
-          title="Unique Companies"
+          label="Unique Companies"
           value={stats.uniqueCompanies}
           subtext="Corporate Employers"
           icon={Building2}
@@ -306,7 +288,7 @@ export default function CompaniesVisitedManager({ currentUser, onDataChange }) {
           border="rgba(59, 130, 246, 0.25)"
         />
         <MotionKpiCard
-          title="Total Drives"
+          label="Total Drives"
           value={stats.totalVisits}
           subtext="Recruitment Events"
           icon={Briefcase}
@@ -315,7 +297,7 @@ export default function CompaniesVisitedManager({ currentUser, onDataChange }) {
           border="rgba(16, 185, 129, 0.25)"
         />
         <MotionKpiCard
-          title="Active Drives"
+          label="Active Drives"
           value={stats.activeDrives}
           subtext="Scheduled / Ongoing"
           icon={Clock}
@@ -324,7 +306,7 @@ export default function CompaniesVisitedManager({ currentUser, onDataChange }) {
           border="rgba(245, 158, 11, 0.25)"
         />
         <MotionKpiCard
-          title="Total Offers"
+          label="Total Offers"
           value={stats.totalOffers}
           subtext="Resulting from Drives"
           icon={Award}

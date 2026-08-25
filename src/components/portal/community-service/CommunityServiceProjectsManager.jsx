@@ -141,7 +141,7 @@ export default function CommunityServiceProjectsManager({ currentUser, onDataCha
     semester: 'III-I',
     section: 'A',
     batch: '2023-2027',
-    projectType: 'Awareness Campaign',
+    projectType: 'Rural Field Survey',
     community: '',
     partnerOrganization: '',
     startDate: '',
@@ -154,10 +154,10 @@ export default function CommunityServiceProjectsManager({ currentUser, onDataCha
     findings: '',
     outcomes: '',
     recommendations: '',
-    beneficiaryType: 'Rural Community',
+    beneficiaryType: '',
     beneficiaryCount: '',
     stage: 'ACTIVE',
-    workflowStatus: 'APPROVED',
+    workflowStatus: 'DRAFT',
     students: []
   });
 
@@ -186,10 +186,10 @@ export default function CommunityServiceProjectsManager({ currentUser, onDataCha
       findings: '',
       outcomes: '',
       recommendations: '',
-      beneficiaryType: 'Rural Residents',
+      beneficiaryType: '',
       beneficiaryCount: '',
       stage: 'ACTIVE',
-      workflowStatus: 'APPROVED',
+      workflowStatus: 'DRAFT',
       students: []
     });
     setWizardOpen(true);
@@ -213,10 +213,16 @@ export default function CommunityServiceProjectsManager({ currentUser, onDataCha
 
     // Lookup in Student Master
     const found = studentsMaster.find(sm => sm.rollNumber.toUpperCase() === cleanRoll);
+    if (!found) {
+      showToast(`Student roll "${cleanRoll}" not found in Student Master. Please verify the roll number.`);
+      return;
+    }
+
     const newStudent = {
       rollNumber: cleanRoll,
-      studentName: found ? found.name : cleanRoll,
-      isLeader: formData.students.length === 0 // First student is leader by default
+      studentName: found.name || found.fullName || cleanRoll,
+      department: found.department || formData.department,
+      isLeader: formData.students.length === 0
     };
 
     setFormData(prev => ({
@@ -308,44 +314,26 @@ export default function CommunityServiceProjectsManager({ currentUser, onDataCha
   return (
     <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       <ModulePageHeader
-        badge="Student Development"
-        badgeIcon={HeartHandshake}
+        breadcrumbs={[
+          { label: 'Dashboard' },
+          { label: 'Student Development' },
+          { label: 'Community Service Projects' }
+        ]}
         title="Community Service Projects"
-        description="Field outreach, community problem-solving, and societal impact initiatives conducted by ET students."
-        actions={
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <MotionButton
-              variant="outline"
-              size="sm"
-              icon={Download}
-              onClick={handleExportCSV}
-            >
-              Export CSV
-            </MotionButton>
-            <MotionButton
-              variant="outline"
-              size="sm"
-              icon={Download}
-              onClick={handleExportPDF}
-            >
-              Export PDF
-            </MotionButton>
-            <MotionButton
-              variant="primary"
-              size="sm"
-              icon={Plus}
-              onClick={handleOpenCreate}
-            >
-              Add Project
-            </MotionButton>
-          </div>
-        }
+        subtitle="Field outreach, community problem-solving, and societal impact initiatives conducted by ET students."
+        onExportCSV={handleExportCSV}
+        onExportPDF={handleExportPDF}
+        primaryAction={{
+          label: 'Add Project',
+          icon: Plus,
+          onClick: handleOpenCreate
+        }}
       />
 
       {/* KPI Summary Grid */}
       <AnimatedKpiGrid>
         <MotionKpiCard
-          title="Total Projects"
+          label="Total Projects"
           value={stats.total}
           subtext="ET Community Initiatives"
           icon={HeartHandshake}
@@ -354,7 +342,7 @@ export default function CommunityServiceProjectsManager({ currentUser, onDataCha
           border="rgba(59, 130, 246, 0.25)"
         />
         <MotionKpiCard
-          title="Active Projects"
+          label="Active Projects"
           value={stats.active}
           subtext="In Progress in Community"
           icon={Clock}
@@ -363,7 +351,7 @@ export default function CommunityServiceProjectsManager({ currentUser, onDataCha
           border="rgba(245, 158, 11, 0.25)"
         />
         <MotionKpiCard
-          title="Completed Projects"
+          label="Completed Projects"
           value={stats.completed}
           subtext="Evaluated & Documented"
           icon={CheckCircle2}
@@ -372,7 +360,7 @@ export default function CommunityServiceProjectsManager({ currentUser, onDataCha
           border="rgba(16, 185, 129, 0.25)"
         />
         <MotionKpiCard
-          title="Participating Students"
+          label="Participating Students"
           value={stats.studentsCount}
           subtext="Enrolled in Projects"
           icon={Users}

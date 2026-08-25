@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Grid, 
   Smartphone, 
@@ -11,7 +11,10 @@ import {
   Lock, 
   Key, 
   ChevronRight,
-  ShieldAlert
+  ShieldAlert,
+  CheckCircle2,
+  AlertTriangle,
+  AlertCircle
 } from 'lucide-react';
 import { 
   getRolePermissions, 
@@ -152,6 +155,31 @@ export function IamSessionsManager({ currentUser }) {
     showToast('All other active sessions revoked.');
   };
 
+  // Derive real display sessions including current authenticated session
+  const displaySessions = useMemo(() => {
+    if (sessions && sessions.length > 0) {
+      return sessions.map((s, idx) => ({
+        ...s,
+        isCurrent: idx === 0 || s.userId === currentUser?.id || s.email === currentUser?.email
+      }));
+    }
+
+    if (!currentUser) return [];
+
+    return [{
+      id: 'current-auth-session',
+      userName: currentUser.name || currentUser.username || 'Current Administrator',
+      email: currentUser.email || `${currentUser.username || 'admin'}@nec.edu.in`,
+      role: currentUser.role || 'SUPER_ADMIN',
+      device: typeof navigator !== 'undefined' ? `${navigator.platform || 'Desktop'} • Verified Web Client` : 'Active Browser Session',
+      ipAddress: 'Active Session (Secure TLS)',
+      createdAt: new Date().toISOString(),
+      isCurrent: true
+    }];
+  }, [sessions, currentUser]);
+
+  const otherSessionsCount = displaySessions.filter(s => !s.isCurrent).length;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem', width: '100%', position: 'relative' }}>
       {toastMessage && (
@@ -180,10 +208,23 @@ export function IamSessionsManager({ currentUser }) {
 
         <button
           type="button"
+          disabled={otherSessionsCount === 0}
           onClick={() => setConfirmRevokeAll(true)}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', padding: '0.5rem 0.85rem', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.35rem',
+            background: otherSessionsCount === 0 ? '#F1F5F9' : '#FEF2F2',
+            border: otherSessionsCount === 0 ? '1px solid #E2E8F0' : '1px solid #FECACA',
+            color: otherSessionsCount === 0 ? '#94A3B8' : '#DC2626',
+            padding: '0.5rem 0.85rem',
+            borderRadius: '8px',
+            fontSize: '0.78rem',
+            fontWeight: 700,
+            cursor: otherSessionsCount === 0 ? 'not-allowed' : 'pointer'
+          }}
         >
-          <Trash2 size={14} /> Terminate All Other Sessions
+          <Trash2 size={14} /> Terminate All Other Sessions ({otherSessionsCount})
         </button>
       </div>
 
@@ -200,37 +241,59 @@ export function IamSessionsManager({ currentUser }) {
             </tr>
           </thead>
           <tbody>
-            {sessions.map(s => (
-              <tr key={s.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                <td style={{ padding: '0.85rem 1rem' }}>
-                  <div style={{ fontWeight: 800, color: '#0F172A' }}>{s.userName || s.name || 'User'}</div>
-                  <div style={{ fontSize: '0.7rem', color: '#64748B' }}>{s.email}</div>
-                </td>
-                <td style={{ padding: '0.85rem 1rem' }}>
-                  <span style={{ padding: '0.15rem 0.5rem', borderRadius: '4px', background: '#EFF6FF', color: '#1D4ED8', fontSize: '0.7rem', fontWeight: 700 }}>
-                    {s.role}
-                  </span>
-                </td>
-                <td style={{ padding: '0.85rem 1rem', color: '#334155' }}>
-                  {s.device || s.userAgent || 'Chrome on Windows 11'}
-                </td>
-                <td style={{ padding: '0.85rem 1rem', fontFamily: 'monospace', color: '#64748B' }}>
-                  {s.ipAddress || '192.168.1.102'}
-                </td>
-                <td style={{ padding: '0.85rem 1rem', fontSize: '0.74rem', color: '#64748B' }}>
-                  {new Date(s.createdAt || Date.now()).toLocaleTimeString()}
-                </td>
-                <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
-                  <button
-                    type="button"
-                    onClick={() => handleRevoke(s.id)}
-                    style={{ padding: '0.3rem 0.6rem', borderRadius: '6px', background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}
-                  >
-                    Revoke
-                  </button>
+            {displaySessions.length === 0 ? (
+              <tr>
+                <td colSpan={6} style={{ padding: '3rem 1rem', textAlign: 'center', color: '#94A3B8', fontSize: '0.84rem' }}>
+                  <ShieldCheck size={28} style={{ color: '#10B981', marginBottom: '0.4rem' }} />
+                  <div>No active sessions found.</div>
                 </td>
               </tr>
-            ))}
+            ) : (
+              displaySessions.map(s => (
+                <tr key={s.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                  <td style={{ padding: '0.85rem 1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <span style={{ fontWeight: 800, color: '#0F172A' }}>{s.userName || s.name || 'User'}</span>
+                      {s.isCurrent && (
+                        <span style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#047857', padding: '0.1rem 0.4rem', borderRadius: '9999px', fontSize: '0.64rem', fontWeight: 800 }}>
+                          Current Session
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: '#64748B' }}>{s.email}</div>
+                  </td>
+                  <td style={{ padding: '0.85rem 1rem' }}>
+                    <span style={{ padding: '0.15rem 0.5rem', borderRadius: '4px', background: '#EFF6FF', color: '#1D4ED8', fontSize: '0.7rem', fontWeight: 700 }}>
+                      {s.role}
+                    </span>
+                  </td>
+                  <td style={{ padding: '0.85rem 1rem', color: '#334155' }}>
+                    {s.device || s.userAgent || (s.isCurrent ? 'Current Web Client' : 'Not recorded')}
+                  </td>
+                  <td style={{ padding: '0.85rem 1rem', fontFamily: 'monospace', color: '#64748B' }}>
+                    {s.ipAddress || 'Not recorded'}
+                  </td>
+                  <td style={{ padding: '0.85rem 1rem', fontSize: '0.74rem', color: '#64748B' }}>
+                    {new Date(s.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </td>
+                  <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
+                    {s.isCurrent ? (
+                      <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 700 }}>
+                        Active
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleRevoke(s.id)}
+                        style={{ padding: '0.3rem 0.6rem', borderRadius: '6px', background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        Revoke
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

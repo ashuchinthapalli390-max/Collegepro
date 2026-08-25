@@ -31,7 +31,7 @@ import {
   Layers,
   Star
 } from 'lucide-react';
-import { DEPARTMENTS, FACULTY_DATA } from '../../../data/masterData.js';
+import { ET_DEPARTMENTS } from '../../../data/masterData.js';
 import { saveAcademicEvent, getMoUs } from '../../../data/portalStore.js';
 import FormField from '../../ui/form/FormField.jsx';
 import { Input, DateInput, Select, Textarea } from '../../ui/form/FormControls.jsx';
@@ -159,22 +159,22 @@ export default function AcademicEventWizardModal({
       };
     }
 
-    const defaultDept = currentUser?.role === 'HOD' ? (currentUser.dept || 'CSE') : 'CSE';
+    const defaultDept = currentUser?.role === 'HOD' ? (currentUser.dept || 'CYS') : 'CYS';
 
     return {
       eventType: 'Workshop',
       title: '',
       department: defaultDept,
-      academicYear: '2025-26',
+      academicYear: '2026-27',
       startDate: new Date().toISOString().split('T')[0],
       endDate: new Date().toISOString().split('T')[0],
       startTime: '09:30',
       endTime: '16:30',
       mode: 'Offline',
-      venue: 'Main Seminar Hall',
+      venue: '',
       platformName: '',
       privateMeetingUrl: '',
-      level: 'Institution',
+      level: 'Department',
       description: '',
       objectives: '',
       
@@ -697,7 +697,7 @@ export default function AcademicEventWizardModal({
                       onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                       error={!!errors.department}
                     >
-                      {DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.name} ({d.code})</option>)}
+                      {ET_DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.name} ({d.code})</option>)}
                     </Select>
                   </FormField>
 

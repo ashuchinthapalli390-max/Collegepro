@@ -7,24 +7,27 @@ import {
   Layers, 
   CheckCircle2,
   Plus,
-  X
+  X,
+  Eye
 } from 'lucide-react';
+import NECDocumentViewer from '../shared/NECDocumentViewer.jsx';
 
 export default function RegulationsHubManager({ currentUser }) {
   const [modalOpen, setModalOpen] = useState(false);
+  const [activePreviewDoc, setActivePreviewDoc] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
 
   const [regulations, setRegulations] = useState([
-    { code: 'R24', title: 'Autonomous Academic Regulations R24 (CBCS & NEP-2020 Aligned)', effectiveBatch: '2024-2028 Onwards', programs: 'B.Tech, M.Tech, MCA, MBA', credits: 160, status: 'Active (Current)', pdf: 'NEC_R24_Academic_Regulations.pdf' },
-    { code: 'R20', title: 'Autonomous Academic Regulations R20 (Outcome Based Education)', effectiveBatch: '2020-2024 Batches', programs: 'B.Tech, M.Tech, MCA, MBA', credits: 160, status: 'Active (Graduating)', pdf: 'NEC_R20_Academic_Regulations.pdf' },
-    { code: 'R19', title: 'Autonomous Academic Regulations R19', effectiveBatch: '2019-2023 Batches', programs: 'B.Tech, M.Tech', credits: 160, status: 'Archived', pdf: 'NEC_R19_Academic_Regulations.pdf' }
+    { code: 'R24', title: 'Autonomous Academic Regulations R24 (CBCS & NEP-2020 Aligned)', effectiveBatch: '2024-2028 Onwards', programs: 'B.Tech (Emerging Technologies: CYS, DS, AI, AIML)', credits: 160, status: 'Active (Current)', pdf: 'NEC_R24_Academic_Regulations.pdf' },
+    { code: 'R20', title: 'Autonomous Academic Regulations R20 (Outcome Based Education)', effectiveBatch: '2020-2024 Batches', programs: 'B.Tech (Emerging Technologies: CYS, DS, AI, AIML)', credits: 160, status: 'Active (Graduating)', pdf: 'NEC_R20_Academic_Regulations.pdf' },
+    { code: 'R19', title: 'Autonomous Academic Regulations R19', effectiveBatch: '2019-2023 Batches', programs: 'B.Tech (Emerging Technologies)', credits: 160, status: 'Archived', pdf: 'NEC_R19_Academic_Regulations.pdf' }
   ]);
 
   const [newReg, setNewReg] = useState({
     code: '',
     title: '',
     effectiveBatch: '',
-    programs: 'B.Tech, M.Tech, MCA, MBA',
+    programs: 'B.Tech (Emerging Technologies: CYS, DS, AI, AIML)',
     credits: 160,
     status: 'Active (Current)'
   });
@@ -32,6 +35,32 @@ export default function RegulationsHubManager({ currentUser }) {
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const handleDownloadRegulation = (r) => {
+    const textBlob = new Blob([
+      `NARASARAOPETA ENGINEERING COLLEGE (AUTONOMOUS)\n` +
+      `DEPARTMENT OF EMERGING TECHNOLOGIES\n\n` +
+      `ACADEMIC REGULATIONS & COURSE SCHEME - ${r.code}\n` +
+      `============================================================\n` +
+      `Title: ${r.title}\n` +
+      `Applicability: ${r.effectiveBatch}\n` +
+      `Programs: ${r.programs}\n` +
+      `Total Graduation Credits: ${r.credits} Credits\n` +
+      `Status: ${r.status}\n\n` +
+      `Document Reference: ${r.pdf}\n` +
+      `Certified Official Copy • Autonomous Academic Council Approved\n`
+    ], { type: 'text/plain;charset=utf-8' });
+
+    const url = URL.createObjectURL(textBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = r.pdf.replace(/\.pdf$/, '.txt') || `NEC_${r.code}_Regulations.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast(`Downloaded official regulations documentation for ${r.code}.`);
   };
 
   const handleUpload = (e) => {
@@ -48,7 +77,7 @@ export default function RegulationsHubManager({ currentUser }) {
       code: '',
       title: '',
       effectiveBatch: '',
-      programs: 'B.Tech, M.Tech, MCA, MBA',
+      programs: 'B.Tech (Emerging Technologies: CYS, DS, AI, AIML)',
       credits: 160,
       status: 'Active (Current)'
     });
@@ -124,13 +153,15 @@ export default function RegulationsHubManager({ currentUser }) {
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => showToast(`Initiating download for ${r.code} official document (${r.pdf})`)}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.55rem 1rem', background: '#070F1E', color: '#F1C40F', border: 'none', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer' }}
-            >
-              <Download size={14} /> Download {r.code} Regulations PDF
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <button
+                type="button"
+                onClick={() => handleDownloadRegulation(r)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.55rem 1rem', background: '#070F1E', color: '#F1C40F', border: 'none', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer' }}
+              >
+                <Download size={14} /> Download {r.code} Document
+              </button>
+            </div>
           </div>
         ))}
       </div>

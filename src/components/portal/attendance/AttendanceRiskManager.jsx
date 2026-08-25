@@ -374,24 +374,30 @@ export default function AttendanceRiskManager({ currentUser }) {
                 boxShadow: '0 2px 8px rgba(241,196,15,0.3)'
               }}
             >
-              <UploadCloud size={15} /> Upload Attendance CSV
+              <UploadCloud size={15} /> Smart Import Attendance
             </button>
 
             <button
               type="button"
-              onClick={() => generateParentContactSheetPDF(alertsList, { departmentCode: deptFilter, semester: semesterFilter, threshold }, true, currentUser)}
+              disabled={alertsList.length === 0}
+              title={alertsList.length === 0 ? 'No low attendance alerts in current cohort to generate parent contact sheet' : 'Generate official Parent Contact PDF'}
+              onClick={() => {
+                if (alertsList.length === 0) return;
+                generateParentContactSheetPDF(alertsList, { departmentCode: deptFilter, semester: semesterFilter, threshold }, true, currentUser);
+              }}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.4rem',
-                background: 'rgba(255,255,255,0.1)',
-                color: '#FFFFFF',
+                background: alertsList.length === 0 ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.1)',
+                color: alertsList.length === 0 ? '#64748B' : '#FFFFFF',
                 border: '1px solid rgba(255,255,255,0.2)',
                 padding: '0.55rem 0.9rem',
                 borderRadius: '8px',
                 fontSize: '0.8rem',
                 fontWeight: 700,
-                cursor: 'pointer'
+                cursor: alertsList.length === 0 ? 'not-allowed' : 'pointer',
+                opacity: alertsList.length === 0 ? 0.6 : 1
               }}
             >
               <FileText size={15} /> Parent Contact Sheet PDF
@@ -430,7 +436,7 @@ export default function AttendanceRiskManager({ currentUser }) {
       <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid #E2E8F0', paddingBottom: '0.5rem', flexWrap: 'wrap' }}>
         {[
           { id: 'risk-list', label: 'Active Attendance Risk List', icon: AlertTriangle, count: stats.totalAlerts },
-          { id: 'upload-wizard', label: 'Attendance CSV Ingestion', icon: UploadCloud },
+          { id: 'upload-wizard', label: 'Smart Attendance Import', icon: UploadCloud },
           { id: 'contact-ledger', label: 'Parent Communication Ledger', icon: PhoneCall, count: contactsLedger.length },
           { id: 'student-directory', label: 'Student Master Directory', icon: Users, count: studentsList.length },
           { id: 'import-history', label: 'Import History & Batches', icon: Layers, count: importHistory.length }
@@ -552,15 +558,43 @@ export default function AttendanceRiskManager({ currentUser }) {
             <div style={{ display: 'flex', gap: '0.35rem' }}>
               <button
                 type="button"
+                disabled={alertsList.length === 0}
                 onClick={() => exportAttendanceRiskList(alertsList, 'csv', false, currentUser)}
-                style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#F8FAFC', color: '#334155', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                style={{
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid #CBD5E1',
+                  background: '#F8FAFC',
+                  color: alertsList.length === 0 ? '#94A3B8' : '#334155',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  cursor: alertsList.length === 0 ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  opacity: alertsList.length === 0 ? 0.6 : 1
+                }}
               >
                 <Download size={13} /> Export CSV
               </button>
               <button
                 type="button"
+                disabled={alertsList.length === 0}
                 onClick={() => exportAttendanceRiskList(alertsList, 'excel', false, currentUser)}
-                style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#F8FAFC', color: '#334155', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                style={{
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid #CBD5E1',
+                  background: '#F8FAFC',
+                  color: alertsList.length === 0 ? '#94A3B8' : '#334155',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  cursor: alertsList.length === 0 ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  opacity: alertsList.length === 0 ? 0.6 : 1
+                }}
               >
                 <FileSpreadsheet size={13} /> Excel
               </button>

@@ -14,7 +14,7 @@ import {
   Check, 
   X
 } from 'lucide-react';
-import { DEPARTMENTS } from '../../../data/masterData.js';
+import { ET_DEPARTMENTS } from '../../../data/masterData.js';
 import { 
   getMoUs, 
   getAcademicEvents, 
@@ -845,7 +845,7 @@ export default function AcademicEventBulkImportModal({ isOpen, onClose, currentU
                               >
                                 <option value="">Select Dept...</option>
                                 <option value="ALL">ALL (Institution)</option>
-                                {DEPARTMENTS.map(d => (
+                                {ET_DEPARTMENTS.map(d => (
                                   <option key={d.code} value={d.code}>{d.code}</option>
                                 ))}
                               </select>

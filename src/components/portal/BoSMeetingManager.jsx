@@ -56,12 +56,13 @@ import {
   exportBoSToPDF,
   exportBoSReportToPDF
 } from '../../data/portalStore.js';
-import { ET_DEPARTMENTS } from '../../data/masterData.js';
+import { ET_DEPARTMENTS, normalizeDepartment } from '../../data/masterData.js';
 import { 
   getWorkflowBadge, 
   StatusBadge 
 } from '../../lib/ui/statusBadges.jsx';
 import BosWizardModal from './bos/BosWizardModal.jsx';
+import NECDocumentViewer from './shared/NECDocumentViewer.jsx';
 import { 
   MotionPage, 
   ModulePageHeader, 
@@ -167,7 +168,7 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
 
   const canEditRecord = (meeting) => {
     if (isSuperAdmin || isAdmin) return true;
-    if (isHOD && meeting.department === currentUser?.dept) {
+    if (isHOD && normalizeDepartment(meeting.department).code === normalizeDepartment(currentUser?.dept).code) {
       return ['DRAFT', 'NEEDS_REVISION'].includes(meeting.workflowStatus);
     }
     return false;
@@ -177,7 +178,7 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
     if (isSuperAdmin) return true;
     if (meeting.workflowStatus === 'DRAFT') {
       if (isAdmin) return true;
-      if (isHOD && meeting.department === currentUser?.dept) return true;
+      if (isHOD && normalizeDepartment(meeting.department).code === normalizeDepartment(currentUser?.dept).code) return true;
       return Boolean(currentUser?.permissions?.includes('bos.delete'));
     }
     return false;
@@ -185,7 +186,7 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
 
   const canArchiveRecord = (meeting) => {
     if (meeting.workflowStatus === 'ARCHIVED') return false;
-    return isSuperAdmin || isAdmin || (isHOD && meeting.department === currentUser?.dept);
+    return isSuperAdmin || isAdmin || (isHOD && normalizeDepartment(meeting.department).code === normalizeDepartment(currentUser?.dept).code);
   };
 
   // Filtered Meetings List
@@ -200,10 +201,12 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
       (m.universityNominee?.name && m.universityNominee.name.toLowerCase().includes(q)) ||
       (m.regulations && m.regulations.some(r => r.toLowerCase().includes(q)));
 
-    // HOD Department Restriction
+    // Canonical HOD & Department Code Matching
+    const meetingDeptCode = normalizeDepartment(m.department).code;
+    const userDeptCode = normalizeDepartment(currentUser?.dept).code;
     const matchesDept = currentUser?.role === 'HOD' 
-      ? m.department === currentUser.dept 
-      : (selectedDeptFilter === 'ALL' || m.department === selectedDeptFilter);
+      ? meetingDeptCode === userDeptCode 
+      : (selectedDeptFilter === 'ALL' || meetingDeptCode === selectedDeptFilter);
 
     const matchesReg = selectedRegulationFilter === 'ALL' || (m.regulations && m.regulations.includes(selectedRegulationFilter));
     const matchesStatus = selectedStatusFilter === 'ALL' || m.workflowStatus === selectedStatusFilter;
@@ -212,12 +215,12 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
     return matchesSearch && matchesDept && matchesReg && matchesStatus && matchesYear;
   });
 
-  // KPI Metrics Summary
-  const totalCount = meetings.length;
-  const draftCount = meetings.filter(m => m.workflowStatus === 'DRAFT').length;
-  const reviewCount = meetings.filter(m => ['SUBMITTED', 'UNDER_REVIEW', 'NEEDS_REVISION'].includes(m.workflowStatus)).length;
-  const approvedCount = meetings.filter(m => m.workflowStatus === 'APPROVED').length;
-  const currentYearCount = meetings.filter(m => m.academicYear === '2025-26').length;
+  // KPI Metrics Summary (Synchronized strictly with filtered projection)
+  const totalCount = filteredMeetings.length;
+  const draftCount = filteredMeetings.filter(m => m.workflowStatus === 'DRAFT').length;
+  const reviewCount = filteredMeetings.filter(m => ['SUBMITTED', 'UNDER_REVIEW', 'NEEDS_REVISION'].includes(m.workflowStatus)).length;
+  const approvedCount = filteredMeetings.filter(m => m.workflowStatus === 'APPROVED').length;
+  const currentYearCount = filteredMeetings.filter(m => m.academicYear === '2026-27' || m.academicYear === '2025-26').length;
 
   // Open Create Wizard (100% EMPTY initial state)
   const handleOpenCreate = () => {
@@ -418,7 +421,10 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
               style={{ width: '100%', padding: '0.45rem', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.78rem', outline: 'none', background: currentUser?.role === 'HOD' ? '#F1F5F9' : '#FFFFFF' }}
             >
               {currentUser?.role !== 'HOD' && <option value="ALL">All ET Departments</option>}
-              {ET_DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.name} ({d.code})</option>)}
+              <option value="CYS">Cyber Security</option>
+              <option value="DS">Data Science</option>
+              <option value="AI">Artificial Intelligence</option>
+              <option value="AIML">AI & ML</option>
             </select>
           </div>
 
@@ -1397,83 +1403,14 @@ export default function BoSMeetingManager({ currentUser, onDataChange }) {
       )}
 
       {/* 10. Official Scanned PDF Viewer Modal */}
-      {activePdfDoc && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(7, 15, 30, 0.88)',
-          backdropFilter: 'blur(8px)',
-          display: 'flex',
-          flexDirection: 'column',
-          zIndex: 8500,
-          padding: '1rem'
-        }}>
-          <div style={{
-            background: '#0F172A',
-            borderRadius: '12px 12px 0 0',
-            padding: '0.75rem 1.25rem',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            borderBottom: '1px solid #334155'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <FileText size={20} style={{ color: '#D4AF37' }} />
-              <div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#FFFFFF' }}>
-                  {activePdfDoc.title || activePdfDoc.filename}
-                </div>
-                <div style={{ fontSize: '0.72rem', color: '#94A3B8' }}>
-                  {activePdfDoc.filename} • Verified Official Signed Minutes Package
-                </div>
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <a
-                href={activePdfDoc.downloadUrl || activePdfDoc.url || `/documents/bos/cse-cys/${activePdfDoc.filename}`}
-                download={activePdfDoc.filename}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  background: '#D4AF37',
-                  color: '#0F172A',
-                  border: 'none',
-                  padding: '0.45rem 0.9rem',
-                  borderRadius: '6px',
-                  fontSize: '0.76rem',
-                  fontWeight: 800,
-                  textDecoration: 'none',
-                  cursor: 'pointer'
-                }}
-              >
-                <Download size={13} /> Download PDF
-              </a>
-              <button
-                type="button"
-                onClick={() => setActivePdfDoc(null)}
-                style={{
-                  background: '#334155',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  padding: '0.45rem 0.65rem',
-                  borderRadius: '6px',
-                  cursor: 'pointer'
-                }}
-              >
-                <X size={16} />
-              </button>
-            </div>
-          </div>
-          <div style={{ flex: 1, background: '#1E293B', borderRadius: '0 0 12px 12px', overflow: 'hidden' }}>
-            <iframe
-              src={activePdfDoc.downloadUrl || activePdfDoc.url || `/documents/bos/cse-cys/${activePdfDoc.filename}`}
-              title={activePdfDoc.title || 'Official Document Viewer'}
-              style={{ width: '100%', height: '100%', border: 'none' }}
-            />
-          </div>
-        </div>
-      )}
+      <NECDocumentViewer
+        isOpen={Boolean(activePdfDoc)}
+        onClose={() => setActivePdfDoc(null)}
+        title={activePdfDoc?.title || 'BoS Official Minutes & Regulations'}
+        subtitle={`Official Signed Package • ${activePdfDoc?.filename || 'Document'}`}
+        documentUrl={activePdfDoc?.downloadUrl || activePdfDoc?.url || (activePdfDoc?.filename ? `/documents/bos/cse-cys/${activePdfDoc.filename}` : '')}
+        fileName={activePdfDoc?.filename || 'BoS_Document.pdf'}
+      />
     </MotionPage>
   );
 }

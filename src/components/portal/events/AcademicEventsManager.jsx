@@ -31,7 +31,7 @@ import {
   X,
   UploadCloud
 } from 'lucide-react';
-import { ET_DEPARTMENTS } from '../../../data/masterData.js';
+import { ET_DEPARTMENTS, normalizeDepartment } from '../../../data/masterData.js';
 import { 
   getAcademicEvents, 
   reviewAcademicEvent, 
@@ -150,12 +150,11 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
         (item.speakers && item.speakers.some(s => s.name && s.name.toLowerCase().includes(q))) ||
         (item.coordinators && item.coordinators.some(c => c.name && c.name.toLowerCase().includes(q)));
 
-      const itemDept = String(item.department || item.departmentCodes || '').toLowerCase();
+      const eventDeptNorm = normalizeDepartment(item.department || item.departmentCodes || item.targetDepartment || '').code;
       const matchDept = selectedDept === 'ALL' || 
-        itemDept === 'all' || 
-        itemDept.includes('all') || 
-        itemDept.includes(selectedDept.toLowerCase()) ||
-        (selectedDept === 'CSE' && (itemDept.includes('cys') || itemDept.includes('ai') || itemDept.includes('ds') || itemDept.includes('cs')));
+        eventDeptNorm === selectedDept || 
+        item.isInstitutionWide ||
+        (item.department && String(item.department).toLowerCase().includes('all'));
 
       const matchAy = selectedAy === 'ALL' || item.academicYear === selectedAy;
 
@@ -240,6 +239,74 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
     }
   };
 
+  const handleExportCSV = () => {
+    const rows = [];
+    filteredEvents.forEach(e => {
+      const sections = e.sectionBreakdown ? e.sectionBreakdown.split(',').map(s => s.trim()) : (e.sections || ['A']);
+      sections.forEach(sec => {
+        rows.push({
+          'Event Number': e.eventNumber || '—',
+          'Event Title': e.title || e.name || '—',
+          'Event Type': e.eventType || e.type || 'Workshop',
+          'Department': e.department || 'CYS',
+          'Academic Year': e.academicYear || '—',
+          'Section': sec,
+          'Start Date': e.startDate || e.date || '—',
+          'End Date': e.endDate || '—',
+          'Venue': e.venue || '—',
+          'Coordinator': e.coordinators?.[0]?.name || e.coordinator || '—',
+          'Status': e.eventStatus || 'COMPLETED'
+        });
+      });
+    });
+    exportToCSV(rows, `ET_Academic_Events_${selectedDept}`, currentUser);
+    showToast(`Exported ${rows.length} event rows to CSV.`);
+  };
+
+  const handleExportExcel = () => {
+    const rows = [];
+    filteredEvents.forEach(e => {
+      const sections = e.sectionBreakdown ? e.sectionBreakdown.split(',').map(s => s.trim()) : (e.sections || ['A']);
+      sections.forEach(sec => {
+        rows.push({
+          'Event Number': e.eventNumber || '—',
+          'Event Title': e.title || e.name || '—',
+          'Event Type': e.eventType || e.type || 'Workshop',
+          'Department': e.department || 'CYS',
+          'Academic Year': e.academicYear || '—',
+          'Section': sec,
+          'Start Date': e.startDate || e.date || '—',
+          'End Date': e.endDate || '—',
+          'Venue': e.venue || '—',
+          'Coordinator': e.coordinators?.[0]?.name || e.coordinator || '—',
+          'Status': e.eventStatus || 'COMPLETED'
+        });
+      });
+    });
+    exportToExcel(rows, `ET_Academic_Events_${selectedDept}`, 'Academic Events', currentUser);
+    showToast(`Exported ${rows.length} event rows to Excel.`);
+  };
+
+  const handleExportPDF = () => {
+    const rows = [];
+    filteredEvents.forEach(e => {
+      const sections = e.sectionBreakdown ? e.sectionBreakdown.split(',').map(s => s.trim()) : (e.sections || ['A']);
+      sections.forEach(sec => {
+        rows.push([
+          e.eventNumber || '—',
+          e.title || e.name || '—',
+          e.eventType || e.type || 'Workshop',
+          e.department || 'CYS',
+          sec,
+          e.startDate || e.date || '—',
+          e.eventStatus || 'COMPLETED'
+        ]);
+      });
+    });
+    exportToPDF('ET Academic Events & Workshops Report', ['Event No.', 'Title', 'Type', 'Dept', 'Sec', 'Date', 'Status'], rows, `ET_Events_${selectedDept}`);
+    showToast(`Exported ${rows.length} event rows to PDF.`);
+  };
+
   return (
     <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem', position: 'relative' }}>
       {toastMessage && (
@@ -257,9 +324,9 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
         ]}
         title="Academic Events & Workshops"
         subtitle="Manage workshops, seminars, guest lectures, hackathons, code-a-thons and institutional events."
-        onExportCSV={() => exportToCSV('events')}
-        onExportExcel={() => exportToExcel('events')}
-        onExportPDF={() => exportToPDF('events')}
+        onExportCSV={handleExportCSV}
+        onExportExcel={handleExportExcel}
+        onExportPDF={handleExportPDF}
         customActions={
           <>
             <button
@@ -306,7 +373,7 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
                   boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
                 }}
               >
-                <UploadCloud size={14} /> Bulk Import CSV
+                <UploadCloud size={14} /> Smart Import
               </button>
             )}
           </>
@@ -350,11 +417,12 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
                 fontSize: '0.76rem',
                 fontWeight: isSelected ? 800 : 600,
                 cursor: 'pointer',
+                transition: 'all 0.15s ease',
                 whiteSpace: 'nowrap'
               }}
             >
               {Icon && <Icon size={13} />}
-              <span>{tab.label}</span>
+              {tab.label}
             </button>
           );
         })}
@@ -381,8 +449,11 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
               onChange={(e) => setSelectedDept(e.target.value)}
               style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', background: '#FFFFFF', color: '#0F172A', fontWeight: 600 }}
             >
-              <option value="ALL">All Departments</option>
-              {DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.code}</option>)}
+              <option value="ALL">All ET Departments</option>
+              <option value="CYS">Cyber Security</option>
+              <option value="DS">Data Science</option>
+              <option value="AI">Artificial Intelligence</option>
+              <option value="AIML">AI & ML</option>
             </select>
 
             <select

@@ -28,7 +28,7 @@ import {
   BookOpen,
   Layers
 } from 'lucide-react';
-import { ET_DEPARTMENTS, FACULTY_DATA } from '../../../data/masterData.js';
+import { ET_DEPARTMENTS, normalizeDepartment } from '../../../data/masterData.js';
 import { 
   getNPTEL, 
   reviewNPTEL, 
@@ -59,7 +59,6 @@ export default function NptelCertificationsManager({ currentUser, onDataChange }
   const [wizardOpen, setWizardOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [dossierModalItem, setDossierModalItem] = useState(null);
-  const [dossierActiveTab, setDossierActiveTab] = useState('overview');
   const [reviewModalItem, setReviewModalItem] = useState(null);
   const [reviewAction, setReviewAction] = useState('APPROVE');
   const [reviewRemarks, setReviewRemarks] = useState('');
@@ -71,11 +70,9 @@ export default function NptelCertificationsManager({ currentUser, onDataChange }
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // Quick Tab Filter
-  const [quickTab, setQuickTab] = useState('ALL');
-
-  // Search & Filter State
+  // Filters State
   const [searchQuery, setSearchQuery] = useState('');
+  const [quickTab, setQuickTab] = useState('ALL'); // 'ALL' | 'STUDENTS' | 'FACULTY' | 'NPTEL' | 'ELITE' | 'PENDING'
   const [selectedDept, setSelectedDept] = useState(currentUser?.role === 'HOD' ? (currentUser.dept || 'ALL') : 'ALL');
   const [selectedAy, setSelectedAy] = useState('ALL');
   const [selectedPlatform, setSelectedPlatform] = useState('ALL');
@@ -92,7 +89,7 @@ export default function NptelCertificationsManager({ currentUser, onDataChange }
   }, [dataVersion]);
 
   // Filtered List
-  const filteredNptel = useMemo(() => {
+  const filteredCertifications = useMemo(() => {
     return nptelList.filter(item => {
       const q = searchQuery.toLowerCase().trim();
       const matchSearch = !q ||
@@ -102,7 +99,7 @@ export default function NptelCertificationsManager({ currentUser, onDataChange }
         (item.courseName && item.courseName.toLowerCase().includes(q)) ||
         (item.certificateId && item.certificateId.toLowerCase().includes(q));
 
-      const itemDept = item.department || '';
+      const itemDept = normalizeDepartment(item.department || '').code;
       const matchDept = selectedDept === 'ALL' || itemDept === selectedDept;
       const matchAy = selectedAy === 'ALL' || item.academicYear === selectedAy;
       const matchPlatform = selectedPlatform === 'ALL' || item.platform === selectedPlatform;
@@ -123,17 +120,17 @@ export default function NptelCertificationsManager({ currentUser, onDataChange }
 
   // KPIs
   const stats = useMemo(() => {
-    const total = filteredNptel.length;
-    const students = filteredNptel.filter(n => n.learnerType === 'STUDENT').length;
-    const faculty = filteredNptel.filter(n => n.learnerType === 'FACULTY').length;
-    const nptel = filteredNptel.filter(n => n.platform === 'NPTEL' || n.platform === 'SWAYAM').length;
-    const elite = filteredNptel.filter(n => n.certificateType && n.certificateType.includes('Elite')).length;
-    const silver = filteredNptel.filter(n => n.certificateType && n.certificateType.includes('Silver')).length;
-    const gold = filteredNptel.filter(n => n.certificateType && (n.certificateType.includes('Gold') || n.certificateType.includes('Topper'))).length;
-    const pendingReview = filteredNptel.filter(n => n.workflowStatus === 'SUBMITTED' || n.workflowStatus === 'UNDER_REVIEW').length;
+    const total = filteredCertifications.length;
+    const students = filteredCertifications.filter(n => n.learnerType === 'STUDENT').length;
+    const faculty = filteredCertifications.filter(n => n.learnerType === 'FACULTY').length;
+    const nptel = filteredCertifications.filter(n => n.platform === 'NPTEL' || n.platform === 'SWAYAM').length;
+    const elite = filteredCertifications.filter(n => n.certificateType && n.certificateType.includes('Elite')).length;
+    const silver = filteredCertifications.filter(n => n.certificateType && n.certificateType.includes('Silver')).length;
+    const gold = filteredCertifications.filter(n => n.certificateType && (n.certificateType.includes('Gold') || n.certificateType.includes('Topper'))).length;
+    const pendingReview = filteredCertifications.filter(n => n.workflowStatus === 'SUBMITTED' || n.workflowStatus === 'UNDER_REVIEW').length;
 
     return { total, students, faculty, nptel, elite, silver, gold, pendingReview };
-  }, [filteredNptel]);
+  }, [filteredCertifications]);
 
   const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'HOD' || currentUser?.role === 'FACULTY';
   const canReview = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'HOD';
@@ -162,7 +159,7 @@ export default function NptelCertificationsManager({ currentUser, onDataChange }
   };
 
   const handleExportCSV = () => {
-    const rows = filteredNptel.map(n => ({
+    const rows = filteredCertifications.map(n => ({
       'Learner Name': n.learnerName,
       'Learner Type': n.learnerType,
       'Roll / Faculty ID': n.rollNumber || n.facultyId || '—',
@@ -180,7 +177,7 @@ export default function NptelCertificationsManager({ currentUser, onDataChange }
   };
 
   const handleExportExcel = () => {
-    const rows = filteredNptel.map(n => ({
+    const rows = filteredCertifications.map(n => ({
       'Learner Name': n.learnerName,
       'Learner Type': n.learnerType,
       'Roll / Faculty ID': n.rollNumber || n.facultyId || '—',
@@ -198,7 +195,7 @@ export default function NptelCertificationsManager({ currentUser, onDataChange }
   };
 
   const handleExportPDF = () => {
-    const rows = filteredNptel.map(n => ({
+    const rows = filteredCertifications.map(n => ({
       'Learner': n.learnerName,
       'Type': n.learnerType,
       'Dept': n.department,
@@ -303,7 +300,10 @@ export default function NptelCertificationsManager({ currentUser, onDataChange }
               style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', background: '#FFFFFF', color: '#0F172A', fontWeight: 600 }}
             >
               <option value="ALL">All ET Departments</option>
-              {ET_DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.name} ({d.code})</option>)}
+              <option value="CYS">Cyber Security</option>
+              <option value="DS">Data Science</option>
+              <option value="AI">Artificial Intelligence</option>
+              <option value="AIML">AI & ML</option>
             </select>
 
             <select

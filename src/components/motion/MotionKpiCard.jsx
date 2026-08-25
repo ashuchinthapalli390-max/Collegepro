@@ -5,6 +5,8 @@ import MotionNumber from './MotionNumber.jsx';
 
 export default function MotionKpiCard({
   label,
+  title,
+  subtext,
   value = 0,
   icon: Icon,
   color = '#0F172A',
@@ -17,6 +19,7 @@ export default function MotionKpiCard({
   style = {}
 }) {
   const shouldReduce = useReducedMotion();
+  const displayLabel = label || title || '';
 
   return (
     <motion.div
@@ -38,7 +41,7 @@ export default function MotionKpiCard({
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-        <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>{label}</span>
+        <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>{displayLabel}</span>
         {Icon && (
           <motion.div
             variants={shouldReduce ? undefined : kpiIconVariants}
@@ -60,6 +63,12 @@ export default function MotionKpiCard({
       >
         <MotionNumber value={value} prefix={prefix} suffix={suffix} />
       </div>
+
+      {subtext && (
+        <div style={{ fontSize: '0.68rem', color: '#94A3B8', marginTop: '0.25rem', fontWeight: 500 }}>
+          {subtext}
+        </div>
+      )}
     </motion.div>
   );
 }

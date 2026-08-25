@@ -124,9 +124,9 @@ export default function CampusPlacementsManager({ currentUser, onDataChange }) {
     department: currentUser?.role === 'HOD' ? (currentUser.dept || 'CYS') : 'CYS',
     academicYear: '2026-27',
     companyName: '',
-    role: 'Cyber Security Analyst',
+    role: '',
     offerType: 'Full-Time',
-    packageLpa: '7.5',
+    packageLpa: '',
     stipendMonthly: '',
     offerDate: new Date().toISOString().split('T')[0],
     status: 'OFFERED'
@@ -140,9 +140,9 @@ export default function CampusPlacementsManager({ currentUser, onDataChange }) {
       department: currentUser?.role === 'HOD' ? (currentUser.dept || 'CYS') : 'CYS',
       academicYear: '2026-27',
       companyName: '',
-      role: 'Associate Software Engineer',
+      role: '',
       offerType: 'Full-Time',
-      packageLpa: '6.5',
+      packageLpa: '',
       stipendMonthly: '',
       offerDate: new Date().toISOString().split('T')[0],
       status: 'OFFERED'
@@ -165,8 +165,9 @@ export default function CampusPlacementsManager({ currentUser, onDataChange }) {
     setFormData(prev => ({
       ...prev,
       studentRoll: roll,
-      studentName: found ? found.name : prev.studentName,
-      department: found && found.department ? found.department : prev.department
+      studentName: found ? (found.name || found.fullName || '') : '',
+      department: found && found.department ? found.department : (currentUser?.dept || 'CYS'),
+      matchStatus: found ? 'MATCHED' : 'UNMATCHED'
     }));
   };
 
@@ -174,6 +175,11 @@ export default function CampusPlacementsManager({ currentUser, onDataChange }) {
     e.preventDefault();
     if (!formData.studentRoll.trim() || !formData.companyName.trim()) {
       showToast('Please provide Student Roll Number and Company Name.');
+      return;
+    }
+
+    if (!formData.studentName.trim()) {
+      showToast(`Student roll "${formData.studentRoll}" is not matched to a registered student. Please verify the roll number.`);
       return;
     }
 
@@ -234,44 +240,26 @@ export default function CampusPlacementsManager({ currentUser, onDataChange }) {
   return (
     <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       <ModulePageHeader
-        badge="Placements & Career"
-        badgeIcon={Award}
+        breadcrumbs={[
+          { label: 'Dashboard' },
+          { label: 'Placements & Career' },
+          { label: 'Campus Placements' }
+        ]}
         title="Campus Placements"
-        description="Student placement outcomes, enterprise offers, salary packages, and career milestone tracking."
-        actions={
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <MotionButton
-              variant="outline"
-              size="sm"
-              icon={Download}
-              onClick={handleExportCSV}
-            >
-              Export CSV
-            </MotionButton>
-            <MotionButton
-              variant="outline"
-              size="sm"
-              icon={Download}
-              onClick={handleExportPDF}
-            >
-              Export PDF
-            </MotionButton>
-            <MotionButton
-              variant="primary"
-              size="sm"
-              icon={Plus}
-              onClick={handleOpenCreate}
-            >
-              Record Placement Offer
-            </MotionButton>
-          </div>
-        }
+        subtitle="Student placement outcomes, enterprise offers, salary packages, and career milestone tracking."
+        onExportCSV={handleExportCSV}
+        onExportPDF={handleExportPDF}
+        primaryAction={{
+          label: 'Record Placement Offer',
+          icon: Plus,
+          onClick: handleOpenCreate
+        }}
       />
 
       {/* KPI Summary Grid */}
       <AnimatedKpiGrid>
         <MotionKpiCard
-          title="Students Placed"
+          label="Students Placed"
           value={stats.uniqueStudents}
           subtext="Unique ET Students"
           icon={UserCheck}
@@ -280,7 +268,7 @@ export default function CampusPlacementsManager({ currentUser, onDataChange }) {
           border="rgba(16, 185, 129, 0.25)"
         />
         <MotionKpiCard
-          title="Total Offers"
+          label="Total Offers"
           value={stats.totalOffers}
           subtext="Offer Letters Issued"
           icon={Award}
@@ -289,7 +277,7 @@ export default function CampusPlacementsManager({ currentUser, onDataChange }) {
           border="rgba(59, 130, 246, 0.25)"
         />
         <MotionKpiCard
-          title="Highest Package"
+          label="Highest Package"
           value={stats.highestPackage}
           subtext="Top Campus CTC"
           icon={DollarSign}
@@ -298,7 +286,7 @@ export default function CampusPlacementsManager({ currentUser, onDataChange }) {
           border="rgba(245, 158, 11, 0.25)"
         />
         <MotionKpiCard
-          title="Average Package"
+          label="Average Package"
           value={stats.avgPackage}
           subtext="Mean Cohort CTC"
           icon={TrendingUp}

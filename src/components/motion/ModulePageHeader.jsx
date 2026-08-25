@@ -14,15 +14,19 @@ export default function ModulePageHeader({
   breadcrumbs = [],
   title,
   subtitle,
+  description,
   onExportCSV,
   onExportExcel,
   onExportPDF,
   primaryAction,
-  customActions
+  customActions,
+  actions
 }) {
   const shouldReduce = useReducedMotion();
   const [exportingType, setExportingType] = useState(null);
   const [successType, setSuccessType] = useState(null);
+  const resolvedSubtitle = subtitle || description || '';
+  const resolvedCustomActions = customActions || actions || null;
 
   const handleExport = async (type, fn) => {
     if (!fn) return;
@@ -94,14 +98,14 @@ export default function ModulePageHeader({
             {title}
           </motion.h1>
 
-          {subtitle && (
+          {resolvedSubtitle && (
             <motion.p
               variants={shouldReduce ? undefined : subtitleVariants}
               initial={shouldReduce ? false : "hidden"}
               animate="visible"
               style={{ fontSize: '0.82rem', color: '#64748B', margin: 0, lineHeight: 1.45 }}
             >
-              {subtitle}
+              {resolvedSubtitle}
             </motion.p>
           )}
         </div>
@@ -138,7 +142,7 @@ export default function ModulePageHeader({
               {successType === 'csv' ? (
                 <Check size={14} style={{ color: '#059669' }} />
               ) : (
-                <Download size={14} />
+                <FileSpreadsheet size={14} />
               )}
               {exportingType === 'csv' ? 'Preparing...' : successType === 'csv' ? 'Ready ✓' : 'CSV'}
             </motion.button>
@@ -162,14 +166,14 @@ export default function ModulePageHeader({
                 borderRadius: '8px',
                 fontSize: '0.78rem',
                 fontWeight: 700,
-                color: successType === 'excel' ? '#059669' : '#10B981',
+                color: successType === 'excel' ? '#059669' : '#059669',
                 cursor: 'pointer'
               }}
             >
               {successType === 'excel' ? (
                 <Check size={14} style={{ color: '#059669' }} />
               ) : (
-                <FileSpreadsheet size={14} />
+                <Download size={14} />
               )}
               {exportingType === 'excel' ? 'Preparing...' : successType === 'excel' ? 'Ready ✓' : 'Excel'}
             </motion.button>
@@ -207,7 +211,7 @@ export default function ModulePageHeader({
           )}
 
           {/* Custom Actions */}
-          {customActions}
+          {resolvedCustomActions}
 
           {/* Primary CTA */}
           {primaryAction && (
