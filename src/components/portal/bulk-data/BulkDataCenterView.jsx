@@ -24,16 +24,20 @@ import BulkMediaUploadView from './BulkMediaUploadView.jsx';
 import TemplateLibraryView from './TemplateLibraryView.jsx';
 import ImportHistoryView from './ImportHistoryView.jsx';
 import AliasMappingsView from './AliasMappingsView.jsx';
+import FormatConverterModal from './FormatConverterModal.jsx';
 import { 
   MotionPage, 
   MotionKpiCard, 
   AnimatedKpiGrid 
 } from '../../motion/index.js';
 import ModulePageHeader from '../../motion/ModulePageHeader.jsx';
+import { Sparkles, FileSpreadsheet } from 'lucide-react';
 
 export default function BulkDataCenterView({ currentUser, initialModuleKey = null }) {
   const [activeTab, setActiveTab] = useState(initialModuleKey ? 'wizard' : 'overview');
   const [selectedWizardModule, setSelectedWizardModule] = useState(initialModuleKey || 'academic_events');
+  const [converterModalOpen, setConverterModalOpen] = useState(false);
+  const [converterModuleKey, setConverterModuleKey] = useState('attendance');
   const [, setDataVersion] = useState(0);
   const [searchModuleQuery, setSearchModuleQuery] = useState('');
 
@@ -116,6 +120,28 @@ export default function BulkDataCenterView({ currentUser, initialModuleKey = nul
         subtitle="Import, validate, review, and manage institutional datasets and media using controlled CSV, Excel, and folder workflows."
         customActions={
           <>
+            <button
+              type="button"
+              onClick={() => {
+                setConverterModuleKey('attendance');
+                setConverterModalOpen(true);
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                padding: '0.48rem 0.85rem',
+                background: 'linear-gradient(135deg, #070F1E 0%, #1E293B 100%)',
+                border: '1px solid #D4AF37',
+                borderRadius: '8px',
+                fontSize: '0.78rem',
+                fontWeight: 800,
+                color: '#F1C40F',
+                cursor: 'pointer'
+              }}
+            >
+              <Sparkles size={14} /> Smart Converter & Import
+            </button>
             <button
               type="button"
               onClick={() => setActiveTab('templates')}
@@ -221,6 +247,70 @@ export default function BulkDataCenterView({ currentUser, initialModuleKey = nul
       {/* TAB 1: OVERVIEW & MODULES GRID */}
       {activeTab === 'overview' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+          {/* Smart Universal Importer & Converter Hero Card */}
+          <div style={{
+            background: 'linear-gradient(135deg, #070F1E 0%, #0B192C 100%)',
+            border: '1px solid rgba(212, 175, 55, 0.35)',
+            borderRadius: '16px',
+            padding: '1.25rem 1.5rem',
+            color: '#FFFFFF',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '1.25rem',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.15)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', maxWidth: '650px' }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                background: 'rgba(241, 196, 15, 0.15)',
+                border: '1px solid #D4AF37',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#F1C40F',
+                flexShrink: 0
+              }}>
+                <Sparkles size={26} />
+              </div>
+              <div>
+                <h4 style={{ fontSize: '1.05rem', fontWeight: 800, margin: '0 0 0.25rem', fontFamily: 'Cinzel, Georgia, serif', color: '#F1C40F' }}>
+                  Smart Universal Importer & Format Converter
+                </h4>
+                <p style={{ fontSize: '0.78rem', color: '#CBD5E1', margin: 0, lineHeight: 1.5 }}>
+                  Upload arbitrary Excel or CSV spreadsheets directly. The engine automatically detects table headers, multi-sheet workbooks, maps student/faculty columns via semantic aliases, and normalizes ET department boundaries.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setConverterModuleKey('attendance');
+                setConverterModalOpen(true);
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                padding: '0.65rem 1.35rem',
+                background: 'linear-gradient(135deg, #F1C40F 0%, #D4AF37 100%)',
+                color: '#070F1E',
+                border: 'none',
+                borderRadius: '10px',
+                fontSize: '0.84rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                boxShadow: '0 4px 15px rgba(241, 196, 15, 0.3)'
+              }}
+            >
+              <FileSpreadsheet size={16} /> Open Smart Converter
+            </button>
+          </div>
+
           {/* Search bar */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
@@ -378,6 +468,17 @@ export default function BulkDataCenterView({ currentUser, initialModuleKey = nul
           currentUser={currentUser}
         />
       )}
+
+      {/* Format Converter & Smart Importer Modal */}
+      <FormatConverterModal
+        isOpen={converterModalOpen}
+        onClose={() => setConverterModalOpen(false)}
+        initialModuleKey={converterModuleKey}
+        currentUser={currentUser}
+        onImportSuccess={() => {
+          refresh();
+        }}
+      />
     </MotionPage>
   );
 }

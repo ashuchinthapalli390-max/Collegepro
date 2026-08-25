@@ -110,25 +110,44 @@ export const STORAGE_KEYS = {
   ATTENDANCE_BATCHES: 'et_portal_attendance_batches_v1'
 };
 
-// Automatic one-time cleanup of obsolete legacy demo caches
+// Automatic one-time cleanup of obsolete legacy demo caches & transactional zero-data reset
 if (typeof window !== 'undefined' && window.localStorage) {
   try {
-    const legacyKeys = [
-      'nec_portal_publications_v1', 'nec_portal_publications_v2',
-      'nec_portal_patents_v1', 'nec_portal_patents_v2',
-      'nec_portal_bos_v1', 'nec_portal_bos_v2',
-      'nec_portal_student_achievements_v1', 'nec_portal_student_achievements_v2',
-      'nec_portal_internships_v1', 'nec_portal_internships_v2',
-      'nec_portal_projects_v1', 'nec_portal_projects_v2',
-      'nec_portal_fdps_v1', 'nec_portal_fdps_v2',
-      'nec_portal_faculty_achievements_v1', 'nec_portal_faculty_achievements_v2',
-      'nec_portal_events_v1', 'nec_portal_events_v2',
-      'nec_portal_memberships_v1', 'nec_portal_memberships_v2',
-      'nec_portal_mous_v1', 'nec_portal_mous_v2',
-      'nec_portal_nptel_v1', 'nec_portal_nptel_v2',
-      'nec_portal_placements_v1', 'nec_portal_placements_v2'
-    ];
-    legacyKeys.forEach(k => localStorage.removeItem(k));
+    const zeroDataPurgeKey = 'et_portal_zero_data_purged_v2';
+    if (!localStorage.getItem(zeroDataPurgeKey)) {
+      const transactionalKeysToClear = [
+        'nec_portal_publications_v1', 'nec_portal_publications_v2', 'nec_portal_publications_v3',
+        'nec_portal_patents_v1', 'nec_portal_patents_v2', 'nec_portal_patents_v3',
+        'nec_portal_bos_v1', 'nec_portal_bos_v2', 'nec_portal_bos_v3',
+        'nec_portal_student_achievements_v1', 'nec_portal_student_achievements_v2', 'nec_portal_student_achievements_v3',
+        'nec_portal_internships_v1', 'nec_portal_internships_v2', 'nec_portal_internships_v3',
+        'nec_portal_projects_v1', 'nec_portal_projects_v2', 'nec_portal_projects_v3',
+        'nec_portal_fdps_v1', 'nec_portal_fdps_v2', 'nec_portal_fdps_v3',
+        'nec_portal_faculty_achievements_v1', 'nec_portal_faculty_achievements_v2', 'nec_portal_faculty_achievements_v3',
+        'nec_portal_events_v1', 'nec_portal_events_v2', 'nec_portal_events_v3',
+        'nec_portal_memberships_v1', 'nec_portal_memberships_v2', 'nec_portal_memberships_v3',
+        'nec_portal_mous_v1', 'nec_portal_mous_v2', 'nec_portal_mous_v3',
+        'nec_portal_nptel_v1', 'nec_portal_nptel_v2', 'nec_portal_nptel_v3',
+        'nec_portal_placements_v1', 'nec_portal_placements_v2', 'nec_portal_placements_v3',
+        'nec_portal_faculty_v3', 'nec_portal_staff_profiles_v3', 'nec_portal_students_v3',
+        'nec_portal_student_guardians_v3', 'nec_portal_attendance_import_jobs_v3',
+        'nec_portal_attendance_import_rows_v3', 'nec_portal_attendance_snapshots_v3',
+        'nec_portal_attendance_subject_records_v3', 'nec_portal_attendance_alerts_v3',
+        'nec_portal_attendance_parent_contacts_v3', 'nec_portal_exam_notices_v3',
+        'nec_portal_news_v3', 'nec_portal_research_record_sources_v3',
+        'nec_portal_research_index_records_v3', 'nec_portal_research_import_jobs_v3',
+        'nec_portal_faculty_research_profiles_v3', 'nec_portal_metric_snapshots_v3',
+        'nec_portal_academic_event_import_jobs_v3', 'nec_portal_academic_event_import_rows_v3',
+        'nec_portal_bulk_import_jobs_v3', 'nec_portal_bulk_import_rows_v3',
+        'nec_portal_bulk_import_alias_mappings_v3', 'nec_portal_bulk_media_jobs_v3',
+        'nec_portal_bulk_media_folders_v3', 'nec_portal_bulk_media_items_v3',
+        'nec_portal_media_assets_v3', 'nec_portal_record_media_links_v3',
+        'et_portal_community_projects_v1', 'et_portal_company_visits_v1',
+        'et_portal_campus_placements_v1', 'et_portal_attendance_batches_v1'
+      ];
+      transactionalKeysToClear.forEach(k => localStorage.removeItem(k));
+      localStorage.setItem(zeroDataPurgeKey, 'true');
+    }
   } catch (e) {
     console.warn('Storage purge non-fatal error:', e);
   }
@@ -294,7 +313,7 @@ export const USER_ROLES = [
 
 const memoryStore = {};
 
-function getStorage() {
+export function getStorage() {
   if (typeof window !== 'undefined' && window.localStorage) {
     return window.localStorage;
   }
@@ -305,52 +324,33 @@ function getStorage() {
   };
 }
 
-function loadStore(key, initialData) {
+export function loadStore(key, initialData) {
   try {
     const storage = getStorage();
     const item = storage.getItem(key);
     if (!item) {
-      storage.setItem(key, JSON.stringify(initialData));
-      return initialData;
+      const fallback = Array.isArray(initialData) ? initialData : (initialData || []);
+      storage.setItem(key, JSON.stringify(fallback));
+      return fallback;
     }
     const parsed = JSON.parse(item);
-    if (Array.isArray(initialData)) {
-      let records = [];
-      if (Array.isArray(parsed)) {
-        records = parsed;
-      } else if (parsed && Array.isArray(parsed.records)) {
-        records = parsed.records;
-      } else {
-        storage.setItem(key, JSON.stringify(initialData));
-        return initialData;
-      }
-
-      // If initialData has records not yet in localStorage (e.g. newly added seed), merge them seamlessly
-      if (initialData.length > 0) {
-        let hasNew = false;
-        const existingIds = new Set(records.map(r => r.id || r.bosNumber || r.eventNumber || r.title));
-        for (const initRec of initialData) {
-          const recKey = initRec.id || initRec.bosNumber || initRec.eventNumber || initRec.title;
-          if (recKey && !existingIds.has(recKey)) {
-            records.push(initRec);
-            hasNew = true;
-          }
-        }
-        if (hasNew) {
-          storage.setItem(key, JSON.stringify(records));
-        }
-      }
-
-      return records;
+    if (Array.isArray(parsed)) {
+      return parsed;
     }
-    return parsed;
+    if (parsed && Array.isArray(parsed.records)) {
+      return parsed.records;
+    }
+    if (parsed !== null && typeof parsed === 'object') {
+      return parsed;
+    }
+    return Array.isArray(initialData) ? initialData : [];
   } catch (e) {
-    console.error('Storage load error:', e);
-    return initialData;
+    console.error('Storage load error for key:', key, e);
+    return Array.isArray(initialData) ? initialData : [];
   }
 }
 
-function saveStore(key, data) {
+export function saveStore(key, data) {
   try {
     const storage = getStorage();
     storage.setItem(key, JSON.stringify(data));
