@@ -53,7 +53,7 @@ import {
 } from '../../../data/portalStore.js';
 import { ET_DEPARTMENTS } from '../../../data/masterData.js';
 
-export default function AttendanceRiskManager({ currentUser }) {
+export default function AttendanceRiskManager({ currentUser, onDataChange }) {
   // Navigation tabs
   const [activeTab, setActiveTab] = useState('risk-list'); // 'risk-list' | 'upload-wizard' | 'contact-ledger' | 'student-directory' | 'import-history'
   
@@ -125,6 +125,13 @@ export default function AttendanceRiskManager({ currentUser }) {
   const importHistory = useMemo(() => {
     return getAttendanceImportHistory();
   }, [dataVersion]);
+
+  // Load Attendance Batches
+  const attendanceBatches = useMemo(() => {
+    return getAttendanceBatches();
+  }, [dataVersion]);
+
+  const hasAttendanceData = (importHistory && importHistory.length > 0) || (attendanceBatches && attendanceBatches.length > 0);
 
   // Load Students Master
   const studentsList = useMemo(() => {
@@ -260,6 +267,7 @@ export default function AttendanceRiskManager({ currentUser }) {
         setUploadText('');
         setParsedImportResult(null);
         setActiveTab('risk-list');
+        if (onDataChange) onDataChange();
       } else {
         setImportNotification({
           type: 'error',
@@ -618,10 +626,47 @@ export default function AttendanceRiskManager({ currentUser }) {
               <tbody>
                 {alertsList.length === 0 ? (
                   <tr>
-                    <td colSpan={7} style={{ padding: '2.5rem', textAlign: 'center', color: '#64748B' }}>
-                      <CheckCircle2 size={32} style={{ color: '#10B981', marginBottom: '0.5rem' }} />
-                      <div style={{ fontWeight: 700, color: '#0F172A' }}>No Low Attendance Alerts Found</div>
-                      <div style={{ fontSize: '0.78rem', marginTop: '0.25rem' }}>All students in this cohort meet or exceed the {threshold}% attendance requirement.</div>
+                    <td colSpan={7} style={{ padding: '3rem 1.5rem', textAlign: 'center', color: '#64748B' }}>
+                      {!hasAttendanceData ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem' }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '48px', height: '48px', borderRadius: '12px', background: '#F1F5F9', color: '#64748B', marginBottom: '0.4rem' }}>
+                            <UploadCloud size={24} />
+                          </div>
+                          <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.95rem' }}>No attendance data imported yet.</div>
+                          <div style={{ fontSize: '0.8rem', color: '#64748B', maxWidth: '420px', marginBottom: '0.75rem' }}>
+                            Use Smart Attendance Import to upload the current attendance dataset.
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setActiveTab('upload-wizard')}
+                            style={{
+                              padding: '0.5rem 1rem',
+                              borderRadius: '8px',
+                              border: 'none',
+                              background: '#070F1E',
+                              color: '#F1C40F',
+                              fontSize: '0.78rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.4rem'
+                            }}
+                          >
+                            <UploadCloud size={14} /> Smart Attendance Import
+                          </button>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '48px', height: '48px', borderRadius: '12px', background: '#ECFDF5', color: '#059669', marginBottom: '0.4rem' }}>
+                            <CheckCircle2 size={24} />
+                          </div>
+                          <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.95rem' }}>No Low Attendance Alerts Found</div>
+                          <div style={{ fontSize: '0.8rem', color: '#64748B' }}>
+                            All students in this cohort meet or exceed the {threshold}% attendance requirement.
+                          </div>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ) : (

@@ -761,7 +761,7 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
           {/* VIEW 5.5: ATTENDANCE RISK & PARENT CONTACT SUITE */}
           {/* ────────────────────────────────────────────────────────── */}
           {(activeModule === 'attendance-risk' || activeModule === 'attendance') && (
-            <AttendanceRiskManager currentUser={currentUser} />
+            <AttendanceRiskManager currentUser={currentUser} onDataChange={refreshData} />
           )}
 
           {/* ────────────────────────────────────────────────────────── */}
@@ -967,10 +967,6 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
 
           {activeModule === 'external-exam-analysis' && (
             <ExternalExamAnalysis currentUser={currentUser} />
-          )}
-
-          {activeModule === 'attendance-risk' && (
-            <AttendanceRiskManager currentUser={currentUser} />
           )}
 
           {activeModule === 'campus-placements' && (

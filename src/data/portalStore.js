@@ -7685,21 +7685,7 @@ export function deleteCampusPlacement(id) {
 // -------------------------------------------------------------
 // 4. Attendance Monthly Batch Lifecycle Handlers
 // -------------------------------------------------------------
-export const INITIAL_ATTENDANCE_BATCHES = [
-  {
-    batchId: 'batch_2026_08_cys_iii_a',
-    department: 'CYS',
-    year: 'III',
-    semester: 'III-I',
-    section: 'A',
-    monthLabel: 'August 2026',
-    importDate: '2026-08-20',
-    totalRecords: 60,
-    atRiskCount: 3,
-    status: 'ACTIVE',
-    uploadedBy: 'Dr. V. V. A. S. Lakshmi'
-  }
-];
+export const INITIAL_ATTENDANCE_BATCHES = [];
 
 export function getAttendanceBatches() {
   return loadStore(STORAGE_KEYS.ATTENDANCE_BATCHES, INITIAL_ATTENDANCE_BATCHES);
