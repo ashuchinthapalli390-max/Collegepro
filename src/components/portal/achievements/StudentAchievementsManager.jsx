@@ -20,7 +20,8 @@ import {
   Sparkles,
   Printer,
   Archive,
-  RefreshCw
+  RefreshCw,
+  X
 } from 'lucide-react';
 import { ET_DEPARTMENTS } from '../../../data/masterData.js';
 import { 
@@ -101,8 +102,8 @@ export default function StudentAchievementsManager({ currentUser, onDataChange }
       const matchCategory = selectedCategory === 'ALL' || item.category === selectedCategory || item.achievementType === selectedCategory;
       const matchLevel = selectedLevel === 'ALL' || item.level === selectedLevel;
       const matchPrize = selectedPrize === 'ALL' ||
-        (selectedPrize === 'YES' && (item.hasPrize === 'Yes' || item.prize === 'Yes')) ||
-        (selectedPrize === 'NO' && item.hasPrize !== 'Yes' && item.prize !== 'Yes');
+        (selectedPrize === 'YES' && (item.hasPrize === 'Yes' || item.prize === 'Yes' || !!item.awardTitle)) ||
+        (selectedPrize === 'NO' && item.hasPrize !== 'Yes' && item.prize !== 'Yes' && !item.awardTitle);
       
       const itemStatus = item.workflowStatus || (item.status === 'Approved' ? 'APPROVED' : 'DRAFT');
       const matchStatus = selectedStatus === 'ALL' || itemStatus === selectedStatus;
@@ -114,12 +115,12 @@ export default function StudentAchievementsManager({ currentUser, onDataChange }
   // KPIs
   const stats = useMemo(() => {
     const total = filteredAchievements.length;
-    const pending = filteredAchievements.filter(a => a.workflowStatus === 'SUBMITTED' || a.workflowStatus === 'UNDER_REVIEW').length;
-    const approved = filteredAchievements.filter(a => a.workflowStatus === 'APPROVED' || a.workflowStatus === 'VERIFIED' || a.status === 'Approved').length;
-    const national = filteredAchievements.filter(a => a.level === 'National' || a.level === 'International').length;
-    const prizeWinners = filteredAchievements.filter(a => a.hasPrize === 'Yes' || a.prize === 'Yes').length;
-    const thisYear = filteredAchievements.filter(a => a.academicYear === '2025-26' || a.academicYear === '2024-25').length;
-    return { total, pending, approved, national, prizeWinners, thisYear };
+    const academic = filteredAchievements.filter(a => a.category === 'Academic' || a.achievementType === 'Academic').length;
+    const sports = filteredAchievements.filter(a => a.category === 'Sports' || a.achievementType === 'Sports').length;
+    const uniqueStudents = new Set(filteredAchievements.map(a => (a.rollNumber || '').trim().toUpperCase())).size;
+    const prizeWinners = filteredAchievements.filter(a => !!a.awardTitle || a.hasPrize === 'Yes' || a.prize === 'Yes').length;
+    const thisYear = filteredAchievements.filter(a => a.academicYear === '2026-27' || a.academicYear === '2025-26' || a.academicYear === '2024-25').length;
+    return { total, academic, sports, uniqueStudents, prizeWinners, thisYear };
   }, [filteredAchievements]);
 
   // Permissions
@@ -133,10 +134,10 @@ export default function StudentAchievementsManager({ currentUser, onDataChange }
     setReviewModalItem(null);
     setReviewRemarks('');
     refresh();
-    showToast(`Achievement decision submitted.`);
+    showToast(`Achievement status updated to ${reviewAction}.`);
   };
 
-  // Handle Soft Delete
+  // Handle Delete
   const handleDelete = (item) => {
     setDeleteConfirmItem(item);
   };
@@ -144,107 +145,97 @@ export default function StudentAchievementsManager({ currentUser, onDataChange }
   const handleConfirmDelete = () => {
     if (deleteConfirmItem) {
       softDeleteStudentAchievement(deleteConfirmItem.id, currentUser);
-      const title = deleteConfirmItem.awardTitle || deleteConfirmItem.eventName || deleteConfirmItem.id;
       setDeleteConfirmItem(null);
       refresh();
-      showToast(`Achievement "${title}" moved to Recycle Bin.`);
+      showToast(`Achievement for "${deleteConfirmItem.studentName}" moved to Recycle Bin.`);
     }
   };
 
   const handleExportCSV = () => {
-    const rows = filteredAchievements.map(a => ({
-      'Roll Number': a.rollNumber,
-      'Student Name': a.studentName,
-      'Department': a.department || a.branch,
-      'Academic Year': a.academicYear || '—',
-      'Event / Award Title': a.title || a.eventName || a.awardTitle,
-      'Organized By': a.organizingInstitute || a.organizedBy,
-      'Category': a.achievementType || a.category,
-      'Level': a.level,
-      'Prize': a.prizePosition || (a.hasPrize === 'Yes' ? 'Winner' : 'Participation'),
-      'Prize Amount': a.prizeAmount || 0,
-      'Date': a.achievementDate || a.eventDate,
-      'Workflow Status': a.workflowStatus || 'APPROVED'
-    }));
-    exportToCSV(rows, `ET_Student_Achievements_${selectedDept}`, currentUser);
-    showToast(`Exported ${rows.length} student achievement records to CSV.`);
-  };
-
-  const handleExportExcel = () => {
-    const rows = filteredAchievements.map(a => ({
-      'Roll Number': a.rollNumber,
-      'Student Name': a.studentName,
-      'Department': a.department || a.branch,
-      'Academic Year': a.academicYear || '—',
-      'Event / Award Title': a.title || a.eventName || a.awardTitle,
-      'Organized By': a.organizingInstitute || a.organizedBy,
-      'Category': a.achievementType || a.category,
-      'Level': a.level,
-      'Prize': a.prizePosition || (a.hasPrize === 'Yes' ? 'Winner' : 'Participation'),
-      'Prize Amount': a.prizeAmount || 0,
-      'Date': a.achievementDate || a.eventDate,
-      'Workflow Status': a.workflowStatus || 'APPROVED'
-    }));
-    exportToExcel(rows, `ET_Student_Achievements_${selectedDept}`, 'Student Achievements', currentUser);
-    showToast(`Exported ${rows.length} student achievement records to Excel.`);
+    exportToCSV(filteredAchievements, 'student_achievements');
+    showToast('Exported filtered student achievements to CSV.');
   };
 
   const handleExportPDF = () => {
-    const rows = filteredAchievements.map(a => ({
-      'Roll No': a.rollNumber || '—',
-      'Student Name': a.studentName,
-      'Dept': a.department || a.branch,
-      'Event / Title': a.title || a.eventName || a.awardTitle,
-      'Level': a.level,
-      'Prize': a.prizePosition || (a.hasPrize === 'Yes' ? 'Winner' : 'Participation'),
-      'Status': a.workflowStatus || 'APPROVED'
-    }));
-    exportToPDF('ET_Student_Achievements_Report', ['Roll No', 'Student Name', 'Dept', 'Event / Title', 'Level', 'Prize', 'Status'], rows, 'Student Achievements & Honors Repository');
-    showToast(`Exported student achievements report to PDF.`);
+    exportToPDF(filteredAchievements, 'student_achievements');
+    showToast('Exported filtered student achievements to PDF.');
   };
 
   return (
-    <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.4rem', position: 'relative' }}>
-      {toastMessage && (
-        <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#047857', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.84rem', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '-0.7rem' }}>
-          <CheckCircle2 size={16} />
-          <span>{toastMessage}</span>
-        </div>
-      )}
-      {/* 1. Header & Quick Actions */}
+    <MotionPage className="student-achievements-page" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      {/* 1. Header with Breadcrumbs */}
       <ModulePageHeader
+        title="Student Achievements & Awards"
+        subtitle="Departmental and institutional registry of student co-curricular, academic, and sports accomplishments."
         breadcrumbs={[
-          { label: 'Dashboard' },
-          { label: 'Student Development' },
-          { label: 'Student Achievements' }
+          { label: 'Portal', onClick: () => {} },
+          { label: 'Student Portfolio', onClick: () => {} },
+          { label: 'Achievements' }
         ]}
-        title="Student Achievements & Honors Repository"
-        subtitle="Official departmental evidence for hackathons, paper presentations, sports medals, awards, and certifications."
-        onExportCSV={handleExportCSV}
-        onExportExcel={handleExportExcel}
-        onExportPDF={handleExportPDF}
+        actions={
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0.45rem 0.85rem',
+                borderRadius: '8px',
+                border: '1px solid #CBD5E1',
+                background: '#FFFFFF',
+                color: '#334155',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              <Download size={14} /> CSV
+            </button>
+            <button
+              type="button"
+              onClick={handleExportPDF}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0.45rem 0.85rem',
+                borderRadius: '8px',
+                border: '1px solid #CBD5E1',
+                background: '#FFFFFF',
+                color: '#334155',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              <Printer size={14} /> PDF
+            </button>
+          </div>
+        }
         primaryAction={canCreate ? {
-          label: 'Record Achievement',
+          label: 'Register Achievement',
           icon: Plus,
           onClick: () => { setEditingItem(null); setWizardOpen(true); }
         } : null}
       />
 
       {/* 2. KPI Summary Cards */}
-      <AnimatedKpiGrid minWidth="160px">
-        <MotionKpiCard label="Total Achievements" value={stats.total} icon={Trophy} color="#0F172A" bg="#F8FAFC" />
-        <MotionKpiCard label="Pending Verification" value={stats.pending} icon={Clock} color="#D97706" bg="#FEFCE8" />
-        <MotionKpiCard label="Verified & Approved" value={stats.approved} icon={CheckCircle2} color="#059669" bg="#ECFDF5" />
-        <MotionKpiCard label="National / Intl." value={stats.national} icon={Award} color="#2563EB" bg="#EFF6FF" />
-        <MotionKpiCard label="Prize Winners" value={stats.prizeWinners} icon={Sparkles} color="#9333EA" bg="#FDF4FF" />
-        <MotionKpiCard label="Active AY Records" value={stats.thisYear} icon={Building2} color="#0D9488" bg="#F0FDFA" />
+      <AnimatedKpiGrid minWidth="150px">
+        <MotionKpiCard label="Total Achievements" value={stats.total} icon={Trophy} color="#D97706" bg="#FEFCE8" />
+        <MotionKpiCard label="Academic" value={stats.academic} icon={Award} color="#2563EB" bg="#EFF6FF" />
+        <MotionKpiCard label="Sports" value={stats.sports} icon={Sparkles} color="#059669" bg="#ECFDF5" />
+        <MotionKpiCard label="Students Represented" value={stats.uniqueStudents} icon={Building2} color="#7C3AED" bg="#F5F3FF" />
+        <MotionKpiCard label="Awards & Prizes" value={stats.prizeWinners} icon={CheckCircle2} color="#DB2777" bg="#FDF2F8" />
+        <MotionKpiCard label="This AY" value={stats.thisYear} icon={Clock} color="#475569" bg="#F8FAFC" />
       </AnimatedKpiGrid>
 
-      {/* 3. Search & Multi-Filter Toolbar */}
+      {/* 3. Filter Bar */}
       <div style={{
         background: '#FFFFFF',
-        padding: '1rem 1.25rem',
-        borderRadius: '14px',
+        borderRadius: '12px',
+        padding: '0.9rem',
         border: '1px solid #E2E8F0',
         display: 'flex',
         flexDirection: 'column',
@@ -282,7 +273,10 @@ export default function StudentAchievementsManager({ currentUser, onDataChange }
               style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', background: '#FFFFFF', color: '#0F172A', fontWeight: 600 }}
             >
               <option value="ALL">All ET Departments</option>
-              {ET_DEPARTMENTS.map(d => <option key={d.code} value={d.code}>{d.name} ({d.code})</option>)}
+              <option value="CYS">Cyber Security</option>
+              <option value="DS">Data Science</option>
+              <option value="AI">Artificial Intelligence</option>
+              <option value="AIML">AI & ML</option>
             </select>
 
             {/* Academic Year */}
@@ -322,11 +316,22 @@ export default function StudentAchievementsManager({ currentUser, onDataChange }
               style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', background: '#FFFFFF', color: '#0F172A', fontWeight: 600 }}
             >
               <option value="ALL">All Levels</option>
-              <option value="National">National</option>
               <option value="International">International</option>
+              <option value="National">National</option>
               <option value="State">State</option>
               <option value="University">University</option>
-              <option value="College">College</option>
+              <option value="Institution">Institution</option>
+            </select>
+
+            {/* Prize */}
+            <select
+              value={selectedPrize}
+              onChange={(e) => setSelectedPrize(e.target.value)}
+              style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', background: '#FFFFFF', color: '#0F172A', fontWeight: 600 }}
+            >
+              <option value="ALL">Award/Prize: All</option>
+              <option value="YES">Prize Winners Only</option>
+              <option value="NO">Participation Only</option>
             </select>
 
             {/* Status */}
@@ -419,39 +424,39 @@ export default function StudentAchievementsManager({ currentUser, onDataChange }
                       {/* Department & AY */}
                       <td style={{ padding: '0.85rem 1rem' }}>
                         <span style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.8rem' }}>
-                          {item.department || item.branch || 'CSE'}
+                          {item.department || item.departmentCode || item.branch || '—'}
                         </span>
                         <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                          {item.academicYear} • {item.year || 'III Year'}
+                          {item.academicYear || '—'} {item.year ? `• ${item.year}` : ''}
                         </div>
                       </td>
 
                       {/* Achievement & Event */}
                       <td style={{ padding: '0.85rem 1rem', maxWidth: '280px' }}>
                         <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.82rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                          {item.title || item.eventName}
+                          {item.title || item.eventName || '—'}
                         </div>
                         <div style={{ fontSize: '0.72rem', color: '#64748B', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                          {item.organizedBy || item.eventDetails}
+                          {item.organizingInstitute || item.organizer || item.eventDetails || '—'}
                         </div>
                       </td>
 
                       {/* Category & Level */}
                       <td style={{ padding: '0.85rem 1rem' }}>
                         <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0369A1', background: '#E0F2FE', padding: '0.15rem 0.45rem', borderRadius: '4px' }}>
-                          {item.achievementType || 'Technical'}
+                          {item.category || item.achievementType || 'Academic'}
                         </span>
                         <div style={{ fontSize: '0.7rem', color: '#64748B', marginTop: '0.2rem' }}>
-                          {item.level || 'National'} Level
+                          {item.level ? `${item.level} Level` : '—'}
                         </div>
                       </td>
 
                       {/* Prize / Award */}
                       <td style={{ padding: '0.85rem 1rem' }}>
-                        {(item.hasPrize === 'Yes' || item.prize === 'Yes') ? (
+                        {(item.awardTitle || item.hasPrize === 'Yes' || item.prize === 'Yes') ? (
                           <div style={{ display: 'flex', flexDirection: 'column' }}>
                             <span style={{ fontWeight: 800, color: '#B45309', fontSize: '0.76rem' }}>
-                              {item.prizePosition || item.position || 'Winner'}
+                              {item.awardTitle || item.prizePosition || item.position || 'Award Winner'}
                             </span>
                             {item.prizeAmount ? (
                               <span style={{ fontSize: '0.7rem', color: '#059669', fontWeight: 700 }}>
@@ -460,13 +465,15 @@ export default function StudentAchievementsManager({ currentUser, onDataChange }
                             ) : null}
                           </div>
                         ) : (
-                          <span style={{ fontSize: '0.72rem', color: '#94A3B8' }}>Participation</span>
+                          <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Participation</span>
                         )}
                       </td>
 
-                      {/* Date */}
-                      <td style={{ padding: '0.85rem 1rem', fontSize: '0.76rem', color: '#475569' }}>
-                        {item.achievementDate || item.eventDate || '2025-01-15'}
+                      {/* Event Date */}
+                      <td style={{ padding: '0.85rem 1rem' }}>
+                        <span style={{ fontSize: '0.76rem', color: '#334155' }}>
+                          {item.eventDate || item.date || '—'}
+                        </span>
                       </td>
 
                       {/* Status */}
@@ -475,53 +482,41 @@ export default function StudentAchievementsManager({ currentUser, onDataChange }
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '0.3rem',
+                          padding: '0.15rem 0.5rem',
+                          borderRadius: '9999px',
                           background: badge.bg,
                           color: badge.text,
                           border: `1px solid ${badge.border}`,
-                          padding: '0.2rem 0.55rem',
-                          borderRadius: '9999px',
                           fontSize: '0.68rem',
                           fontWeight: 800
                         }}>
-                          {BadgeIcon && <BadgeIcon size={11} />} {badge.label}
+                          {BadgeIcon && <BadgeIcon size={10} />}
+                          {badge.label}
                         </span>
                       </td>
 
                       {/* Actions */}
                       <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.35rem' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
                           <button
                             type="button"
                             onClick={() => setDossierModalItem(item)}
-                            title="View Complete Dossier"
-                            style={{ padding: '0.35rem', background: '#F1F5F9', border: '1px solid #CBD5E1', borderRadius: '6px', color: '#334155', cursor: 'pointer' }}
+                            title="Inspect Achievement Details"
+                            style={{ padding: '0.35rem', background: '#F8FAFC', border: '1px solid #CBD5E1', borderRadius: '6px', color: '#334155', cursor: 'pointer' }}
                           >
                             <Eye size={13} />
                           </button>
-
                           {canReview && (
                             <button
                               type="button"
-                              onClick={() => { setReviewModalItem(item); setReviewAction('APPROVE'); setReviewRemarks(''); }}
-                              title="Review / Verify Record"
-                              style={{ padding: '0.35rem 0.55rem', background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '6px', color: '#059669', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}
+                              onClick={() => { setReviewModalItem(item); setReviewAction(item.workflowStatus === 'APPROVED' ? 'REJECT' : 'APPROVE'); }}
+                              title="Review / Approve"
+                              style={{ padding: '0.35rem', background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '6px', color: '#1D4ED8', cursor: 'pointer' }}
                             >
-                              Verify
+                              <ShieldCheck size={13} />
                             </button>
                           )}
-
                           {canCreate && (
-                            <button
-                              type="button"
-                              onClick={() => { setEditingItem(item); setWizardOpen(true); }}
-                              title="Edit Record"
-                              style={{ padding: '0.35rem', background: '#FEFCE8', border: '1px solid #FEF08A', borderRadius: '6px', color: '#A16207', cursor: 'pointer' }}
-                            >
-                              <Edit3 size={13} />
-                            </button>
-                          )}
-
-                          {canReview && (
                             <button
                               type="button"
                               onClick={() => handleDelete(item)}
@@ -738,7 +733,7 @@ export default function StudentAchievementsManager({ currentUser, onDataChange }
               </button>
               <button
                 type="button"
-                onClick={handleExecuteReview}
+                onClick={handleReviewSubmit}
                 style={{ padding: '0.45rem 1.15rem', borderRadius: '6px', border: 'none', background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', color: '#FFFFFF', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer' }}
               >
                 Submit Decision

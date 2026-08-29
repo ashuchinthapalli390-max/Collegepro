@@ -22,7 +22,8 @@ import {
   Sparkles,
   Building2,
   GraduationCap,
-  Award
+  Award,
+  BookOpen
 } from 'lucide-react';
 import { 
   MotionPage, 
@@ -70,14 +71,14 @@ export default function DashboardOverviewView({
     year: 'numeric'
   });
 
-  // Dynamic KPI Metrics according to User Role & Scope
+  // Dynamic KPI Metrics according to User Role & Scope (Strictly real data / zero state)
   const getScopedKpiCards = () => {
     if (userRole === 'FACULTY') {
       return [
         {
           title: 'My Publications',
-          value: publicationsCount > 0 ? publicationsCount : '12',
-          subtext: 'Verified Indexed Papers',
+          value: publicationsCount,
+          subtext: publicationsCount > 0 ? `${publicationsCount} verified papers` : 'No records imported yet',
           icon: FileText,
           color: '#10B981',
           bg: 'rgba(16, 185, 129, 0.1)',
@@ -86,8 +87,8 @@ export default function DashboardOverviewView({
         },
         {
           title: 'My Patents & IPR',
-          value: patentsCount > 0 ? patentsCount : '2',
-          subtext: 'Published / Granted',
+          value: patentsCount,
+          subtext: patentsCount > 0 ? `${patentsCount} published / granted` : 'No records imported yet',
           icon: Lightbulb,
           color: '#F59E0B',
           bg: 'rgba(245, 158, 11, 0.1)',
@@ -96,8 +97,8 @@ export default function DashboardOverviewView({
         },
         {
           title: 'Professional Memberships',
-          value: '4',
-          subtext: 'IEEE, CSI, ISTE',
+          value: 0,
+          subtext: 'No memberships registered yet',
           icon: Award,
           color: '#8B5CF6',
           bg: 'rgba(139, 92, 246, 0.1)',
@@ -106,8 +107,8 @@ export default function DashboardOverviewView({
         },
         {
           title: 'NPTEL & FDPs',
-          value: '8',
-          subtext: 'Elite / Gold Certified',
+          value: 0,
+          subtext: 'No certifications registered yet',
           icon: GraduationCap,
           color: '#06B6D4',
           bg: 'rgba(6, 182, 212, 0.1)',
@@ -122,7 +123,7 @@ export default function DashboardOverviewView({
         {
           title: 'Dept. Publications',
           value: publicationsCount,
-          subtext: `Department of ${userDept}`,
+          subtext: publicationsCount > 0 ? `Department of ${userDept}` : 'No records imported yet',
           icon: FileText,
           color: '#10B981',
           bg: 'rgba(16, 185, 129, 0.1)',
@@ -132,7 +133,7 @@ export default function DashboardOverviewView({
         {
           title: 'Department Faculty',
           value: facultyCount,
-          subtext: 'Active Teaching Roster',
+          subtext: facultyCount > 0 ? 'Active Teaching Roster' : 'No faculty added yet',
           icon: Users,
           color: '#3B82F6',
           bg: 'rgba(59, 130, 246, 0.1)',
@@ -142,7 +143,7 @@ export default function DashboardOverviewView({
         {
           title: 'Student Achievements',
           value: achievementsCount,
-          subtext: 'Hackathons & Competitions',
+          subtext: achievementsCount > 0 ? `${achievementsCount} verified records` : 'No records imported yet',
           icon: Trophy,
           color: '#EC4899',
           bg: 'rgba(236, 72, 153, 0.1)',
@@ -151,8 +152,8 @@ export default function DashboardOverviewView({
         },
         {
           title: 'BoS Meetings',
-          value: bosMeetingsCount || '6',
-          subtext: 'Curriculum Approved',
+          value: bosMeetingsCount,
+          subtext: bosMeetingsCount > 0 ? `${bosMeetingsCount} approved meetings` : 'No meetings imported yet',
           icon: BookOpen,
           color: '#D4AF37',
           bg: 'rgba(212, 175, 55, 0.1)',
@@ -162,7 +163,7 @@ export default function DashboardOverviewView({
         {
           title: 'Department MoUs',
           value: mousCount,
-          subtext: 'Active Collaborations',
+          subtext: mousCount > 0 ? 'Active Collaborations' : 'No records imported yet',
           icon: Handshake,
           color: '#8B5CF6',
           bg: 'rgba(139, 92, 246, 0.1)',
@@ -172,7 +173,7 @@ export default function DashboardOverviewView({
         {
           title: 'Department Events',
           value: eventsCount,
-          subtext: 'Workshops & Guest Lectures',
+          subtext: eventsCount > 0 ? 'Workshops & Guest Lectures' : 'No records imported yet',
           icon: Calendar,
           color: '#06B6D4',
           bg: 'rgba(6, 182, 212, 0.1)',
@@ -187,7 +188,7 @@ export default function DashboardOverviewView({
         {
           title: 'Verified Publications',
           value: publicationsCount,
-          subtext: 'Audit Ready (Scopus/SCI)',
+          subtext: publicationsCount > 0 ? 'Audit Ready (Scopus/SCI)' : 'No records imported yet',
           icon: FileText,
           color: '#10B981',
           bg: 'rgba(16, 185, 129, 0.1)',
@@ -197,7 +198,7 @@ export default function DashboardOverviewView({
         {
           title: 'Patents & IPR Evidence',
           value: patentsCount,
-          subtext: 'Official Gazette Verified',
+          subtext: patentsCount > 0 ? 'Official Gazette Verified' : 'No records imported yet',
           icon: Lightbulb,
           color: '#F59E0B',
           bg: 'rgba(245, 158, 11, 0.1)',
@@ -207,7 +208,7 @@ export default function DashboardOverviewView({
         {
           title: 'Active Institutional MoUs',
           value: mousCount,
-          subtext: 'Industry Agreements',
+          subtext: mousCount > 0 ? 'Industry Agreements' : 'No records imported yet',
           icon: Handshake,
           color: '#8B5CF6',
           bg: 'rgba(139, 92, 246, 0.1)',
@@ -216,7 +217,7 @@ export default function DashboardOverviewView({
         },
         {
           title: 'Audit Trail Records',
-          value: '1,840+',
+          value: 0,
           subtext: 'Immutable Log Entries',
           icon: ShieldCheck,
           color: '#38BDF8',
@@ -232,7 +233,7 @@ export default function DashboardOverviewView({
       {
         title: 'Total Faculty',
         value: facultyCount,
-        subtext: 'Verified academic profiles',
+        subtext: facultyCount > 0 ? `${facultyCount} verified profiles` : 'No faculty added yet',
         icon: Users,
         color: '#3B82F6',
         bg: 'rgba(59, 130, 246, 0.1)',
@@ -242,7 +243,7 @@ export default function DashboardOverviewView({
       {
         title: 'Publications',
         value: publicationsCount,
-        subtext: '+14 this quarter',
+        subtext: publicationsCount > 0 ? `${publicationsCount} indexed papers` : 'No records imported yet',
         icon: FileText,
         color: '#10B981',
         bg: 'rgba(16, 185, 129, 0.1)',
@@ -252,7 +253,7 @@ export default function DashboardOverviewView({
       {
         title: 'Patents & IPR',
         value: patentsCount,
-        subtext: `${patentsCount} published patents`,
+        subtext: patentsCount > 0 ? `${patentsCount} published patents` : 'No records imported yet',
         icon: Lightbulb,
         color: '#F59E0B',
         bg: 'rgba(245, 158, 11, 0.1)',
@@ -262,7 +263,7 @@ export default function DashboardOverviewView({
       {
         title: 'Active MoUs',
         value: mousCount,
-        subtext: 'Industry tie-ups',
+        subtext: mousCount > 0 ? `${mousCount} active tie-ups` : 'No records imported yet',
         icon: Handshake,
         color: '#8B5CF6',
         bg: 'rgba(139, 92, 246, 0.1)',
@@ -272,7 +273,7 @@ export default function DashboardOverviewView({
       {
         title: 'Student Awards',
         value: achievementsCount,
-        subtext: `${achievementsCount} verified achievements`,
+        subtext: achievementsCount > 0 ? `${achievementsCount} verified records` : 'No records imported yet',
         icon: Trophy,
         color: '#EC4899',
         bg: 'rgba(236, 72, 153, 0.1)',
@@ -282,7 +283,7 @@ export default function DashboardOverviewView({
       {
         title: 'Workshops & Events',
         value: eventsCount,
-        subtext: `${eventsCount} academic events`,
+        subtext: eventsCount > 0 ? `${eventsCount} academic events` : 'No records imported yet',
         icon: Calendar,
         color: '#06B6D4',
         bg: 'rgba(6, 182, 212, 0.1)',
@@ -291,8 +292,8 @@ export default function DashboardOverviewView({
       },
       {
         title: 'Campus Placements',
-        value: placementsCount > 0 ? placementsCount : '63',
-        subtext: uniquePlacedStudentsCount > 0 ? `${uniquePlacedStudentsCount} placed students` : '43 placed students',
+        value: placementsCount,
+        subtext: placementsCount > 0 ? `${uniquePlacedStudentsCount} placed students` : 'No records imported yet',
         icon: TrendingUp,
         color: '#D4AF37',
         bg: 'rgba(212, 175, 55, 0.1)',
@@ -301,8 +302,8 @@ export default function DashboardOverviewView({
       },
       {
         title: 'BoS Meetings',
-        value: bosMeetingsCount > 0 ? bosMeetingsCount : '6',
-        subtext: '6 canonical meetings',
+        value: bosMeetingsCount,
+        subtext: bosMeetingsCount > 0 ? `${bosMeetingsCount} canonical meetings` : 'No meetings imported yet',
         icon: BookOpen,
         color: '#6366F1',
         bg: 'rgba(99, 102, 241, 0.1)',

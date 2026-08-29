@@ -75,8 +75,7 @@ export const NAVIGATION_CATEGORIES = [
       { id: 'attendance-risk', label: 'Attendance Risk & Parent Contact', icon: AlertTriangle },
       { id: 'student-projects', label: 'Student Projects & Capstone', icon: Code },
       { id: 'student-achievements', label: 'Student Achievements & Honors', icon: Trophy },
-      { id: 'internships', label: 'Student Internships & Training', icon: Briefcase },
-      { id: 'community-service', label: 'Community Service Projects', icon: HeartHandshake }
+      { id: 'internships', label: 'Student Internships & Training', icon: Briefcase }
     ]
   },
   {

@@ -108,7 +108,6 @@ import NptelCertificationsManager from './nptel/NptelCertificationsManager.jsx';
 import AttendanceRiskManager from './attendance/AttendanceRiskManager.jsx';
 import MidExamAnalysis from './analytics/MidExamAnalysis.jsx';
 import ExternalExamAnalysis from './analytics/ExternalExamAnalysis.jsx';
-import CommunityServiceProjectsManager from './community-service/CommunityServiceProjectsManager.jsx';
 import CampusPlacementsManager from './placements/CampusPlacementsManager.jsx';
 import CompaniesVisitedManager from './placements/CompaniesVisitedManager.jsx';
 
@@ -974,10 +973,6 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
             <AttendanceRiskManager currentUser={currentUser} />
           )}
 
-          {activeModule === 'community-service' && (
-            <CommunityServiceProjectsManager currentUser={currentUser} />
-          )}
-
           {activeModule === 'campus-placements' && (
             <CampusPlacementsManager currentUser={currentUser} />
           )}
@@ -1015,7 +1010,6 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
             'mid-exam-analysis',
             'external-exam-analysis',
             'attendance-risk',
-            'community-service',
             'campus-placements',
             'companies-visited',
             'gallery-media',
