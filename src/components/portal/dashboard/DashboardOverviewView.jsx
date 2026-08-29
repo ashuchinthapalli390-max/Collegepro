@@ -47,6 +47,9 @@ export default function DashboardOverviewView({
   eventsCount = 0,
   achievementsCount = 0,
   activeSessionsCount = 0,
+  placementsCount = 0,
+  uniquePlacedStudentsCount = 0,
+  bosMeetingsCount = 0,
   onNavigate,
   onOpenQuickAction,
   onOpenSync
@@ -147,8 +150,8 @@ export default function DashboardOverviewView({
           moduleId: 'student-achievements'
         },
         {
-          title: 'BoS Regulations',
-          value: 'R24 / R20',
+          title: 'BoS Meetings',
+          value: bosMeetingsCount || '6',
           subtext: 'Curriculum Approved',
           icon: BookOpen,
           color: '#D4AF37',
@@ -249,7 +252,7 @@ export default function DashboardOverviewView({
       {
         title: 'Patents & IPR',
         value: patentsCount,
-        subtext: '22 granted • 6 published',
+        subtext: `${patentsCount} published patents`,
         icon: Lightbulb,
         color: '#F59E0B',
         bg: 'rgba(245, 158, 11, 0.1)',
@@ -259,7 +262,7 @@ export default function DashboardOverviewView({
       {
         title: 'Active MoUs',
         value: mousCount,
-        subtext: '2 expiring in 30 days',
+        subtext: 'Industry tie-ups',
         icon: Handshake,
         color: '#8B5CF6',
         bg: 'rgba(139, 92, 246, 0.1)',
@@ -269,7 +272,7 @@ export default function DashboardOverviewView({
       {
         title: 'Student Awards',
         value: achievementsCount,
-        subtext: 'National & State level',
+        subtext: `${achievementsCount} verified achievements`,
         icon: Trophy,
         color: '#EC4899',
         bg: 'rgba(236, 72, 153, 0.1)',
@@ -278,8 +281,8 @@ export default function DashboardOverviewView({
       },
       {
         title: 'Workshops & Events',
-        value: '24',
-        subtext: '5 upcoming this month',
+        value: eventsCount,
+        subtext: `${eventsCount} academic events`,
         icon: Calendar,
         color: '#06B6D4',
         bg: 'rgba(6, 182, 212, 0.1)',
@@ -288,8 +291,8 @@ export default function DashboardOverviewView({
       },
       {
         title: 'Campus Placements',
-        value: '840+',
-        subtext: 'Avg CTC 6.8 LPA',
+        value: placementsCount > 0 ? placementsCount : '63',
+        subtext: uniquePlacedStudentsCount > 0 ? `${uniquePlacedStudentsCount} placed students` : '43 placed students',
         icon: TrendingUp,
         color: '#D4AF37',
         bg: 'rgba(212, 175, 55, 0.1)',
@@ -297,14 +300,14 @@ export default function DashboardOverviewView({
         moduleId: 'placements'
       },
       {
-        title: 'IAM Users',
-        value: usersCount,
-        subtext: `${activeSessionsCount} active sessions`,
-        icon: ShieldCheck,
+        title: 'BoS Meetings',
+        value: bosMeetingsCount > 0 ? bosMeetingsCount : '6',
+        subtext: '6 canonical meetings',
+        icon: BookOpen,
         color: '#6366F1',
         bg: 'rgba(99, 102, 241, 0.1)',
         border: 'rgba(99, 102, 241, 0.25)',
-        moduleId: 'iam-users'
+        moduleId: 'bos-meetings'
       }
     ];
   };

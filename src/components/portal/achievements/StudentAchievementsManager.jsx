@@ -292,6 +292,7 @@ export default function StudentAchievementsManager({ currentUser, onDataChange }
               style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', background: '#FFFFFF', color: '#0F172A', fontWeight: 600 }}
             >
               <option value="ALL">All AYs</option>
+              <option value="2026-27">2026-27</option>
               <option value="2025-26">2025-26</option>
               <option value="2024-25">2024-25</option>
               <option value="2023-24">2023-24</option>
@@ -304,10 +305,11 @@ export default function StudentAchievementsManager({ currentUser, onDataChange }
               style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', background: '#FFFFFF', color: '#0F172A', fontWeight: 600 }}
             >
               <option value="ALL">All Categories</option>
+              <option value="Academic">Academic</option>
+              <option value="Sports">Sports</option>
               <option value="Hackathon">Hackathon</option>
               <option value="Coding Competition">Coding Competition</option>
               <option value="Paper Presentation">Paper Presentation</option>
-              <option value="Sports">Sports</option>
               <option value="Cultural">Cultural</option>
               <option value="NCC">NCC</option>
               <option value="Innovation">Innovation</option>

@@ -558,6 +558,80 @@ export function authServerPlugin() {
           return res.end(JSON.stringify({ success: true, count: logs.length, logs }));
         }
 
+        // ──────────────────────────────────────────────────────────
+        // 6. /api/portal/data - Shared Server Persistence Endpoint
+        // ──────────────────────────────────────────────────────────
+        if (req.url && req.url.startsWith('/api/portal/data')) {
+          const parsedUrl = new URL(req.url, 'http://localhost');
+          const moduleKey = parsedUrl.searchParams.get('module') || 'all';
+          const action = parsedUrl.searchParams.get('action') || 'get';
+
+          if (req.method === 'GET') {
+            try {
+              const { readDbState, getModuleRecords } = await import('./portalDataService.js');
+              if (moduleKey === 'all') {
+                const fullState = readDbState();
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ success: true, state: fullState }));
+              }
+              const records = getModuleRecords(moduleKey);
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              return res.end(JSON.stringify({ success: true, module: moduleKey, count: records.length, records }));
+            } catch (err) {
+              return safeApiError(res, err, 500, 'Failed to fetch portal records');
+            }
+          }
+
+          if (req.method === 'POST') {
+            let bodyStr = '';
+            req.on('data', chunk => bodyStr += chunk);
+            req.on('end', async () => {
+              try {
+                const body = JSON.parse(bodyStr || '{}');
+                const { saveModuleRecord, saveAllModuleRecords, commitBatch, rollbackBatch } = await import('./portalDataService.js');
+
+                if (action === 'save-all') {
+                  const result = saveAllModuleRecords(moduleKey, body, null);
+                  res.writeHead(200, { 'Content-Type': 'application/json' });
+                  return res.end(JSON.stringify({ success: result }));
+                }
+
+                if (action === 'batch-commit') {
+                  const result = commitBatch(moduleKey, body, null);
+                  res.writeHead(200, { 'Content-Type': 'application/json' });
+                  return res.end(JSON.stringify({ success: true, ...result }));
+                }
+
+                if (action === 'rollback') {
+                  const { batchId } = body || {};
+                  const result = rollbackBatch(batchId, null);
+                  res.writeHead(200, { 'Content-Type': 'application/json' });
+                  return res.end(JSON.stringify({ success: true, ...result }));
+                }
+
+                const saved = saveModuleRecord(moduleKey, body, null);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ success: true, record: saved }));
+              } catch (err) {
+                return safeApiError(res, err, 500, 'Failed to save portal record');
+              }
+            });
+            return;
+          }
+
+          if (req.method === 'DELETE') {
+            try {
+              const id = parsedUrl.searchParams.get('id');
+              const { deleteModuleRecord } = await import('./portalDataService.js');
+              const deleted = deleteModuleRecord(moduleKey, id, null);
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              return res.end(JSON.stringify({ success: deleted }));
+            } catch (err) {
+              return safeApiError(res, err, 500, 'Failed to delete portal record');
+            }
+          }
+        }
+
         next();
       });
     }

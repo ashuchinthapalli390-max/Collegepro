@@ -132,38 +132,52 @@ export function parseDelimitedText(text, delimiter = ',') {
 
 /**
  * Evaluates candidates for the header row index (0-indexed).
- * Checks row density, string content vs numeric/date content, and non-empty columns.
+ * Checks row density, string content vs numeric/date content, academic keywords, and non-empty columns.
  */
 export function detectHeaderRowIndex(rawMatrix) {
   if (!rawMatrix || rawMatrix.length === 0) return 0;
   if (rawMatrix.length === 1) return 0;
 
-  const maxScan = Math.min(rawMatrix.length, 8);
+  const maxScan = Math.min(rawMatrix.length, 25);
   let bestRowIndex = 0;
   let bestScore = -1;
+
+  const ACADEMIC_HEADER_KEYWORDS = [
+    'application', 'inventor', 'title', 'patent', 'cbr',
+    'roll', 'htno', 'regd', 'student', 'name',
+    'company', 'package', 'ctc', 'salary', 'lpa', 'drive',
+    'event', 'organizer', 'workshop', 'seminar', 'hackathon',
+    'department', 'dept', 'branch', 'regulation', 'bos',
+    'date', 'venue', 'coordinator', 'mou', 'participants'
+  ];
 
   for (let r = 0; r < maxScan; r++) {
     const row = rawMatrix[r] || [];
     const nonEmptyCells = row.filter(c => c !== null && c !== undefined && String(c).trim() !== '');
     if (nonEmptyCells.length === 0) continue;
 
+    const rowStr = nonEmptyCells.map(c => String(c).toLowerCase()).join(' ');
+
     // A good header row has many non-empty string cells, distinct names, and few pure numbers
     const totalCells = nonEmptyCells.length;
     const stringCells = nonEmptyCells.filter(c => isNaN(Number(String(c).trim()))).length;
     const uniqueCells = new Set(nonEmptyCells.map(c => String(c).trim().toLowerCase())).size;
 
+    // Academic keyword match count
+    const keywordMatches = ACADEMIC_HEADER_KEYWORDS.filter(kw => rowStr.includes(kw)).length;
+
     // Check if next row exists and has similar number of columns (data row)
     const nextRow = rawMatrix[r + 1] || [];
     const nextNonEmpty = nextRow.filter(c => c !== null && c !== undefined && String(c).trim() !== '').length;
 
-    let score = (stringCells * 3) + (uniqueCells * 2);
+    let score = (stringCells * 3) + (uniqueCells * 2) + (keywordMatches * 10);
     if (nextNonEmpty >= totalCells * 0.7) {
-      score += 5; // next row looks like data!
+      score += 8; // next row looks like data!
     }
     
-    // Penalize if the entire row has only 1 cell (e.g. "Narasaraopeta Engineering College Banner")
+    // Penalize if the entire row has only 1 or 2 cells (e.g. title banner or note)
     if (totalCells <= 2 && rawMatrix.length > 3) {
-      score -= 10;
+      score -= 15;
     }
 
     if (score > bestScore) {

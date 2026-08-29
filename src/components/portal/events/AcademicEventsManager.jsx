@@ -135,7 +135,7 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
     const ongoing = events.filter(e => e.eventStatus === 'ONGOING').length;
     const completed = events.filter(e => e.eventStatus === 'COMPLETED').length;
     const pendingReview = events.filter(e => e.workflowStatus === 'SUBMITTED' || e.workflowStatus === 'UNDER_REVIEW').length;
-    const thisYear = events.filter(e => e.academicYear === '2025-26' || e.academicYear === '2024-25').length;
+    const thisYear = events.filter(e => e.academicYear === '2026-27' || e.academicYear === '2025-26' || e.academicYear === '2024-25').length;
     return { total, upcoming, ongoing, completed, pendingReview, thisYear };
   }, [events]);
 

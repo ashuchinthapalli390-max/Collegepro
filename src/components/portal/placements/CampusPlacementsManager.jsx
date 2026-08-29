@@ -474,22 +474,41 @@ export default function CampusPlacementsManager({ currentUser, onDataChange }) {
                 </span>
               </td>
 
-              {/* Status */}
+              {/* Status & Validation Flags */}
               <td style={{ padding: '0.85rem 1rem' }}>
-                <span style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.3rem',
-                  padding: '0.2rem 0.55rem',
-                  borderRadius: '9999px',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  background: ['JOINED', 'OFFERED', 'SELECTED'].includes(placement.status) ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                  color: ['JOINED', 'OFFERED', 'SELECTED'].includes(placement.status) ? '#34D399' : '#FBBF24'
-                }}>
-                  <CheckCircle2 size={12} />
-                  {placement.status}
-                </span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'flex-start' }}>
+                  <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.3rem',
+                    padding: '0.2rem 0.55rem',
+                    borderRadius: '9999px',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    background: placement.status === 'DUPLICATE_CANDIDATE' 
+                      ? 'rgba(239, 68, 68, 0.15)' 
+                      : placement.status === 'NEEDS_REVIEW' || placement.departmentConflict
+                      ? 'rgba(245, 158, 11, 0.15)'
+                      : ['JOINED', 'OFFERED', 'SELECTED', 'PLACED'].includes(placement.status)
+                      ? 'rgba(16, 185, 129, 0.15)'
+                      : 'rgba(148, 163, 184, 0.15)',
+                    color: placement.status === 'DUPLICATE_CANDIDATE'
+                      ? '#F87171'
+                      : placement.status === 'NEEDS_REVIEW' || placement.departmentConflict
+                      ? '#FBBF24'
+                      : ['JOINED', 'OFFERED', 'SELECTED', 'PLACED'].includes(placement.status)
+                      ? '#34D399'
+                      : '#CBD5E1'
+                  }}>
+                    <CheckCircle2 size={11} />
+                    {placement.status === 'DUPLICATE_CANDIDATE' ? 'Duplicate Candidate' : (placement.status || 'Placed')}
+                  </span>
+                  {placement.departmentConflict && (
+                    <span style={{ fontSize: '0.66rem', color: '#FBBF24', fontWeight: 600 }}>
+                      ⚠️ Dept Conflict
+                    </span>
+                  )}
+                </div>
               </td>
 
               {/* Actions */}

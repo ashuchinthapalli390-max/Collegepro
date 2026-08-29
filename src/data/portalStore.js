@@ -354,6 +354,32 @@ export function saveStore(key, data) {
   try {
     const storage = getStorage();
     storage.setItem(key, JSON.stringify(data));
+
+    // Background server synchronization for shared cross-device persistence
+    if (typeof window !== 'undefined' && typeof fetch !== 'undefined') {
+      const KEY_TO_MODULE_MAP = {
+        [STORAGE_KEYS.PATENTS]: 'patents',
+        [STORAGE_KEYS.PLACEMENTS]: 'campusPlacements',
+        [STORAGE_KEYS.CAMPUS_PLACEMENTS]: 'campusPlacements',
+        [STORAGE_KEYS.STUDENT_ACHIEVEMENTS]: 'studentAchievements',
+        [STORAGE_KEYS.EVENTS]: 'events',
+        [STORAGE_KEYS.BOS]: 'bos',
+        [STORAGE_KEYS.BULK_IMPORT_JOBS]: 'importJobs',
+        [STORAGE_KEYS.AUDIT_LOGS]: 'auditLogs'
+      };
+
+      const moduleKey = KEY_TO_MODULE_MAP[key];
+      if (moduleKey && Array.isArray(data)) {
+        fetch(`/api/portal/data?module=${encodeURIComponent(moduleKey)}&action=save-all`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        }).catch(err => {
+          // Gracefully defer background sync if offline or in static hosting mode
+          console.debug('[PORTAL_SYNC] Background sync deferred:', err?.message || err);
+        });
+      }
+    }
   } catch (e) {
     console.error('Storage save error:', e);
   }

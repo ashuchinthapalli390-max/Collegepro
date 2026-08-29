@@ -77,7 +77,9 @@ import {
   exportToExcel,
   exportToPDF,
   exportToCSV,
-  getAcademicEvents
+  getAcademicEvents,
+  getCampusPlacements,
+  getBoSMeetings
 } from '../../data/portalStore.js';
 import { DEPARTMENTS, BRANDING_LOGOS } from '../../data/masterData.js';
 import MadamModulesCRUD from './MadamModulesCRUD.jsx';
@@ -219,6 +221,10 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
   const loginEvents = getLoginEvents();
   const authSettings = getAuthSettings();
   const emailTemplates = getEmailTemplates();
+
+  const campusPlacements = getCampusPlacements();
+  const bosMeetings = getBoSMeetings();
+  const uniquePlacedCount = new Set(campusPlacements.map(p => (p.studentRoll || '').trim().toUpperCase())).size;
 
   const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN';
   const isAdminOrSuper = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN';
@@ -485,6 +491,9 @@ export default function PortalDashboard({ currentUser, onNavigatePublic, onLogou
                     eventsCount={academicEvents.length}
                     achievementsCount={achievements.length}
                     activeSessionsCount={activeSessions.length}
+                    placementsCount={campusPlacements.length}
+                    uniquePlacedStudentsCount={uniquePlacedCount}
+                    bosMeetingsCount={bosMeetings.length}
                     onNavigate={(mod) => setActiveModule(mod)}
                     onOpenQuickAction={() => setActiveModule('events')}
                     onOpenSync={() => setSyncModalOpen(true)}
