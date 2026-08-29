@@ -1,4 +1,6 @@
 import * as XLSX from 'xlsx';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 // Storage Key
 export const MID_EXAM_STORAGE_KEY = 'et_portal_mid_exam_analyses_v1';
@@ -111,7 +113,24 @@ export const INITIAL_MID_EXAM_ANALYSES = [
       below50: 4
     },
     students: CANONICAL_CCDF_STUDENTS,
-    advancedActivities: [],
+    advancedActivities: [
+      {
+        id: 'adv_act_1',
+        date: '2026-01-10',
+        topic: 'Memory Forensics & Malware Analysis with Volatility Framework',
+        facultyGuide: 'Dr. S. Venkateswarlu',
+        remarks: 'Seminar conducted for 12 advanced learners to develop advanced forensic triage capabilities.'
+      }
+    ],
+    weakActivities: [
+      {
+        id: 'weak_act_1',
+        date: '2026-01-05',
+        topic: 'Digital Forensics Evidence Acquisition Fundamentals & File Carving',
+        facultyGuide: 'Dr. S. Venkateswarlu',
+        remarks: 'Remedial coaching on descriptive question framing and short-answer clarity.'
+      }
+    ],
     remedialSessions: [
       {
         id: 'rem_session_1',
@@ -124,6 +143,19 @@ export const INITIAL_MID_EXAM_ANALYSES = [
           '23471A4623': 'PRESENT',
           '23471A4627': 'PRESENT',
           '23471A4641': 'ABSENT'
+        }
+      },
+      {
+        id: 'rem_session_2',
+        sessionDate: '2026-01-12',
+        topic: 'Chain of Custody, Hash Verification & Write Blockers',
+        facultyName: 'Dr. S. Venkateswarlu',
+        remarks: 'Hands-on practice session on MD5/SHA256 evidence integrity.',
+        attendance: {
+          '23471A4614': 'PRESENT',
+          '23471A4623': 'PRESENT',
+          '23471A4627': 'PRESENT',
+          '23471A4641': 'PRESENT'
         }
       }
     ],
@@ -208,7 +240,7 @@ export function saveMidExamAnalysis(analysisData) {
   return updated.find(a => a.id === analysisData.id) || updated[0];
 }
 
-// Classification & Score Calculation Logic
+// Helper: Score Calculation Engine
 export function calculateStudentMid1(ass1Raw, saqRaw, desRaw) {
   const isAss1Absent = ass1Raw === 'AB' || ass1Raw === 'ab';
   const isSaqAbsent = saqRaw === 'AB' || saqRaw === 'ab';
@@ -239,87 +271,208 @@ export function calculateStudentMid1(ass1Raw, saqRaw, desRaw) {
   };
 }
 
-// Generate Blank Mid Analysis XLSX Template (Clean, Zero Formula Errors)
-export function generateBlankMidTemplateXLSX() {
-  const wb = XLSX.utils.book_new();
+// -------------------------------------------------------------
+// 1. PDF Institutional Header Helper
+// -------------------------------------------------------------
+function addInstitutionalPdfHeader(doc, title, subtitle, metadata = {}) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const margin = 14;
+  let y = margin;
 
-  // Sheet 1: INFO
-  const infoData = [
-    ['METADATA FIELD', 'VALUE / CONFIGURATION'],
-    ['Department', 'CSE (Cyber Security)'],
-    ['Department Code', 'CYS'],
-    ['Academic Year', '2025-26'],
-    ['Regulation', 'R23'],
-    ['Batch', '2023'],
-    ['Year', 'III Year'],
-    ['Semester', 'II Semester'],
-    ['Subject Name', 'Cyber Crime & Digital Forensics'],
-    ['Subject Code', 'R23CY3201'],
-    ['Mid-I Examination Date', '2025-12-15'],
-    ['Mid-II Examination Date', '2026-03-20'],
-    ['Assignment Maximum Marks', '5'],
-    ['Short Answers (SAQ) Maximum Marks', '10'],
-    ['Descriptive Maximum Marks', '15'],
-    ['Total Mid Assessment Marks', '30']
-  ];
-  const wsInfo = XLSX.utils.aoa_to_sheet(infoData);
-  XLSX.utils.book_append_sheet(wb, wsInfo, 'INFO');
+  // Header Banner
+  doc.setFillColor(11, 25, 44);
+  doc.rect(margin, y, pageWidth - (margin * 2), 24, 'F');
 
-  // Sheet 2: ASSIGNMENT-1
-  const ass1Headers = [
-    ['S.No', 'H.T.NO', 'Q1 (CO1)', 'Q2 (CO1)', 'Total (/10)', 'Reduced (/5)']
-  ];
-  const wsAss1 = XLSX.utils.aoa_to_sheet(ass1Headers);
-  XLSX.utils.book_append_sheet(wb, wsAss1, 'ASSIGNMENT-1');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(255, 255, 255);
+  doc.text('NARASARAOPETA ENGINEERING COLLEGE (AUTONOMOUS)', pageWidth / 2, y + 7, { align: 'center' });
 
-  // Sheet 3: MID-1
-  const mid1Headers = [
-    ['S.No', 'H.T.NO', 'Q1 (a)', 'Q1 (b)', 'Q2 (a)', 'Q2 (b)', 'DES Total (/30)', 'DES Reduced (/15)', 'SAQ Total (/10)']
-  ];
-  const wsMid1 = XLSX.utils.aoa_to_sheet(mid1Headers);
-  XLSX.utils.book_append_sheet(wb, wsMid1, 'MID-1');
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(212, 175, 55);
+  doc.text('Approved by AICTE, Affiliated to JNTUK, Accredited with NAAC "A+" Grade & NBA', pageWidth / 2, y + 13, { align: 'center' });
 
-  // Sheet 4: ASSIGNMENT-2
-  const ass2Headers = [
-    ['S.No', 'H.T.NO', 'Q1 (CO3)', 'Q2 (CO4)', 'Total (/10)', 'Reduced (/5)']
-  ];
-  const wsAss2 = XLSX.utils.aoa_to_sheet(ass2Headers);
-  XLSX.utils.book_append_sheet(wb, wsAss2, 'ASSIGNMENT-2');
+  doc.setFontSize(8);
+  doc.setTextColor(226, 232, 240);
+  doc.text(`DEPARTMENT OF EMERGING TECHNOLOGIES — ${metadata.departmentName || 'CYBER SECURITY'}`, pageWidth / 2, y + 19, { align: 'center' });
 
-  // Sheet 5: MID-2
-  const mid2Headers = [
-    ['S.No', 'H.T.NO', 'Q1 (a)', 'Q1 (b)', 'Q2 (a)', 'Q2 (b)', 'DES Total (/30)', 'DES Reduced (/15)', 'SAQ Total (/10)']
-  ];
-  const wsMid2 = XLSX.utils.aoa_to_sheet(mid2Headers);
-  XLSX.utils.book_append_sheet(wb, wsMid2, 'MID-2');
+  y += 28;
 
-  // Generate binary and trigger browser download
-  XLSX.writeFile(wb, 'ET_Mid_Exam_Analysis_Blank_Template.xlsx');
+  // Document Title
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(11, 25, 44);
+  doc.text(title.toUpperCase(), pageWidth / 2, y, { align: 'center' });
+  y += 5;
+
+  if (subtitle) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text(subtitle, pageWidth / 2, y, { align: 'center' });
+    y += 6;
+  }
+
+  // Course Context Box
+  doc.setFillColor(248, 250, 252);
+  doc.rect(margin, y, pageWidth - (margin * 2), 12, 'F');
+  doc.setDrawColor(226, 232, 240);
+  doc.rect(margin, y, pageWidth - (margin * 2), 12, 'S');
+
+  doc.setFontSize(7.5);
+  doc.setTextColor(15, 23, 42);
+  doc.setFont('helvetica', 'bold');
+  
+  const col1 = margin + 3;
+  const col2 = margin + 55;
+  const col3 = margin + 115;
+
+  doc.text(`Subject: ${metadata.subjectName || 'CCDF'} (${metadata.subjectCode || 'R23CY3201'})`, col1, y + 5);
+  doc.text(`Year/Sem: ${metadata.year || 'III Year'} - ${metadata.semester || 'II Sem'}`, col2, y + 5);
+  doc.text(`Academic Year: ${metadata.academicYear || '2025-26'}`, col3, y + 5);
+
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Regulation: ${metadata.regulation || 'R23'} | Batch: ${metadata.batch || '2023'}`, col1, y + 9);
+  doc.text(`Assessment Basis: Mid-I (30 Marks)`, col2, y + 9);
+  doc.text(`Report Generated: ${new Date().toLocaleDateString()}`, col3, y + 9);
+
+  return y + 16;
 }
 
-// Dedicated Exporter: Advanced Learners (>= 80%)
+// -------------------------------------------------------------
+// 2. Remedial Attendance Sheet (Excel & PDF)
+// -------------------------------------------------------------
+export function exportRemedialAttendanceXLSX(analysis, { prefilled = true, sessionCount = 6 } = {}) {
+  const wb = XLSX.utils.book_new();
+
+  const weakList = prefilled ? (analysis.students || []).filter(s => s.mid1Percentage < 50) : [];
+
+  const sessionCols = [];
+  for (let i = 1; i <= sessionCount; i++) {
+    sessionCols.push(`Session ${i}\nDate: _______`);
+  }
+
+  const headerRows = [
+    ['NARASARAOPETA ENGINEERING COLLEGE (AUTONOMOUS)'],
+    [`DEPARTMENT OF ${analysis.departmentName ? analysis.departmentName.toUpperCase() : 'CYBER SECURITY'}`],
+    ['MAKEUP & REMEDIAL CLASSES ATTENDANCE FOR SLOW STUDENTS'],
+    [],
+    ['Subject Name:', analysis.subjectName, 'Subject Code:', analysis.subjectCode, 'Academic Year:', analysis.academicYear],
+    ['Year & Semester:', `${analysis.year} ${analysis.semester}`, 'Regulation:', analysis.regulation, 'Target Threshold:', '< 50% (< 15/30)'],
+    [],
+    ['S.No', 'Roll Number', 'Student Name', 'Mid-I Marks (/30)', 'Percentage', ...sessionCols, 'Remarks / Status']
+  ];
+
+  const dataRows = [];
+  if (prefilled && weakList.length > 0) {
+    weakList.forEach((s, idx) => {
+      const row = [
+        idx + 1,
+        s.rollNumber,
+        s.studentName || '—',
+        s.mid1Total,
+        `${s.mid1Percentage}%`,
+        ...Array(sessionCount).fill(''),
+        'Weak Learner (<50%)'
+      ];
+      dataRows.push(row);
+    });
+  } else {
+    // 10 blank rows for manual entry
+    for (let i = 1; i <= 10; i++) {
+      dataRows.push([i, '', '', '', '', ...Array(sessionCount).fill(''), '']);
+    }
+  }
+
+  // Footer Signatures
+  const footerRows = [
+    [],
+    [],
+    ['Signature of Course Faculty: ____________________', '', '', '', 'Signature of Head of Department: ____________________']
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet([...headerRows, ...dataRows, ...footerRows]);
+  XLSX.utils.book_append_sheet(wb, ws, 'REMEDIAL ATTENDANCE');
+  XLSX.writeFile(wb, `Remedial_Attendance_${prefilled ? 'Prefilled' : 'Blank'}_${analysis.subjectCode}_${analysis.academicYear}.xlsx`);
+}
+
+export function exportRemedialAttendancePDF(analysis, { prefilled = true, sessionCount = 6 } = {}) {
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const startY = addInstitutionalPdfHeader(
+    doc,
+    'MAKEUP & REMEDIAL CLASSES ATTENDANCE FOR SLOW STUDENTS',
+    'Mandatory academic intervention record for students scoring below 50% in Mid-I Examination',
+    analysis
+  );
+
+  const weakList = prefilled ? (analysis.students || []).filter(s => s.mid1Percentage < 50) : [];
+
+  const sessionCols = [];
+  for (let i = 1; i <= sessionCount; i++) {
+    sessionCols.push(`Sess ${i}\n__/__`);
+  }
+
+  const tableHead = [
+    ['S.No', 'Roll Number', 'Student Name', 'Mid-I /30', '%', ...sessionCols, 'Remarks']
+  ];
+
+  const tableBody = [];
+  if (prefilled && weakList.length > 0) {
+    weakList.forEach((s, idx) => {
+      tableBody.push([
+        idx + 1,
+        s.rollNumber,
+        s.studentName || '—',
+        s.mid1Total,
+        `${s.mid1Percentage}%`,
+        ...Array(sessionCount).fill(''),
+        s.isAbsentMid1 ? 'Absent Flagged' : 'Low Score'
+      ]);
+    });
+  } else {
+    for (let i = 1; i <= 10; i++) {
+      tableBody.push([i, '', '', '', '', ...Array(sessionCount).fill(''), '']);
+    }
+  }
+
+  autoTable(doc, {
+    startY,
+    head: tableHead,
+    body: tableBody,
+    theme: 'grid',
+    styles: { fontSize: 7.5, cellPadding: 2.5, halign: 'center' },
+    headStyles: { fillColor: [11, 25, 44], textColor: [255, 255, 255], fontStyle: 'bold' },
+    columnStyles: {
+      0: { cellWidth: 12 },
+      1: { cellWidth: 28, halign: 'left', fontStyle: 'bold' },
+      2: { cellWidth: 35, halign: 'left' },
+      3: { cellWidth: 18 },
+      4: { cellWidth: 16 }
+    }
+  });
+
+  const finalY = doc.lastAutoTable.finalY + 18;
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(15, 23, 42);
+  doc.text('Signature of Faculty / Course Coordinator', 18, finalY);
+  doc.text('Signature of Head of Department (HOD)', 200, finalY);
+
+  doc.save(`Remedial_Attendance_${prefilled ? 'Prefilled' : 'Blank'}_${analysis.subjectCode}.pdf`);
+}
+
+// -------------------------------------------------------------
+// 3. Advanced Learners Report & Activities (Excel & PDF)
+// -------------------------------------------------------------
 export function exportAdvancedLearnersCSV(analysis) {
   if (!analysis || !analysis.students) return;
-
   const advancedList = analysis.students.filter(s => s.mid1Percentage >= 80);
   
   const headers = [
-    'Academic Year',
-    'Department',
-    'Batch',
-    'Year',
-    'Semester',
-    'Regulation',
-    'Subject',
-    'Subject Code',
-    'Roll Number',
-    'Student Name',
-    'Assignment /5',
-    'SAQ /10',
-    'Descriptive /15',
-    'Total /30',
-    'Percentage (%)',
-    'Learner Classification'
+    'Academic Year', 'Department', 'Batch', 'Year', 'Semester', 'Regulation', 
+    'Subject', 'Subject Code', 'Roll Number', 'Student Name', 'Assignment /5', 
+    'SAQ /10', 'Descriptive /15', 'Total /30', 'Percentage (%)', 'Learner Classification'
   ];
 
   const rows = advancedList.map(s => [
@@ -352,31 +505,136 @@ export function exportAdvancedLearnersCSV(analysis) {
   document.body.removeChild(a);
 }
 
-// Dedicated Exporter: Weak Learners (< 50%)
+export function exportAdvancedLearnersXLSX(analysis) {
+  const wb = XLSX.utils.book_new();
+  const advancedList = (analysis.students || []).filter(s => s.mid1Percentage >= 80);
+
+  const headerRows = [
+    ['NARASARAOPETA ENGINEERING COLLEGE (AUTONOMOUS)'],
+    [`DEPARTMENT OF ${analysis.departmentName ? analysis.departmentName.toUpperCase() : 'CYBER SECURITY'}`],
+    ['ADVANCED LEARNERS PERFORMANCE REPORT (≥80%)'],
+    [],
+    ['Subject:', analysis.subjectName, 'Code:', analysis.subjectCode, 'AY:', analysis.academicYear],
+    ['Year/Sem:', `${analysis.year} ${analysis.semester}`, 'Regulation:', analysis.regulation, 'Advanced Count:', `${advancedList.length} Students`],
+    [],
+    ['S.No', 'Roll Number', 'Student Name', 'Assignment (/5)', 'Mid-I SAQ (/10)', 'Mid-I DES (/15)', 'Total (/30)', 'Percentage', 'Classification']
+  ];
+
+  const dataRows = advancedList.map((s, idx) => [
+    idx + 1,
+    s.rollNumber,
+    s.studentName || '—',
+    s.assignment1,
+    s.mid1Saq,
+    s.mid1Descriptive,
+    s.mid1Total,
+    `${s.mid1Percentage}%`,
+    'Advanced Learner (≥80%)'
+  ]);
+
+  const ws = XLSX.utils.aoa_to_sheet([...headerRows, ...dataRows]);
+  XLSX.utils.book_append_sheet(wb, ws, 'ADVANCED LEARNERS');
+  XLSX.writeFile(wb, `Advanced_Learners_80_Percent_${analysis.subjectCode}_${analysis.academicYear}.xlsx`);
+}
+
+export function exportAdvancedLearnersPDF(analysis) {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const startY = addInstitutionalPdfHeader(
+    doc,
+    'ADVANCED LEARNERS PERFORMANCE REPORT (≥80%)',
+    'Official academic record of high performers identified for advanced topics & technical seminars',
+    analysis
+  );
+
+  const advancedList = (analysis.students || []).filter(s => s.mid1Percentage >= 80);
+
+  const tableHead = [
+    ['S.No', 'Roll Number', 'Student Name', 'Ass (/5)', 'SAQ (/10)', 'DES (/15)', 'Total /30', '%']
+  ];
+
+  const tableBody = advancedList.map((s, idx) => [
+    idx + 1,
+    s.rollNumber,
+    s.studentName || '—',
+    s.assignment1,
+    s.mid1Saq,
+    s.mid1Descriptive,
+    s.mid1Total,
+    `${s.mid1Percentage}%`
+  ]);
+
+  autoTable(doc, {
+    startY,
+    head: tableHead,
+    body: tableBody,
+    theme: 'grid',
+    styles: { fontSize: 8, cellPadding: 2.5, halign: 'center' },
+    headStyles: { fillColor: [5, 150, 105], textColor: [255, 255, 255], fontStyle: 'bold' },
+    columnStyles: {
+      0: { cellWidth: 12 },
+      1: { cellWidth: 32, halign: 'left', fontStyle: 'bold' },
+      2: { cellWidth: 48, halign: 'left' }
+    }
+  });
+
+  const finalY = doc.lastAutoTable.finalY + 16;
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(15, 23, 42);
+  doc.text('Signature of Faculty Coordinator', 18, finalY);
+  doc.text('Signature of Head of Department (HOD)', 130, finalY);
+
+  doc.save(`Advanced_Learners_80_Percent_${analysis.subjectCode}.pdf`);
+}
+
+export function exportAdvancedEvidenceXLSX(analysis) {
+  const wb = XLSX.utils.book_new();
+
+  const headerRows = [
+    ['NARASARAOPETA ENGINEERING COLLEGE (AUTONOMOUS)'],
+    [`DEPARTMENT OF ${analysis.departmentName ? analysis.departmentName.toUpperCase() : 'CYBER SECURITY'}`],
+    ['TOPICS / ENRICHMENT ACTIVITIES FOR ADVANCED LEARNERS'],
+    [],
+    ['Subject:', analysis.subjectName, 'Code:', analysis.subjectCode, 'AY:', analysis.academicYear],
+    ['Year/Sem:', `${analysis.year} ${analysis.semester}`, 'Regulation:', analysis.regulation, 'Learner Group:', 'Score ≥ 80%'],
+    [],
+    ['S.No', 'Date', 'Name of the Topic / Advanced Activity', 'Target Student Roll(s)', 'Faculty Guide / Name', 'Signature of Faculty', 'Remarks']
+  ];
+
+  const dataRows = (analysis.advancedActivities && analysis.advancedActivities.length > 0)
+    ? analysis.advancedActivities.map((act, idx) => [
+        idx + 1,
+        act.date,
+        act.topic,
+        'All Advanced (12)',
+        act.facultyGuide,
+        '',
+        act.remarks || ''
+      ])
+    : [
+        [1, '', '', '', '', '', ''],
+        [2, '', '', '', '', '', ''],
+        [3, '', '', '', '', '', ''],
+        [4, '', '', '', '', '', '']
+      ];
+
+  const ws = XLSX.utils.aoa_to_sheet([...headerRows, ...dataRows]);
+  XLSX.utils.book_append_sheet(wb, ws, 'EVIDENCE-ADVANCED');
+  XLSX.writeFile(wb, `Advanced_Learner_Activities_${analysis.subjectCode}_${analysis.academicYear}.xlsx`);
+}
+
+// -------------------------------------------------------------
+// 4. Weak Learners Report & Evidence (Excel & PDF)
+// -------------------------------------------------------------
 export function exportWeakLearnersCSV(analysis) {
   if (!analysis || !analysis.students) return;
-
   const weakList = analysis.students.filter(s => s.mid1Percentage < 50);
 
   const headers = [
-    'Academic Year',
-    'Department',
-    'Batch',
-    'Year',
-    'Semester',
-    'Regulation',
-    'Subject',
-    'Subject Code',
-    'Roll Number',
-    'Student Name',
-    'Assignment /5',
-    'SAQ /10',
-    'Descriptive /15',
-    'Total /30',
-    'Percentage (%)',
-    'Absence Status',
-    'Learner Classification',
-    'Remedial Action'
+    'Academic Year', 'Department', 'Batch', 'Year', 'Semester', 'Regulation', 
+    'Subject', 'Subject Code', 'Roll Number', 'Student Name', 'Assignment /5', 
+    'SAQ /10', 'Descriptive /15', 'Total /30', 'Percentage (%)', 'Absence Status', 
+    'Learner Classification', 'Remedial Action'
   ];
 
   const rows = weakList.map(s => [
@@ -411,24 +669,244 @@ export function exportWeakLearnersCSV(analysis) {
   document.body.removeChild(a);
 }
 
-// Dedicated Exporter: Consolidated Mid Analysis Report
+export function exportWeakLearnersXLSX(analysis) {
+  const wb = XLSX.utils.book_new();
+  const weakList = (analysis.students || []).filter(s => s.mid1Percentage < 50);
+
+  const headerRows = [
+    ['NARASARAOPETA ENGINEERING COLLEGE (AUTONOMOUS)'],
+    [`DEPARTMENT OF ${analysis.departmentName ? analysis.departmentName.toUpperCase() : 'CYBER SECURITY'}`],
+    ['WEAK / SLOW LEARNERS PERFORMANCE REPORT (<50%)'],
+    [],
+    ['Subject:', analysis.subjectName, 'Code:', analysis.subjectCode, 'AY:', analysis.academicYear],
+    ['Year/Sem:', `${analysis.year} ${analysis.semester}`, 'Regulation:', analysis.regulation, 'Weak Count:', `${weakList.length} Students`],
+    [],
+    ['S.No', 'Roll Number', 'Student Name', 'Assignment (/5)', 'Mid-I SAQ (/10)', 'Mid-I DES (/15)', 'Total (/30)', 'Percentage', 'Absence Notes', 'Remedial Action']
+  ];
+
+  const dataRows = weakList.map((s, idx) => [
+    idx + 1,
+    s.rollNumber,
+    s.studentName || '—',
+    s.assignment1,
+    s.mid1Saq,
+    s.mid1Descriptive,
+    s.mid1Total,
+    `${s.mid1Percentage}%`,
+    s.absenceNote || 'Appeared',
+    'Mandatory Remedial Classes'
+  ]);
+
+  const ws = XLSX.utils.aoa_to_sheet([...headerRows, ...dataRows]);
+  XLSX.utils.book_append_sheet(wb, ws, 'WEAK LEARNERS');
+  XLSX.writeFile(wb, `Weak_Learners_Under_50_Percent_${analysis.subjectCode}_${analysis.academicYear}.xlsx`);
+}
+
+export function exportWeakLearnersPDF(analysis) {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const startY = addInstitutionalPdfHeader(
+    doc,
+    'WEAK / SLOW LEARNERS IDENTIFICATION REPORT (<50%)',
+    'Official academic record of students requiring mandatory makeup classes and remedial monitoring',
+    analysis
+  );
+
+  const weakList = (analysis.students || []).filter(s => s.mid1Percentage < 50);
+
+  const tableHead = [
+    ['S.No', 'Roll Number', 'Student Name', 'Ass (/5)', 'SAQ (/10)', 'DES (/15)', 'Total /30', '%', 'Absence Note']
+  ];
+
+  const tableBody = weakList.map((s, idx) => [
+    idx + 1,
+    s.rollNumber,
+    s.studentName || '—',
+    s.assignment1,
+    s.mid1Saq,
+    s.mid1Descriptive,
+    s.mid1Total,
+    `${s.mid1Percentage}%`,
+    s.absenceNote || 'Appeared'
+  ]);
+
+  autoTable(doc, {
+    startY,
+    head: tableHead,
+    body: tableBody,
+    theme: 'grid',
+    styles: { fontSize: 8, cellPadding: 2.5, halign: 'center' },
+    headStyles: { fillColor: [220, 38, 38], textColor: [255, 255, 255], fontStyle: 'bold' },
+    columnStyles: {
+      0: { cellWidth: 12 },
+      1: { cellWidth: 32, halign: 'left', fontStyle: 'bold' },
+      2: { cellWidth: 42, halign: 'left' },
+      8: { cellWidth: 38, halign: 'left' }
+    }
+  });
+
+  const finalY = doc.lastAutoTable.finalY + 16;
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(15, 23, 42);
+  doc.text('Signature of Remedial Coordinator', 18, finalY);
+  doc.text('Signature of Head of Department (HOD)', 130, finalY);
+
+  doc.save(`Weak_Learners_Under_50_Percent_${analysis.subjectCode}.pdf`);
+}
+
+export function exportWeakEvidenceXLSX(analysis) {
+  const wb = XLSX.utils.book_new();
+
+  const headerRows = [
+    ['NARASARAOPETA ENGINEERING COLLEGE (AUTONOMOUS)'],
+    [`DEPARTMENT OF ${analysis.departmentName ? analysis.departmentName.toUpperCase() : 'CYBER SECURITY'}`],
+    ['TOPICS / REMEDIAL COACHING FOR SLOW / WEAK LEARNERS'],
+    [],
+    ['Subject:', analysis.subjectName, 'Code:', analysis.subjectCode, 'AY:', analysis.academicYear],
+    ['Year/Sem:', `${analysis.year} ${analysis.semester}`, 'Regulation:', analysis.regulation, 'Target Threshold:', '< 50% (< 15/30)'],
+    [],
+    ['S.No', 'Date', 'Remedial Topic / Focus Area', 'Target Students', 'Faculty Guide / Name', 'Signature of Faculty', 'Remarks']
+  ];
+
+  const dataRows = (analysis.weakActivities && analysis.weakActivities.length > 0)
+    ? analysis.weakActivities.map((act, idx) => [
+        idx + 1,
+        act.date,
+        act.topic,
+        'Weak Cohort (4)',
+        act.facultyGuide,
+        '',
+        act.remarks || ''
+      ])
+    : [
+        [1, '', '', '', '', '', ''],
+        [2, '', '', '', '', '', ''],
+        [3, '', '', '', '', '', ''],
+        [4, '', '', '', '', '', '']
+      ];
+
+  const ws = XLSX.utils.aoa_to_sheet([...headerRows, ...dataRows]);
+  XLSX.utils.book_append_sheet(wb, ws, 'EVIDENCE-WEAK');
+  XLSX.writeFile(wb, `Weak_Learner_Topics_${analysis.subjectCode}_${analysis.academicYear}.xlsx`);
+}
+
+// -------------------------------------------------------------
+// 5. Improvement Analysis Sheet (Excel & PDF)
+// -------------------------------------------------------------
+export function exportImprovementAnalysisXLSX(analysis) {
+  const wb = XLSX.utils.book_new();
+  const weakList = (analysis.students || []).filter(s => s.mid1Percentage < 50);
+
+  const headerRows = [
+    ['NARASARAOPETA ENGINEERING COLLEGE (AUTONOMOUS)'],
+    [`DEPARTMENT OF ${analysis.departmentName ? analysis.departmentName.toUpperCase() : 'CYBER SECURITY'}`],
+    ['IMPACT ANALYSIS AFTER II MID ON REMEDIAL CLASSES CONDUCTED FOR WEAK STUDENTS'],
+    [],
+    ['Subject:', analysis.subjectName, 'Code:', analysis.subjectCode, 'AY:', analysis.academicYear],
+    ['Year/Sem:', `${analysis.year} ${analysis.semester}`, 'Regulation:', analysis.regulation, 'Intervention Cohort:', 'Mid-I Weak Students'],
+    [],
+    ['S.No', 'Roll Number', 'Student Name', 'Mid-I Total (/30)', 'Mid-I %', 'Mid-II Total (/30)', 'Mid-II %', 'Marks Change', 'Percentage Change', 'Remarks / Improvement Status']
+  ];
+
+  const dataRows = weakList.map((s, idx) => {
+    const mid2Tot = s.mid2Total != null ? s.mid2Total : 'Pending';
+    const mid2Pct = s.mid2Percentage != null ? `${s.mid2Percentage}%` : 'Pending';
+    const marksDelta = s.mid2Total != null ? (s.mid2Total - s.mid1Total) : '—';
+    const pctDelta = s.mid2Percentage != null ? `${(s.mid2Percentage - s.mid1Percentage).toFixed(2)}%` : '—';
+
+    return [
+      idx + 1,
+      s.rollNumber,
+      s.studentName || '—',
+      s.mid1Total,
+      `${s.mid1Percentage}%`,
+      mid2Tot,
+      mid2Pct,
+      marksDelta,
+      pctDelta,
+      s.improvementRemarks || 'Remedial coaching provided'
+    ];
+  });
+
+  const footerRows = [
+    [],
+    ['Signature of Course Faculty: ____________________', '', '', '', 'Signature of Head of Department: ____________________']
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet([...headerRows, ...dataRows, ...footerRows]);
+  XLSX.utils.book_append_sheet(wb, ws, 'IMPROVEMENT ANALYSIS');
+  XLSX.writeFile(wb, `Improvement_Analysis_${analysis.subjectCode}_${analysis.academicYear}.xlsx`);
+}
+
+export function exportImprovementAnalysisPDF(analysis) {
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const startY = addInstitutionalPdfHeader(
+    doc,
+    'IMPACT ANALYSIS AFTER II MID ON REMEDIAL CLASSES CONDUCTED FOR WEAK STUDENTS',
+    'Comparative evaluation tracking academic improvement of the Mid-I weak cohort after remedial sessions',
+    analysis
+  );
+
+  const weakList = (analysis.students || []).filter(s => s.mid1Percentage < 50);
+
+  const tableHead = [
+    ['S.No', 'Roll Number', 'Student Name', 'Mid-I /30', 'Mid-I %', 'Mid-II /30', 'Mid-II %', 'Marks Δ', '% Δ', 'Remarks']
+  ];
+
+  const tableBody = weakList.map((s, idx) => {
+    const mid2Tot = s.mid2Total != null ? s.mid2Total : 'Pending';
+    const mid2Pct = s.mid2Percentage != null ? `${s.mid2Percentage}%` : 'Pending';
+    const marksDelta = s.mid2Total != null ? (s.mid2Total - s.mid1Total) : '—';
+    const pctDelta = s.mid2Percentage != null ? `${(s.mid2Percentage - s.mid1Percentage).toFixed(2)}%` : '—';
+
+    return [
+      idx + 1,
+      s.rollNumber,
+      s.studentName || '—',
+      s.mid1Total,
+      `${s.mid1Percentage}%`,
+      mid2Tot,
+      mid2Pct,
+      marksDelta,
+      pctDelta,
+      s.improvementRemarks || 'Remedial coaching provided'
+    ];
+  });
+
+  autoTable(doc, {
+    startY,
+    head: tableHead,
+    body: tableBody,
+    theme: 'grid',
+    styles: { fontSize: 8, cellPadding: 2.5, halign: 'center' },
+    headStyles: { fillColor: [11, 25, 44], textColor: [255, 255, 255], fontStyle: 'bold' },
+    columnStyles: {
+      0: { cellWidth: 12 },
+      1: { cellWidth: 32, halign: 'left', fontStyle: 'bold' },
+      2: { cellWidth: 45, halign: 'left' }
+    }
+  });
+
+  const finalY = doc.lastAutoTable.finalY + 16;
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(15, 23, 42);
+  doc.text('Signature of Faculty / Course Coordinator', 18, finalY);
+  doc.text('Signature of Head of Department (HOD)', 200, finalY);
+
+  doc.save(`Improvement_Analysis_${analysis.subjectCode}.pdf`);
+}
+
+// -------------------------------------------------------------
+// 6. Consolidated Mid Analysis Reports (CSV, PDF, Full XLSX)
+// -------------------------------------------------------------
 export function exportConsolidatedMidCSV(analysis) {
   if (!analysis || !analysis.students) return;
 
   const headers = [
-    'Roll Number',
-    'Student Name',
-    'Department',
-    'Subject Code',
-    'Mid-I Ass /5',
-    'Mid-I SAQ /10',
-    'Mid-I DES /15',
-    'Mid-I Total /30',
-    'Mid-I %',
-    'Mid-II SAQ /10',
-    'Mid-II DES /15',
-    'Mid-II Ass /5',
-    'Classification'
+    'Roll Number', 'Student Name', 'Department', 'Subject Code', 'Mid-I Ass /5', 
+    'Mid-I SAQ /10', 'Mid-I DES /15', 'Mid-I Total /30', 'Mid-I %', 'Mid-II SAQ /10', 
+    'Mid-II DES /15', 'Mid-II Ass /5', 'Classification'
   ];
 
   const rows = analysis.students.map(s => [
@@ -456,4 +934,172 @@ export function exportConsolidatedMidCSV(analysis) {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+}
+
+export function exportConsolidatedMidPDF(analysis) {
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const startY = addInstitutionalPdfHeader(
+    doc,
+    'CONSOLIDATED MID EXAMINATION MARKS & LEARNER ANALYSIS',
+    'Comprehensive institutional assessment ledger across Assignment-I, Mid-I and Mid-II evaluations',
+    analysis
+  );
+
+  const tableHead = [
+    ['S.No', 'Roll Number', 'Student Name', 'Ass-I /5', 'SAQ /10', 'DES /15', 'Mid-I /30', 'Mid-I %', 'Mid-II SAQ', 'Mid-II DES', 'Classification']
+  ];
+
+  const tableBody = (analysis.students || []).map((s, idx) => [
+    idx + 1,
+    s.rollNumber,
+    s.studentName || '—',
+    s.assignment1,
+    s.mid1Saq,
+    s.mid1Descriptive,
+    s.mid1Total,
+    `${s.mid1Percentage}%`,
+    s.mid2Saq != null ? s.mid2Saq : '—',
+    s.mid2Descriptive != null ? s.mid2Descriptive : '—',
+    s.classification
+  ]);
+
+  autoTable(doc, {
+    startY,
+    head: tableHead,
+    body: tableBody,
+    theme: 'grid',
+    styles: { fontSize: 7, cellPadding: 2, halign: 'center' },
+    headStyles: { fillColor: [11, 25, 44], textColor: [255, 255, 255], fontStyle: 'bold' },
+    columnStyles: {
+      0: { cellWidth: 10 },
+      1: { cellWidth: 26, halign: 'left', fontStyle: 'bold' },
+      2: { cellWidth: 40, halign: 'left' }
+    }
+  });
+
+  const finalY = doc.lastAutoTable.finalY + 16;
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(15, 23, 42);
+  doc.text('Signature of Faculty / Course Coordinator', 18, finalY);
+  doc.text('Signature of Head of Department (HOD)', 200, finalY);
+
+  doc.save(`Consolidated_Mid_Analysis_${analysis.subjectCode}.pdf`);
+}
+
+export function exportFullAcademicWorkbookXLSX(analysis) {
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1: INFO
+  const infoData = [
+    ['NARASARAOPETA ENGINEERING COLLEGE (AUTONOMOUS)'],
+    ['DEPARTMENT OF EMERGING TECHNOLOGIES'],
+    ['FULL ACADEMIC MID EXAMINATION ANALYSIS WORKBOOK'],
+    [],
+    ['METADATA FIELD', 'VALUE'],
+    ['Department', analysis.departmentName || 'Cyber Security'],
+    ['Department Code', analysis.department || 'CYS'],
+    ['Academic Year', analysis.academicYear],
+    ['Regulation', analysis.regulation],
+    ['Batch', analysis.batch],
+    ['Year', analysis.year],
+    ['Semester', analysis.semester],
+    ['Subject Name', analysis.subjectName],
+    ['Subject Code', analysis.subjectCode],
+    ['Total Students Analysed', analysis.studentsCount || 60],
+    ['Mid-I Class Average', `${analysis.mid1Average || 20.28} / 30 (${analysis.mid1Percentage || 67.61}%)`],
+    ['Advanced Learners (≥80%)', analysis.advancedLearnersCount || 12],
+    ['Weak Learners (<50%)', analysis.weakLearnersCount || 4]
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(infoData), 'SUMMARY');
+
+  // Sheet 2: STUDENT MARKS
+  const marksHeaders = [
+    ['S.No', 'Roll Number', 'Student Name', 'Ass-I (/5)', 'Mid-I SAQ (/10)', 'Mid-I DES (/15)', 'Mid-I Total (/30)', 'Mid-I %', 'Mid-II SAQ (/10)', 'Mid-II DES (/15)', 'Ass-II (/5)', 'Classification']
+  ];
+  const marksRows = (analysis.students || []).map((s, idx) => [
+    idx + 1,
+    s.rollNumber,
+    s.studentName || '—',
+    s.assignment1,
+    s.mid1Saq,
+    s.mid1Descriptive,
+    s.mid1Total,
+    `${s.mid1Percentage}%`,
+    s.mid2Saq != null ? s.mid2Saq : '—',
+    s.mid2Descriptive != null ? s.mid2Descriptive : '—',
+    s.assignment2 != null ? s.assignment2 : 'Pending',
+    s.classification
+  ]);
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([...marksHeaders, ...marksRows]), 'STUDENT MARKS');
+
+  // Sheet 3: ADVANCED LEARNERS
+  const advList = (analysis.students || []).filter(s => s.mid1Percentage >= 80);
+  const advRows = advList.map((s, idx) => [
+    idx + 1, s.rollNumber, s.studentName || '—', s.assignment1, s.mid1Saq, s.mid1Descriptive, s.mid1Total, `${s.mid1Percentage}%`, 'Advanced Learner'
+  ]);
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['S.No', 'Roll Number', 'Name', 'Ass-I', 'SAQ', 'DES', 'Total', '%', 'Classification'], ...advRows]), 'ADVANCED LEARNERS');
+
+  // Sheet 4: WEAK LEARNERS
+  const weakList = (analysis.students || []).filter(s => s.mid1Percentage < 50);
+  const weakRows = weakList.map((s, idx) => [
+    idx + 1, s.rollNumber, s.studentName || '—', s.assignment1, s.mid1Saq, s.mid1Descriptive, s.mid1Total, `${s.mid1Percentage}%`, s.absenceNote || 'Appeared', 'Remedial Scheduled'
+  ]);
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['S.No', 'Roll Number', 'Name', 'Ass-I', 'SAQ', 'DES', 'Total', '%', 'Absence Notes', 'Remedial Status'], ...weakRows]), 'WEAK LEARNERS');
+
+  XLSX.writeFile(wb, `Complete_Mid_Analysis_Workbook_${analysis.subjectCode}_${analysis.academicYear}.xlsx`);
+}
+
+// -------------------------------------------------------------
+// 7. Generate Blank Mid Analysis Import Template (Clean Multi-sheet)
+// -------------------------------------------------------------
+export function generateBlankMidTemplateXLSX() {
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1: INFO
+  const infoData = [
+    ['METADATA FIELD', 'VALUE / CONFIGURATION'],
+    ['Department', 'CSE (Cyber Security)'],
+    ['Department Code', 'CYS'],
+    ['Academic Year', '2025-26'],
+    ['Regulation', 'R23'],
+    ['Batch', '2023'],
+    ['Year', 'III Year'],
+    ['Semester', 'II Semester'],
+    ['Subject Name', 'Cyber Crime & Digital Forensics'],
+    ['Subject Code', 'R23CY3201'],
+    ['Mid-I Examination Date', '2025-12-15'],
+    ['Mid-II Examination Date', '2026-03-20'],
+    ['Assignment Maximum Marks', '5'],
+    ['Short Answers (SAQ) Maximum Marks', '10'],
+    ['Descriptive Maximum Marks', '15'],
+    ['Total Mid Assessment Marks', '30']
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(infoData), 'INFO');
+
+  // Sheet 2: ASSIGNMENT-1
+  const ass1Headers = [
+    ['S.No', 'H.T.NO', 'Q1 (CO1)', 'Q2 (CO1)', 'Total (/10)', 'Reduced (/5)']
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(ass1Headers), 'ASSIGNMENT-1');
+
+  // Sheet 3: MID-1
+  const mid1Headers = [
+    ['S.No', 'H.T.NO', 'Q1 (a)', 'Q1 (b)', 'Q2 (a)', 'Q2 (b)', 'DES Total (/30)', 'DES Reduced (/15)', 'SAQ Total (/10)']
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(mid1Headers), 'MID-1');
+
+  // Sheet 4: ASSIGNMENT-2
+  const ass2Headers = [
+    ['S.No', 'H.T.NO', 'Q1 (CO3)', 'Q2 (CO4)', 'Total (/10)', 'Reduced (/5)']
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(ass2Headers), 'ASSIGNMENT-2');
+
+  // Sheet 5: MID-2
+  const mid2Headers = [
+    ['S.No', 'H.T.NO', 'Q1 (a)', 'Q1 (b)', 'Q2 (a)', 'Q2 (b)', 'DES Total (/30)', 'DES Reduced (/15)', 'SAQ Total (/10)']
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(mid2Headers), 'MID-2');
+
+  XLSX.writeFile(wb, 'ET_Mid_Exam_Analysis_Blank_Template.xlsx');
 }

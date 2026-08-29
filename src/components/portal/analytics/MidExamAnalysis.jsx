@@ -25,7 +25,11 @@ import {
   ShieldCheck, 
   Trash2, 
   RefreshCw,
-  Info
+  Info,
+  ChevronDown,
+  ArrowRight,
+  Printer,
+  FileCheck2
 } from 'lucide-react';
 import { 
   MotionPage, 
@@ -46,11 +50,22 @@ import {
   calculateStudentMid1,
   generateBlankMidTemplateXLSX,
   exportAdvancedLearnersCSV,
+  exportAdvancedLearnersXLSX,
+  exportAdvancedLearnersPDF,
+  exportAdvancedEvidenceXLSX,
   exportWeakLearnersCSV,
+  exportWeakLearnersXLSX,
+  exportWeakLearnersPDF,
+  exportWeakEvidenceXLSX,
+  exportRemedialAttendanceXLSX,
+  exportRemedialAttendancePDF,
+  exportImprovementAnalysisXLSX,
+  exportImprovementAnalysisPDF,
   exportConsolidatedMidCSV,
+  exportConsolidatedMidPDF,
+  exportFullAcademicWorkbookXLSX,
   getStudents
 } from '../../../data/portalStore.js';
-import ConfirmDeleteDialog from '../common/ConfirmDeleteDialog.jsx';
 
 export default function MidExamAnalysis({ currentUser }) {
   const [dataVersion, setDataVersion] = useState(0);
@@ -64,7 +79,7 @@ export default function MidExamAnalysis({ currentUser }) {
   const [selectedAy, setSelectedAy] = useState('2025-26');
   const [selectedYear, setSelectedYear] = useState('III Year');
   const [selectedSemester, setSelectedSemester] = useState('II Semester');
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'marks' | 'mid1-analysis' | 'mid2-analysis' | 'advanced' | 'weak' | 'remedial' | 'import-history'
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'marks' | 'mid1-analysis' | 'mid2-analysis' | 'advanced' | 'weak' | 'remedial' | 'improvement' | 'import-export'
 
   // Search & Filtering within tables
   const [searchQuery, setSearchQuery] = useState('');
@@ -73,9 +88,11 @@ export default function MidExamAnalysis({ currentUser }) {
   // Modals & Drawers
   const [studentDetailModal, setStudentDetailModal] = useState(null);
   const [importWizardOpen, setImportWizardOpen] = useState(false);
+  const [templatesModalOpen, setTemplatesModalOpen] = useState(false);
+  const [exportsModalOpen, setExportsModalOpen] = useState(false);
   const [addAdvancedTopicOpen, setAddAdvancedTopicOpen] = useState(false);
   const [addRemedialSessionOpen, setAddRemedialSessionOpen] = useState(false);
-  const [deleteConfirmAnalysis, setDeleteConfirmAnalysis] = useState(null);
+  const [remedialSessionCount, setRemedialSessionCount] = useState(6);
   const [toastMessage, setToastMessage] = useState(null);
 
   const showToast = (msg) => {
@@ -203,7 +220,6 @@ export default function MidExamAnalysis({ currentUser }) {
       showToast('Please provide a remedial session topic.');
       return;
     }
-    // Auto populate attendance for identified weak students
     const initialAttendance = {};
     weakLearners.forEach(w => {
       initialAttendance[w.rollNumber] = 'PRESENT';
@@ -251,6 +267,7 @@ export default function MidExamAnalysis({ currentUser }) {
   // Smart Import State
   const [wizardStep, setWizardStep] = useState(1);
   const [importFileName, setImportFileName] = useState('');
+  const [importDetectedType, setImportDetectedType] = useState('FULL_WORKBOOK');
   const [importPreviewData, setImportPreviewData] = useState(null);
 
   const handleSimulateUpload = (e) => {
@@ -258,24 +275,53 @@ export default function MidExamAnalysis({ currentUser }) {
     if (!file) return;
     setImportFileName(file.name);
     setWizardStep(2);
-    // Simulating sheet inspection
+
+    const nameLower = file.name.toLowerCase();
+    let detected = 'FULL_WORKBOOK';
+    if (nameLower.includes('remedial') || nameLower.includes('attendance')) {
+      detected = 'REMEDIAL_ATTENDANCE';
+    } else if (nameLower.includes('advanced') && nameLower.includes('activit')) {
+      detected = 'ADVANCED_ACTIVITIES';
+    } else if (nameLower.includes('weak') && nameLower.includes('topic')) {
+      detected = 'WEAK_TOPICS';
+    } else if (nameLower.includes('improvement') || nameLower.includes('improved')) {
+      detected = 'IMPROVEMENT_REMARKS';
+    }
+
+    setImportDetectedType(detected);
+
     setTimeout(() => {
-      setImportPreviewData({
-        sheetsDetected: 12,
-        rawSheets: ['ASSIGNMENT-1', 'MID-1', 'MID-2 (Partial exam marks)'],
-        derivedSheets: ['ANALYSIS-1', 'ANALYSIS -2', 'WEAK STUDENTS', 'ADVANCED LEARNERS', 'IMPROVED'],
-        formulaErrorsFound: 4,
-        conflictWarning: 'Mid-II sheet header contains semester template reference; canonical metadata aligned to III Year II Semester.',
-        calculatedAdvanced: 12,
-        calculatedWeak: 4,
-        studentsCount: 60
-      });
+      if (detected === 'REMEDIAL_ATTENDANCE') {
+        setImportPreviewData({
+          typeTitle: 'Completed Remedial Attendance Sheet',
+          rowsDetected: 4,
+          matchedStudents: 4,
+          sessionsDetected: 6,
+          notes: 'Matched 4 weak students for Cyber Crime & Digital Forensics (R23CY3201). Attendance will be updated in Remedial & Follow-up ledger.'
+        });
+      } else {
+        setImportPreviewData({
+          typeTitle: 'Comprehensive Mid Analysis Workbook',
+          sheetsDetected: 12,
+          rawSheets: ['ASSIGNMENT-1', 'MID-1', 'MID-2 (Partial exam marks)'],
+          derivedSheets: ['ANALYSIS-1', 'ANALYSIS -2', 'WEAK STUDENTS', 'ADVANCED LEARNERS', 'IMPROVED'],
+          formulaErrorsFound: 4,
+          conflictWarning: 'Mid-II sheet header contains semester template reference; canonical metadata aligned to III Year II Semester.',
+          calculatedAdvanced: 12,
+          calculatedWeak: 4,
+          studentsCount: 60
+        });
+      }
       setWizardStep(3);
     }, 600);
   };
 
   const handleCommitImport = () => {
-    showToast(`Successfully committed Mid Analysis import for ${currentAnalysis?.subjectName || 'CCDF'}.`);
+    if (importDetectedType === 'REMEDIAL_ATTENDANCE') {
+      showToast('Successfully ingested completed Remedial Attendance sheet.');
+    } else {
+      showToast(`Successfully committed Mid Analysis import for ${currentAnalysis?.subjectName || 'CCDF'}.`);
+    }
     setImportWizardOpen(false);
     setWizardStep(1);
     setImportFileName('');
@@ -285,7 +331,7 @@ export default function MidExamAnalysis({ currentUser }) {
 
   return (
     <MotionPage style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-      {/* 1. Header with Breadcrumbs & Action Buttons */}
+      {/* 1. Header with Breadcrumbs & Unified Action Modals */}
       <ModulePageHeader
         breadcrumbs={[
           { label: 'Portal', onClick: () => {} },
@@ -293,12 +339,13 @@ export default function MidExamAnalysis({ currentUser }) {
           { label: 'Mid Exam Analysis' }
         ]}
         title="Mid Exam Analysis"
-        subtitle="Mid-I and Mid-II performance analysis, learner identification, and remedial follow-up."
+        subtitle="Mid examination marks, learner analysis, remedial follow-up, and academic evidence."
         actions={
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {/* Download Templates Group */}
             <button
               type="button"
-              onClick={generateBlankMidTemplateXLSX}
+              onClick={() => setTemplatesModalOpen(true)}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -309,17 +356,17 @@ export default function MidExamAnalysis({ currentUser }) {
                 background: '#FFFFFF',
                 color: '#334155',
                 fontSize: '0.78rem',
-                fontWeight: 600,
+                fontWeight: 700,
                 cursor: 'pointer'
               }}
             >
-              <Download size={14} /> Download Blank Template
+              <Download size={14} /> Download Templates <ChevronDown size={12} />
             </button>
 
-            {/* Exports Action Group */}
+            {/* Export Reports Group */}
             <button
               type="button"
-              onClick={() => exportAdvancedLearnersCSV(currentAnalysis)}
+              onClick={() => setExportsModalOpen(true)}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -327,39 +374,19 @@ export default function MidExamAnalysis({ currentUser }) {
                 padding: '0.45rem 0.85rem',
                 borderRadius: '8px',
                 border: '1px solid #CBD5E1',
-                background: '#ECFDF5',
-                color: '#047857',
+                background: '#FFFFFF',
+                color: '#0F172A',
                 fontSize: '0.78rem',
                 fontWeight: 700,
                 cursor: 'pointer'
               }}
             >
-              <Award size={14} /> Export Advanced (≥80%)
-            </button>
-
-            <button
-              type="button"
-              onClick={() => exportWeakLearnersCSV(currentAnalysis)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                padding: '0.45rem 0.85rem',
-                borderRadius: '8px',
-                border: '1px solid #CBD5E1',
-                background: '#FEF2F2',
-                color: '#B91C1C',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                cursor: 'pointer'
-              }}
-            >
-              <AlertTriangle size={14} /> Export Weak (&lt;50%)
+              <FileSpreadsheet size={14} /> Export Reports <ChevronDown size={12} />
             </button>
           </div>
         }
         primaryAction={{
-          label: 'Smart Import Mid Data',
+          label: 'Smart Import',
           icon: UploadCloud,
           onClick: () => {
             setWizardStep(1);
@@ -389,10 +416,10 @@ export default function MidExamAnalysis({ currentUser }) {
             disabled={currentUser?.role === 'HOD' && currentUser?.dept && currentUser?.dept !== 'Management & Governance'}
             style={{ padding: '0.4rem 0.65rem', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.78rem', background: '#FFFFFF', color: '#0F172A', fontWeight: 600 }}
           >
-            <option value="CYS">Cyber Security</option>
-            <option value="DS">Data Science</option>
-            <option value="AI">Artificial Intelligence</option>
-            <option value="AIML">AI & ML</option>
+            <option value="CYS">Cyber Security (CYS)</option>
+            <option value="DS">Data Science (DS)</option>
+            <option value="AI">Artificial Intelligence (AI)</option>
+            <option value="AIML">AI & ML (AIML)</option>
           </select>
         </div>
 
@@ -520,7 +547,7 @@ export default function MidExamAnalysis({ currentUser }) {
         />
       </AnimatedKpiGrid>
 
-      {/* 4. Tabbed Navigation Bar */}
+      {/* 4. 9 Functional Tabs */}
       <div style={{
         display: 'flex',
         gap: '0.35rem',
@@ -536,7 +563,8 @@ export default function MidExamAnalysis({ currentUser }) {
           { id: 'advanced', label: 'Advanced Learners (≥80%)', icon: Award, count: distribution.above80 },
           { id: 'weak', label: 'Weak Learners (<50%)', icon: AlertTriangle, count: distribution.below50 },
           { id: 'remedial', label: 'Remedial & Follow-up', icon: BookOpen },
-          { id: 'import-history', label: 'Import History', icon: Layers, count: (currentAnalysis?.importHistory || []).length }
+          { id: 'improvement', label: 'Improvement Analysis', icon: TrendingUp },
+          { id: 'import-export', label: 'Import / Export Hub', icon: Layers }
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -896,10 +924,17 @@ export default function MidExamAnalysis({ currentUser }) {
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <button
                   type="button"
-                  onClick={() => exportAdvancedLearnersCSV(currentAnalysis)}
+                  onClick={() => exportAdvancedLearnersPDF(currentAnalysis)}
                   style={{ padding: '0.45rem 0.85rem', borderRadius: '6px', border: '1px solid #A7F3D0', background: '#ECFDF5', color: '#047857', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
                 >
-                  <Award size={13} /> Export Advanced List (CSV)
+                  <Printer size={13} /> Print PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => exportAdvancedLearnersCSV(currentAnalysis)}
+                  style={{ padding: '0.45rem 0.85rem', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#FFFFFF', color: '#334155', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                >
+                  <Download size={13} /> CSV
                 </button>
                 <button
                   type="button"
@@ -992,10 +1027,17 @@ export default function MidExamAnalysis({ currentUser }) {
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <button
                   type="button"
-                  onClick={() => exportWeakLearnersCSV(currentAnalysis)}
+                  onClick={() => exportWeakLearnersPDF(currentAnalysis)}
                   style={{ padding: '0.45rem 0.85rem', borderRadius: '6px', border: '1px solid #FECACA', background: '#FEF2F2', color: '#B91C1C', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
                 >
-                  <AlertTriangle size={13} /> Export Weak List (CSV)
+                  <Printer size={13} /> Print PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => exportWeakLearnersCSV(currentAnalysis)}
+                  style={{ padding: '0.45rem 0.85rem', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#FFFFFF', color: '#334155', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                >
+                  <Download size={13} /> CSV
                 </button>
                 <button
                   type="button"
@@ -1060,29 +1102,49 @@ export default function MidExamAnalysis({ currentUser }) {
       {/* ──────────────────────────────────────────────────────────── */}
       {activeTab === 'remedial' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {/* Remedial Classes Schedule & Attendance */}
-          <div style={{ background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', padding: '1.25rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <div>
-                <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
-                  Remedial &amp; Makeup Classes Attendance Tracker
-                </h3>
-                <p style={{ fontSize: '0.74rem', color: '#64748B', margin: '0.2rem 0 0 0' }}>
-                  Auto-populated with students identified as weak in Mid-I. Mark session attendance directly.
-                </p>
-              </div>
+          {/* Quick Actions Bar for Remedial Sheets */}
+          <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '0.85rem 1rem', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <BookOpen size={16} style={{ color: '#DC2626' }} />
+              <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0F172A' }}>
+                Makeup &amp; Remedial Classes Attendance Suite
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => exportRemedialAttendanceXLSX(currentAnalysis, { prefilled: true, sessionCount: remedialSessionCount })}
+                style={{ padding: '0.45rem 0.85rem', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#F8FAFC', color: '#0F172A', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+              >
+                <Download size={13} /> Export Pre-filled Attendance (Excel)
+              </button>
+              <button
+                type="button"
+                onClick={() => exportRemedialAttendancePDF(currentAnalysis, { prefilled: true, sessionCount: remedialSessionCount })}
+                style={{ padding: '0.45rem 0.85rem', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#F8FAFC', color: '#0F172A', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+              >
+                <Printer size={13} /> Print Sheet (PDF)
+              </button>
               <button
                 type="button"
                 onClick={() => setAddRemedialSessionOpen(true)}
-                style={{ padding: '0.45rem 0.85rem', borderRadius: '6px', border: 'none', background: '#0F172A', color: '#F1C40F', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                style={{ padding: '0.45rem 0.85rem', borderRadius: '6px', border: 'none', background: '#0F172A', color: '#F1C40F', fontSize: '0.76rem', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
               >
                 <Plus size={13} /> Add Session
               </button>
             </div>
+          </div>
+
+          {/* Remedial Sessions Card */}
+          <div style={{ background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', padding: '1.25rem' }}>
+            <h4 style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.85rem 0' }}>
+              Logged Remedial Classes &amp; Student Attendance
+            </h4>
 
             {(!currentAnalysis?.remedialSessions || currentAnalysis.remedialSessions.length === 0) ? (
               <div style={{ padding: '2rem', textAlign: 'center', color: '#94A3B8', fontSize: '0.8rem', background: '#F8FAFC', borderRadius: '8px' }}>
-                No remedial classes logged yet. Click "Add Session" to record makeup classes.
+                No remedial classes logged yet. Click "Add Session" or export the pre-filled attendance sheet.
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -1097,7 +1159,7 @@ export default function MidExamAnalysis({ currentUser }) {
 
                     <div style={{ padding: '0.75rem 1rem' }}>
                       <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-                        Student Attendance
+                        Student Attendance (Click to Toggle)
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.5rem' }}>
                         {weakLearners.map(w => {
@@ -1137,14 +1199,167 @@ export default function MidExamAnalysis({ currentUser }) {
       )}
 
       {/* ──────────────────────────────────────────────────────────── */}
-      {/* TAB 8: IMPORT HISTORY & PROVENANCE */}
+      {/* TAB 8: IMPROVEMENT ANALYSIS (MID-I VS MID-II) */}
       {/* ──────────────────────────────────────────────────────────── */}
-      {activeTab === 'import-history' && (
+      {activeTab === 'improvement' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div style={{ background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', padding: '1.25rem' }}>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0F172A', margin: '0 0 1rem 0' }}>
-              Mid Exam Analysis Import Batches &amp; Data Provenance
-            </h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                  Impact Analysis on Remedial Classes Conducted for Weak Students
+                </h3>
+                <p style={{ fontSize: '0.75rem', color: '#64748B', margin: '0.2rem 0 0 0' }}>
+                  Tracks progression and mark delta from Mid-I to Mid-II for the identified intervention cohort.
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => exportImprovementAnalysisXLSX(currentAnalysis)}
+                  style={{ padding: '0.45rem 0.85rem', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#F8FAFC', color: '#0F172A', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                >
+                  <Download size={13} /> Export Excel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => exportImprovementAnalysisPDF(currentAnalysis)}
+                  style={{ padding: '0.45rem 0.85rem', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#F8FAFC', color: '#0F172A', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                >
+                  <Printer size={13} /> Print Sheet (PDF)
+                </button>
+              </div>
+            </div>
+
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
+                <thead>
+                  <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase' }}>
+                    <th style={{ padding: '0.75rem 1rem' }}>Roll Number</th>
+                    <th style={{ padding: '0.75rem 1rem' }}>Student Name</th>
+                    <th style={{ padding: '0.75rem 0.75rem', textAlign: 'center' }}>Mid-I (/30)</th>
+                    <th style={{ padding: '0.75rem 0.75rem', textAlign: 'center' }}>Mid-I %</th>
+                    <th style={{ padding: '0.75rem 0.75rem', textAlign: 'center' }}>Mid-II Total</th>
+                    <th style={{ padding: '0.75rem 0.75rem', textAlign: 'center' }}>Mid-II %</th>
+                    <th style={{ padding: '0.75rem 0.75rem', textAlign: 'center' }}>Change (Δ)</th>
+                    <th style={{ padding: '0.75rem 1rem' }}>Intervention Remarks</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {weakLearners.map(student => {
+                    const mid2Tot = student.mid2Total != null ? student.mid2Total : 'Pending';
+                    const mid2Pct = student.mid2Percentage != null ? `${student.mid2Percentage}%` : 'Pending';
+                    const change = student.mid2Total != null ? (student.mid2Total - student.mid1Total) : '—';
+
+                    return (
+                      <tr key={student.rollNumber} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                        <td style={{ padding: '0.75rem 1rem', fontWeight: 800, color: '#0F172A' }}>{student.rollNumber}</td>
+                        <td style={{ padding: '0.75rem 1rem', color: student.isMatched ? '#0F172A' : '#94A3B8' }}>{student.studentName}</td>
+                        <td style={{ padding: '0.75rem 0.75rem', textAlign: 'center', fontWeight: 700, color: '#DC2626' }}>{student.mid1Total}</td>
+                        <td style={{ padding: '0.75rem 0.75rem', textAlign: 'center', fontWeight: 700 }}>{student.mid1Percentage}%</td>
+                        <td style={{ padding: '0.75rem 0.75rem', textAlign: 'center', color: '#64748B' }}>{mid2Tot}</td>
+                        <td style={{ padding: '0.75rem 0.75rem', textAlign: 'center', color: '#64748B' }}>{mid2Pct}</td>
+                        <td style={{ padding: '0.75rem 0.75rem', textAlign: 'center', fontWeight: 800 }}>{change}</td>
+                        <td style={{ padding: '0.75rem 1rem', fontSize: '0.75rem', color: '#475569' }}>
+                          Remedial sessions conducted; Assignment-II pending
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ──────────────────────────────────────────────────────────── */}
+      {/* TAB 9: IMPORT / EXPORT HUB */}
+      {/* ──────────────────────────────────────────────────────────── */}
+      {activeTab === 'import-export' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {/* Action Cards Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+            {/* Download Templates Card */}
+            <div style={{ background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', padding: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                <Download size={18} style={{ color: '#2563EB' }} />
+                <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>Academic Templates</h4>
+              </div>
+              <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '0 0 1rem 0' }}>
+                Download clean, institutional Excel and PDF templates with zero formula errors.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={generateBlankMidTemplateXLSX}
+                  style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#F8FAFC', color: '#0F172A', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                >
+                  <span>Blank Mid Data Workbook</span>
+                  <FileSpreadsheet size={14} style={{ color: '#059669' }} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => exportRemedialAttendanceXLSX(currentAnalysis, { prefilled: true, sessionCount: 6 })}
+                  style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#F8FAFC', color: '#0F172A', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                >
+                  <span>Pre-filled Remedial Attendance (Excel)</span>
+                  <FileSpreadsheet size={14} style={{ color: '#059669' }} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => exportRemedialAttendancePDF(currentAnalysis, { prefilled: true, sessionCount: 6 })}
+                  style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#F8FAFC', color: '#0F172A', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                >
+                  <span>Printable Remedial Attendance (PDF)</span>
+                  <Printer size={14} style={{ color: '#DC2626' }} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => exportAdvancedEvidenceXLSX(currentAnalysis)}
+                  style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#F8FAFC', color: '#0F172A', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                >
+                  <span>Advanced Learner Activities Sheet</span>
+                  <FileSpreadsheet size={14} style={{ color: '#059669' }} />
+                </button>
+              </div>
+            </div>
+
+            {/* Smart Ingest Card */}
+            <div style={{ background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', padding: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                <UploadCloud size={18} style={{ color: '#059669' }} />
+                <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>Smart Ingest &amp; Re-import</h4>
+              </div>
+              <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '0 0 1rem 0' }}>
+                Upload original workbooks or completed manual-fill sheets. System auto-detects sheet types and maps records.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => { setWizardStep(1); setImportWizardOpen(true); }}
+                  style={{ padding: '0.55rem 0.85rem', borderRadius: '6px', border: 'none', background: '#0F172A', color: '#F1C40F', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                >
+                  <span>Launch Smart Importer</span>
+                  <ArrowRight size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => exportFullAcademicWorkbookXLSX(currentAnalysis)}
+                  style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#F8FAFC', color: '#0F172A', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                >
+                  <span>Export Full Academic Workbook</span>
+                  <FileSpreadsheet size={14} style={{ color: '#2563EB' }} />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Import History Table */}
+          <div style={{ background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', padding: '1.25rem' }}>
+            <h4 style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.85rem 0' }}>
+              File Provenance &amp; Upload History Ledger
+            </h4>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
                 <thead>
@@ -1186,7 +1401,92 @@ export default function MidExamAnalysis({ currentUser }) {
       )}
 
       {/* ──────────────────────────────────────────────────────────── */}
-      {/* MODAL 1: STUDENT DETAILS DOSSIER */}
+      {/* MODAL: DOWNLOAD TEMPLATES CENTER */}
+      {/* ──────────────────────────────────────────────────────────── */}
+      {templatesModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(7, 15, 30, 0.75)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1200, padding: '1rem' }}>
+          <div style={{ background: '#FFFFFF', borderRadius: '16px', maxWidth: '520px', width: '100%', boxShadow: '0 20px 50px rgba(0,0,0,0.3)', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
+            <div style={{ background: '#0F172A', padding: '1.25rem 1.5rem', color: '#FFFFFF', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0, color: '#FFFFFF' }}>Download Templates &amp; Manual Sheets</h3>
+              <button type="button" onClick={() => setTemplatesModalOpen(false)} style={{ background: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer' }}><X size={18} /></button>
+            </div>
+            <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div style={{ padding: '0.75rem', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.84rem' }}>Pre-filled Remedial Attendance Sheet</div>
+                <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '0.15rem' }}>Auto-fills the 4 weak student roll numbers &amp; Mid-I marks. Ready for manual signature &amp; date marking.</div>
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  <button type="button" onClick={() => { exportRemedialAttendanceXLSX(currentAnalysis, { prefilled: true, sessionCount: 6 }); setTemplatesModalOpen(false); }} style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#FFFFFF', color: '#0F172A', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>Excel (.xlsx)</button>
+                  <button type="button" onClick={() => { exportRemedialAttendancePDF(currentAnalysis, { prefilled: true, sessionCount: 6 }); setTemplatesModalOpen(false); }} style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #FECACA', background: '#FEF2F2', color: '#DC2626', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>PDF Printable</button>
+                </div>
+              </div>
+
+              <div style={{ padding: '0.75rem', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.84rem' }}>Blank Remedial Attendance Sheet</div>
+                <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '0.15rem' }}>Blank sheet for manual student roll and mark entry with institutional header.</div>
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  <button type="button" onClick={() => { exportRemedialAttendanceXLSX(currentAnalysis, { prefilled: false, sessionCount: 6 }); setTemplatesModalOpen(false); }} style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#FFFFFF', color: '#0F172A', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>Excel (.xlsx)</button>
+                  <button type="button" onClick={() => { exportRemedialAttendancePDF(currentAnalysis, { prefilled: false, sessionCount: 6 }); setTemplatesModalOpen(false); }} style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #FECACA', background: '#FEF2F2', color: '#DC2626', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>PDF Printable</button>
+                </div>
+              </div>
+
+              <div style={{ padding: '0.75rem', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.84rem' }}>Blank Mid Data Import Workbook</div>
+                <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '0.15rem' }}>Clean multi-sheet workbook (INFO, ASSIGNMENT-1, MID-1, ASSIGNMENT-2, MID-2) with zero broken formulas.</div>
+                <div style={{ marginTop: '0.5rem' }}>
+                  <button type="button" onClick={() => { generateBlankMidTemplateXLSX(); setTemplatesModalOpen(false); }} style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #A7F3D0', background: '#ECFDF5', color: '#047857', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>Download Multi-Sheet Excel</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ──────────────────────────────────────────────────────────── */}
+      {/* MODAL: EXPORT REPORTS CENTER */}
+      {/* ──────────────────────────────────────────────────────────── */}
+      {exportsModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(7, 15, 30, 0.75)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1200, padding: '1rem' }}>
+          <div style={{ background: '#FFFFFF', borderRadius: '16px', maxWidth: '520px', width: '100%', boxShadow: '0 20px 50px rgba(0,0,0,0.3)', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
+            <div style={{ background: '#0F172A', padding: '1.25rem 1.5rem', color: '#FFFFFF', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0, color: '#FFFFFF' }}>Export Academic Reports</h3>
+              <button type="button" onClick={() => setExportsModalOpen(false)} style={{ background: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer' }}><X size={18} /></button>
+            </div>
+            <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div style={{ padding: '0.75rem', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.84rem' }}>Advanced Learners Report (≥80%)</div>
+                <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '0.15rem' }}>Official list of 12 students scoring 24/30 or above.</div>
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  <button type="button" onClick={() => { exportAdvancedLearnersXLSX(currentAnalysis); setExportsModalOpen(false); }} style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#FFFFFF', color: '#0F172A', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>Excel</button>
+                  <button type="button" onClick={() => { exportAdvancedLearnersPDF(currentAnalysis); setExportsModalOpen(false); }} style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #A7F3D0', background: '#ECFDF5', color: '#047857', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>PDF</button>
+                  <button type="button" onClick={() => { exportAdvancedLearnersCSV(currentAnalysis); setExportsModalOpen(false); }} style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#FFFFFF', color: '#334155', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>CSV</button>
+                </div>
+              </div>
+
+              <div style={{ padding: '0.75rem', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.84rem' }}>Weak Learners Report (&lt;50%)</div>
+                <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '0.15rem' }}>Official list of 4 students scoring below 15/30 with absence notes.</div>
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  <button type="button" onClick={() => { exportWeakLearnersXLSX(currentAnalysis); setExportsModalOpen(false); }} style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#FFFFFF', color: '#0F172A', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>Excel</button>
+                  <button type="button" onClick={() => { exportWeakLearnersPDF(currentAnalysis); setExportsModalOpen(false); }} style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #FECACA', background: '#FEF2F2', color: '#DC2626', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>PDF</button>
+                  <button type="button" onClick={() => { exportWeakLearnersCSV(currentAnalysis); setExportsModalOpen(false); }} style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#FFFFFF', color: '#334155', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>CSV</button>
+                </div>
+              </div>
+
+              <div style={{ padding: '0.75rem', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.84rem' }}>Consolidated Full Mid Report</div>
+                <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '0.15rem' }}>Complete marks ledger for all 60 students.</div>
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  <button type="button" onClick={() => { exportFullAcademicWorkbookXLSX(currentAnalysis); setExportsModalOpen(false); }} style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#FFFFFF', color: '#0F172A', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>Full Workbook (Excel)</button>
+                  <button type="button" onClick={() => { exportConsolidatedMidPDF(currentAnalysis); setExportsModalOpen(false); }} style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid #BFDBFE', background: '#EFF6FF', color: '#1D4ED8', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>PDF</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ──────────────────────────────────────────────────────────── */}
+      {/* MODAL: STUDENT DETAILS DOSSIER */}
       {/* ──────────────────────────────────────────────────────────── */}
       {studentDetailModal && (
         <div style={{
@@ -1266,7 +1566,7 @@ export default function MidExamAnalysis({ currentUser }) {
       )}
 
       {/* ──────────────────────────────────────────────────────────── */}
-      {/* MODAL 2: ADD ADVANCED TOPIC */}
+      {/* MODAL: ADD ADVANCED TOPIC */}
       {/* ──────────────────────────────────────────────────────────── */}
       {addAdvancedTopicOpen && (
         <div style={{
@@ -1358,7 +1658,7 @@ export default function MidExamAnalysis({ currentUser }) {
       )}
 
       {/* ──────────────────────────────────────────────────────────── */}
-      {/* MODAL 3: SCHEDULE REMEDIAL SESSION */}
+      {/* MODAL: SCHEDULE REMEDIAL SESSION */}
       {/* ──────────────────────────────────────────────────────────── */}
       {addRemedialSessionOpen && (
         <div style={{
@@ -1454,7 +1754,7 @@ export default function MidExamAnalysis({ currentUser }) {
       )}
 
       {/* ──────────────────────────────────────────────────────────── */}
-      {/* MODAL 4: SMART IMPORT MID DATA WIZARD */}
+      {/* MODAL: SMART IMPORT MID DATA WIZARD */}
       {/* ──────────────────────────────────────────────────────────── */}
       {importWizardOpen && (
         <div style={{
@@ -1482,7 +1782,7 @@ export default function MidExamAnalysis({ currentUser }) {
               <div>
                 <span style={{ fontSize: '0.7rem', color: '#D4AF37', fontWeight: 800 }}>STEP {wizardStep} OF 3</span>
                 <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: '0.15rem 0 0', color: '#FFFFFF' }}>
-                  Smart Import Mid Analysis Workbook
+                  Smart Import Mid Analysis File
                 </h3>
               </div>
               <button type="button" onClick={() => setImportWizardOpen(false)} style={{ background: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer' }}>
@@ -1497,7 +1797,7 @@ export default function MidExamAnalysis({ currentUser }) {
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.9rem' }}>Upload Excel Workbook (.xlsx, .xls)</div>
                     <div style={{ fontSize: '0.74rem', color: '#64748B', marginTop: '0.2rem' }}>
-                      Auto-detects 12-sheet layout (Assignment-I, Mid-I, Mid-II, Derived Reports).
+                      Auto-detects Workbook Layout: Full Mid Analysis, Completed Remedial Attendance, or Evidence Activity Sheets.
                     </div>
                   </div>
                   <input
@@ -1512,26 +1812,53 @@ export default function MidExamAnalysis({ currentUser }) {
               {wizardStep === 2 && (
                 <div style={{ padding: '2rem', textAlign: 'center', color: '#64748B' }}>
                   <RefreshCw size={28} className="animate-spin" style={{ margin: '0 auto 0.75rem auto', color: '#2563EB' }} />
-                  <div style={{ fontWeight: 700, color: '#0F172A' }}>Inspecting Sheets &amp; Verifying Calculations...</div>
+                  <div style={{ fontWeight: 700, color: '#0F172A' }}>Inspecting File &amp; Auto-Detecting Sheet Type...</div>
                 </div>
               )}
 
               {wizardStep === 3 && importPreviewData && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                    <div style={{ padding: '0.75rem', background: '#ECFDF5', borderRadius: '8px', border: '1px solid #A7F3D0' }}>
-                      <div style={{ fontSize: '0.7rem', color: '#047857' }}>Authoritative Sheets Detected</div>
-                      <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#059669' }}>3 Raw Marks Sheets</div>
-                    </div>
-                    <div style={{ padding: '0.75rem', background: '#EFF6FF', borderRadius: '8px', border: '1px solid #BFDBFE' }}>
-                      <div style={{ fontSize: '0.7rem', color: '#1E40AF' }}>Calculated Mid-I Advanced</div>
-                      <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1D4ED8' }}>12 Students (≥80%)</div>
+                  <div style={{ padding: '0.75rem 1rem', background: '#EFF6FF', borderRadius: '8px', border: '1px solid #BFDBFE' }}>
+                    <div style={{ fontSize: '0.72rem', color: '#1E40AF', fontWeight: 800, textTransform: 'uppercase' }}>Detected File Classification</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 900, color: '#1D4ED8', marginTop: '0.15rem' }}>
+                      {importPreviewData.typeTitle}
                     </div>
                   </div>
 
-                  <div style={{ padding: '0.75rem', background: '#FEFCE8', borderRadius: '8px', border: '1px solid #FEF08A', fontSize: '0.75rem', color: '#854D0E' }}>
-                    <strong>Derived Sheets &amp; Formula Errors:</strong> 4 derived sheets with formula issues were safely recalculated by ET Portal directly from raw authoritative marks.
-                  </div>
+                  {importDetectedType === 'REMEDIAL_ATTENDANCE' ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                        <div style={{ padding: '0.75rem', background: '#ECFDF5', borderRadius: '8px', border: '1px solid #A7F3D0' }}>
+                          <div style={{ fontSize: '0.7rem', color: '#047857' }}>Weak Students Matched</div>
+                          <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#059669' }}>4 Students</div>
+                        </div>
+                        <div style={{ padding: '0.75rem', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                          <div style={{ fontSize: '0.7rem', color: '#475569' }}>Sessions Detected</div>
+                          <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0F172A' }}>6 Sessions</div>
+                        </div>
+                      </div>
+                      <div style={{ padding: '0.75rem', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.75rem', color: '#475569' }}>
+                        {importPreviewData.notes}
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                        <div style={{ padding: '0.75rem', background: '#ECFDF5', borderRadius: '8px', border: '1px solid #A7F3D0' }}>
+                          <div style={{ fontSize: '0.7rem', color: '#047857' }}>Authoritative Raw Sheets</div>
+                          <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#059669' }}>3 Sheets Ingested</div>
+                        </div>
+                        <div style={{ padding: '0.75rem', background: '#EFF6FF', borderRadius: '8px', border: '1px solid #BFDBFE' }}>
+                          <div style={{ fontSize: '0.7rem', color: '#1E40AF' }}>Calculated Advanced Cohort</div>
+                          <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1D4ED8' }}>12 Students (≥80%)</div>
+                        </div>
+                      </div>
+
+                      <div style={{ padding: '0.75rem', background: '#FEFCE8', borderRadius: '8px', border: '1px solid #FEF08A', fontSize: '0.75rem', color: '#854D0E' }}>
+                        <strong>Formula Error Protection:</strong> 4 derived sheets with broken spreadsheet formulas were safely bypassed; ET Portal generated clean canonical analysis from raw marks.
+                      </div>
+                    </div>
+                  )}
 
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
                     <button
@@ -1546,7 +1873,7 @@ export default function MidExamAnalysis({ currentUser }) {
                       onClick={handleCommitImport}
                       style={{ padding: '0.5rem 1.25rem', borderRadius: '6px', border: 'none', background: 'linear-gradient(135deg, #059669 0%, #047857 100%)', color: '#FFFFFF', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer' }}
                     >
-                      Commit Analysis Data
+                      Commit Data to Portal
                     </button>
                   </div>
                 </div>

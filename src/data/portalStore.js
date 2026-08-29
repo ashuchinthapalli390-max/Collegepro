@@ -7778,8 +7778,20 @@ export {
   calculateStudentMid1,
   generateBlankMidTemplateXLSX,
   exportAdvancedLearnersCSV,
+  exportAdvancedLearnersXLSX,
+  exportAdvancedLearnersPDF,
+  exportAdvancedEvidenceXLSX,
   exportWeakLearnersCSV,
-  exportConsolidatedMidCSV
+  exportWeakLearnersXLSX,
+  exportWeakLearnersPDF,
+  exportWeakEvidenceXLSX,
+  exportRemedialAttendanceXLSX,
+  exportRemedialAttendancePDF,
+  exportImprovementAnalysisXLSX,
+  exportImprovementAnalysisPDF,
+  exportConsolidatedMidCSV,
+  exportConsolidatedMidPDF,
+  exportFullAcademicWorkbookXLSX
 } from './midExamStore.js';
 
 
