@@ -107,7 +107,8 @@ export const STORAGE_KEYS = {
   COMMUNITY_PROJECTS: 'et_portal_community_projects_v1',
   COMPANY_VISITS: 'et_portal_company_visits_v1',
   CAMPUS_PLACEMENTS: 'et_portal_campus_placements_v1',
-  ATTENDANCE_BATCHES: 'et_portal_attendance_batches_v1'
+  ATTENDANCE_BATCHES: 'et_portal_attendance_batches_v1',
+  MID_EXAM_ANALYSES: 'et_portal_mid_exam_analyses_v1'
 };
 
 // Automatic one-time cleanup of obsolete legacy demo caches & transactional zero-data reset
@@ -7766,6 +7767,20 @@ export function clearCurrentAttendance(cohortMeta, actorUser = null) {
   saveStore(STORAGE_KEYS.ATTENDANCE_ALERTS, retainedAlerts);
   return true;
 }
+
+// -------------------------------------------------------------
+// 5. Mid Exam Analysis Store Re-exports
+// -------------------------------------------------------------
+export {
+  getMidExamAnalyses,
+  getMidExamAnalysisById,
+  saveMidExamAnalysis,
+  calculateStudentMid1,
+  generateBlankMidTemplateXLSX,
+  exportAdvancedLearnersCSV,
+  exportWeakLearnersCSV,
+  exportConsolidatedMidCSV
+} from './midExamStore.js';
 
 
 
