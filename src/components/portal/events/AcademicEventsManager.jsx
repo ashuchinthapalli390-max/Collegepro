@@ -74,6 +74,90 @@ const EVENT_TYPE_TABS = [
   { id: 'Technical Talk', label: 'Technical Talks', icon: Video }
 ];
 
+export const ALL_ET_DEPT_CODES = ['AI', 'AIML', 'CYS', 'DS'];
+
+export const DEPT_METADATA = {
+  'AI': { code: 'AI', name: 'Artificial Intelligence', label: 'Artificial Intelligence' },
+  'AIML': { code: 'AIML', name: 'AI & ML', label: 'AI & ML' },
+  'CYS': { code: 'CYS', name: 'Cyber Security', label: 'Cyber Security' },
+  'DS': { code: 'DS', name: 'Data Science', label: 'Data Science' }
+};
+
+export function parseAndExpandDepartments(deptInput, isInstitutionWide = false) {
+  if (isInstitutionWide) {
+    return [...ALL_ET_DEPT_CODES];
+  }
+  if (!deptInput) return ['CYS'];
+
+  if (Array.isArray(deptInput)) {
+    let res = [];
+    deptInput.forEach(d => {
+      res = res.concat(parseAndExpandDepartments(d));
+    });
+    return [...new Set(res)];
+  }
+
+  const str = String(deptInput).trim();
+  const lower = str.toLowerCase();
+
+  if (
+    lower === 'all' || 
+    lower === 'all et' || 
+    lower === 'allet' || 
+    lower === 'all departments' || 
+    lower.includes('all et') || 
+    lower === 'multiple' ||
+    lower === 'multiple departments' ||
+    lower === 'all-et'
+  ) {
+    return [...ALL_ET_DEPT_CODES];
+  }
+
+  const parts = str.split(/[,+/|]/).map(p => p.trim()).filter(Boolean);
+  const resolved = [];
+
+  for (const part of parts) {
+    const pLower = part.toLowerCase();
+    if (pLower.includes('cyber') || pLower === 'cys' || (pLower.includes('cs') && !pLower.includes('ds') && !pLower.includes('ai'))) {
+      resolved.push('CYS');
+    } else if (pLower.includes('data') || pLower === 'ds') {
+      resolved.push('DS');
+    } else if (pLower.includes('ml') || pLower.includes('machine') || pLower === 'aiml') {
+      resolved.push('AIML');
+    } else if (pLower.includes('ai') || pLower.includes('artificial') || pLower === 'ai') {
+      resolved.push('AI');
+    } else {
+      const norm = normalizeDepartment(part);
+      if (norm && norm.code && ALL_ET_DEPT_CODES.includes(norm.code)) {
+        resolved.push(norm.code);
+      }
+    }
+  }
+
+  return resolved.length > 0 ? [...new Set(resolved)] : ['CYS'];
+}
+
+export function parseAndExpandSections(sectionInput) {
+  if (!sectionInput) return ['A'];
+
+  if (Array.isArray(sectionInput)) {
+    const flat = sectionInput.flatMap(s => parseAndExpandSections(s));
+    return flat.length > 0 ? [...new Set(flat)] : ['A'];
+  }
+
+  const str = String(sectionInput).trim();
+  const lower = str.toLowerCase();
+
+  if (lower === 'all' || lower === 'all sections' || lower === 'all-sections') {
+    return ['A', 'B', 'C', 'D'];
+  }
+
+  const parts = str.split(/[,+/|]/).map(p => p.trim().toUpperCase()).filter(Boolean);
+  const validSections = parts.filter(p => ['A', 'B', 'C', 'D', 'E'].includes(p) || p.startsWith('SEC'));
+
+  return validSections.length > 0 ? [...new Set(validSections)] : (parts.length > 0 ? parts : ['A']);
+}
+
 export default function AcademicEventsManager({ currentUser, onDataChange, initialTypeFilter = 'ALL', onOpenBulkDataCenter }) {
   const [dataVersion, setDataVersion] = useState(0);
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -101,13 +185,14 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
 
   const showToast = (msg) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+    setTimeout(() => setToastMessage(null), 3500);
   };
 
   // Filters State
-  const [selectedTypeTab, setSelectedTypeTab] = useState(initialTypeFilter);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedDept, setSelectedDept] = useState(currentUser?.role === 'HOD' ? (currentUser.dept || 'ALL') : 'ALL');
+  const [selectedTypeTab, setSelectedTypeTab] = useState(initialTypeFilter);
+  const [selectedDept, setSelectedDept] = useState(currentUser?.role === 'HOD' && currentUser?.dept ? currentUser.dept : 'ALL');
+  const [selectedSection, setSelectedSection] = useState('ALL');
   const [selectedAy, setSelectedAy] = useState('ALL');
   const [selectedEventStatus, setSelectedEventStatus] = useState('ALL');
   const [selectedWorkflowStatus, setSelectedWorkflowStatus] = useState('ALL');
@@ -128,33 +213,61 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
     return getAcademicEvents();
   }, [dataVersion]);
 
+  // Projected 1-to-1 Department & Section Offerings
+  const expandedOfferings = useMemo(() => {
+    const list = [];
+    events.forEach(item => {
+      const depts = parseAndExpandDepartments(item.department || item.departmentCodes || item.targetDepartment, item.isInstitutionWide);
+      const rawSecs = item.section || item.sections || item.targetSections || item.sectionBreakdown;
+      const sections = parseAndExpandSections(rawSecs);
+
+      depts.forEach(dept => {
+        sections.forEach(sec => {
+          list.push({
+            ...item,
+            offeringId: `${item.id}_${dept}_${sec}`,
+            parentEventId: item.id,
+            department: dept,
+            departmentCode: dept,
+            departmentName: DEPT_METADATA[dept]?.name || dept,
+            section: sec,
+            sectionLabel: `Section ${sec}`,
+            isExpanded: depts.length > 1 || sections.length > 1,
+            totalSiblings: depts.length * sections.length
+          });
+        });
+      });
+    });
+    return list;
+  }, [events]);
+
   // KPIs
   const stats = useMemo(() => {
-    const total = events.length;
+    const totalEvents = events.length;
+    const totalOfferings = expandedOfferings.length;
     const upcoming = events.filter(e => e.eventStatus === 'PLANNED' || e.eventStatus === 'REGISTRATION_OPEN').length;
     const ongoing = events.filter(e => e.eventStatus === 'ONGOING').length;
     const completed = events.filter(e => e.eventStatus === 'COMPLETED').length;
     const pendingReview = events.filter(e => e.workflowStatus === 'SUBMITTED' || e.workflowStatus === 'UNDER_REVIEW').length;
     const thisYear = events.filter(e => e.academicYear === '2026-27' || e.academicYear === '2025-26' || e.academicYear === '2024-25').length;
-    return { total, upcoming, ongoing, completed, pendingReview, thisYear };
-  }, [events]);
+    return { totalEvents, totalOfferings, total: totalEvents, upcoming, ongoing, completed, pendingReview, thisYear };
+  }, [events, expandedOfferings]);
 
-  // Filtered Records
-  const filteredEvents = useMemo(() => {
-    return events.filter(item => {
+  // Filtered Projected Offerings
+  const filteredOfferings = useMemo(() => {
+    return expandedOfferings.filter(item => {
       const q = searchQuery.toLowerCase().trim();
       const matchSearch = !q ||
         (item.eventNumber && item.eventNumber.toLowerCase().includes(q)) ||
         (item.title && item.title.toLowerCase().includes(q)) ||
         (item.name && item.name.toLowerCase().includes(q)) ||
         (item.speakers && item.speakers.some(s => s.name && s.name.toLowerCase().includes(q))) ||
-        (item.coordinators && item.coordinators.some(c => c.name && c.name.toLowerCase().includes(q)));
+        (item.coordinators && item.coordinators.some(c => c.name && c.name.toLowerCase().includes(q))) ||
+        (item.departmentName && item.departmentName.toLowerCase().includes(q));
 
-      const eventDeptNorm = normalizeDepartment(item.department || item.departmentCodes || item.targetDepartment || '').code;
-      const matchDept = selectedDept === 'ALL' || 
-        eventDeptNorm === selectedDept || 
-        item.isInstitutionWide ||
-        (item.department && String(item.department).toLowerCase().includes('all'));
+      // Direct 1-to-1 match for Department & Section
+      const matchDept = selectedDept === 'ALL' || item.department === selectedDept;
+      const matchSection = selectedSection === 'ALL' || item.section === selectedSection;
 
       const matchAy = selectedAy === 'ALL' || item.academicYear === selectedAy;
 
@@ -171,9 +284,9 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
       const matchMode = selectedMode === 'ALL' || item.mode === selectedMode;
       const matchLevel = selectedLevel === 'ALL' || item.level === selectedLevel;
 
-      return matchSearch && matchDept && matchAy && matchType && matchStatus && matchWorkflow && matchMode && matchLevel;
+      return matchSearch && matchDept && matchSection && matchAy && matchType && matchStatus && matchWorkflow && matchMode && matchLevel;
     });
-  }, [events, searchQuery, selectedDept, selectedAy, selectedTypeTab, selectedEventStatus, selectedWorkflowStatus, selectedMode, selectedLevel]);
+  }, [expandedOfferings, searchQuery, selectedDept, selectedSection, selectedAy, selectedTypeTab, selectedEventStatus, selectedWorkflowStatus, selectedMode, selectedLevel]);
 
   // Permissions
   const canCreate = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'HOD' || currentUser?.role === 'FACULTY';
@@ -240,71 +353,63 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
   };
 
   const handleExportCSV = () => {
-    const rows = [];
-    filteredEvents.forEach(e => {
-      const sections = e.sectionBreakdown ? e.sectionBreakdown.split(',').map(s => s.trim()) : (e.sections || ['A']);
-      sections.forEach(sec => {
-        rows.push({
-          'Event Number': e.eventNumber || '—',
-          'Event Title': e.title || e.name || '—',
-          'Event Type': e.eventType || e.type || 'Workshop',
-          'Department': e.department || 'CYS',
-          'Academic Year': e.academicYear || '—',
-          'Section': sec,
-          'Start Date': e.startDate || e.date || '—',
-          'End Date': e.endDate || '—',
-          'Venue': e.venue || '—',
-          'Coordinator': e.coordinators?.[0]?.name || e.coordinator || '—',
-          'Status': e.eventStatus || 'COMPLETED'
-        });
-      });
-    });
-    exportToCSV(rows, `ET_Academic_Events_${selectedDept}`, currentUser);
-    showToast(`Exported ${rows.length} event rows to CSV.`);
+    const rows = filteredOfferings.map(item => ({
+      'Event Number': item.eventNumber || item.id || '—',
+      'Event Title': item.title || item.name || '—',
+      'Event Type': item.eventType || item.type || 'Workshop',
+      'Department': item.departmentName,
+      'Department Code': item.department,
+      'Section': item.section,
+      'Academic Year': item.academicYear || '—',
+      'Start Date': item.startDate || item.date || '—',
+      'End Date': item.endDate || '—',
+      'Mode': item.mode || 'Offline',
+      'Venue': item.venue || '—',
+      'Coordinator': item.coordinators?.[0]?.name || item.coordinator || '—',
+      'Key Speaker / Expert': item.resourcePersons?.[0]?.name || item.speakers?.[0]?.name || '—',
+      'Attendees': item.actualParticipants || item.expectedParticipants || 0,
+      'Status': item.eventStatus || 'COMPLETED',
+      'Approval': item.workflowStatus || 'APPROVED'
+    }));
+    exportToCSV(rows, `ET_Academic_Events_${selectedDept}_${selectedSection}`, currentUser);
+    showToast(`Exported ${rows.length} expanded offering rows to CSV.`);
   };
 
   const handleExportExcel = () => {
-    const rows = [];
-    filteredEvents.forEach(e => {
-      const sections = e.sectionBreakdown ? e.sectionBreakdown.split(',').map(s => s.trim()) : (e.sections || ['A']);
-      sections.forEach(sec => {
-        rows.push({
-          'Event Number': e.eventNumber || '—',
-          'Event Title': e.title || e.name || '—',
-          'Event Type': e.eventType || e.type || 'Workshop',
-          'Department': e.department || 'CYS',
-          'Academic Year': e.academicYear || '—',
-          'Section': sec,
-          'Start Date': e.startDate || e.date || '—',
-          'End Date': e.endDate || '—',
-          'Venue': e.venue || '—',
-          'Coordinator': e.coordinators?.[0]?.name || e.coordinator || '—',
-          'Status': e.eventStatus || 'COMPLETED'
-        });
-      });
-    });
-    exportToExcel(rows, `ET_Academic_Events_${selectedDept}`, 'Academic Events', currentUser);
-    showToast(`Exported ${rows.length} event rows to Excel.`);
+    const rows = filteredOfferings.map(item => ({
+      'Event Number': item.eventNumber || item.id || '—',
+      'Event Title': item.title || item.name || '—',
+      'Event Type': item.eventType || item.type || 'Workshop',
+      'Department': item.departmentName,
+      'Department Code': item.department,
+      'Section': item.section,
+      'Academic Year': item.academicYear || '—',
+      'Start Date': item.startDate || item.date || '—',
+      'End Date': item.endDate || '—',
+      'Mode': item.mode || 'Offline',
+      'Venue': item.venue || '—',
+      'Coordinator': item.coordinators?.[0]?.name || item.coordinator || '—',
+      'Key Speaker / Expert': item.resourcePersons?.[0]?.name || item.speakers?.[0]?.name || '—',
+      'Attendees': item.actualParticipants || item.expectedParticipants || 0,
+      'Status': item.eventStatus || 'COMPLETED',
+      'Approval': item.workflowStatus || 'APPROVED'
+    }));
+    exportToExcel(rows, `ET_Academic_Events_${selectedDept}_${selectedSection}`, 'Academic Events', currentUser);
+    showToast(`Exported ${rows.length} expanded offering rows to Excel.`);
   };
 
   const handleExportPDF = () => {
-    const rows = [];
-    filteredEvents.forEach(e => {
-      const sections = e.sectionBreakdown ? e.sectionBreakdown.split(',').map(s => s.trim()) : (e.sections || ['A']);
-      sections.forEach(sec => {
-        rows.push([
-          e.eventNumber || '—',
-          e.title || e.name || '—',
-          e.eventType || e.type || 'Workshop',
-          e.department || 'CYS',
-          sec,
-          e.startDate || e.date || '—',
-          e.eventStatus || 'COMPLETED'
-        ]);
-      });
-    });
-    exportToPDF('ET Academic Events & Workshops Report', ['Event No.', 'Title', 'Type', 'Dept', 'Sec', 'Date', 'Status'], rows, `ET_Events_${selectedDept}`);
-    showToast(`Exported ${rows.length} event rows to PDF.`);
+    const rows = filteredOfferings.map(item => [
+      item.eventNumber || item.id || '—',
+      item.title || item.name || '—',
+      item.eventType || 'Workshop',
+      item.departmentName,
+      `Sec ${item.section}`,
+      item.startDate || '—',
+      item.eventStatus || 'COMPLETED'
+    ]);
+    exportToPDF('ET Academic Events & Workshops Report', ['Event No.', 'Title', 'Type', 'Department', 'Section', 'Date', 'Status'], rows, `ET_Events_${selectedDept}_${selectedSection}`);
+    showToast(`Exported ${rows.length} expanded offering rows to PDF.`);
   };
 
   return (
@@ -387,12 +492,12 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
 
       {/* 2. Staggered Animated KPI Summary Cards */}
       <AnimatedKpiGrid minWidth="150px">
-        <MotionKpiCard label="Total Events" value={stats.total} icon={Megaphone} color="#0F172A" bg="#F8FAFC" />
-        <MotionKpiCard label="Upcoming" value={stats.upcoming} icon={Calendar} color="#2563EB" bg="#EFF6FF" />
+        <MotionKpiCard label="Unique Master Events" value={stats.totalEvents} icon={Megaphone} color="#0F172A" bg="#F8FAFC" />
+        <MotionKpiCard label="Dept & Sec Offerings" value={stats.totalOfferings} icon={Layers} color="#2563EB" bg="#EFF6FF" />
+        <MotionKpiCard label="Upcoming" value={stats.upcoming} icon={Calendar} color="#0D9488" bg="#F0FDFA" />
         <MotionKpiCard label="Ongoing Now" value={stats.ongoing} icon={Clock} color="#D97706" bg="#FEFCE8" />
         <MotionKpiCard label="Completed" value={stats.completed} icon={CheckCircle2} color="#059669" bg="#ECFDF5" />
         <MotionKpiCard label="Pending Review" value={stats.pendingReview} icon={Sparkles} color="#9333EA" bg="#FDF4FF" />
-        <MotionKpiCard label="This Academic Year" value={stats.thisYear} icon={Building2} color="#0D9488" bg="#F0FDFA" />
       </AnimatedKpiGrid>
 
       {/* 3. Event Type Horizontal Tabs */}
@@ -443,6 +548,7 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
           </div>
 
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            {/* Department Filter (1-to-1 canonical) */}
             <select
               value={selectedDept}
               disabled={currentUser?.role === 'HOD'}
@@ -454,6 +560,19 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
               <option value="DS">Data Science</option>
               <option value="AI">Artificial Intelligence</option>
               <option value="AIML">AI & ML</option>
+            </select>
+
+            {/* Section Filter (1-to-1 canonical) */}
+            <select
+              value={selectedSection}
+              onChange={(e) => setSelectedSection(e.target.value)}
+              style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', background: '#FFFFFF', color: '#0F172A', fontWeight: 600 }}
+            >
+              <option value="ALL">All Sections</option>
+              <option value="A">Section A</option>
+              <option value="B">Section B</option>
+              <option value="C">Section C</option>
+              <option value="D">Section D</option>
             </select>
 
             <select
@@ -492,13 +611,14 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
               <option value="DRAFT">Draft</option>
             </select>
 
-            {(searchQuery || selectedTypeTab !== 'ALL' || selectedDept !== 'ALL' || selectedAy !== 'ALL' || selectedEventStatus !== 'ALL' || selectedWorkflowStatus !== 'ALL') && (
+            {(searchQuery || selectedTypeTab !== 'ALL' || selectedDept !== 'ALL' || selectedSection !== 'ALL' || selectedAy !== 'ALL' || selectedEventStatus !== 'ALL' || selectedWorkflowStatus !== 'ALL') && (
               <button
                 type="button"
                 onClick={() => {
                   setSearchQuery('');
                   setSelectedTypeTab('ALL');
                   if (currentUser?.role !== 'HOD') setSelectedDept('ALL');
+                  setSelectedSection('ALL');
                   setSelectedAy('ALL');
                   setSelectedEventStatus('ALL');
                   setSelectedWorkflowStatus('ALL');
@@ -520,7 +640,8 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
               <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 <th style={{ padding: '0.85rem 1rem' }}>Event No. & Title</th>
                 <th style={{ padding: '0.85rem 1rem' }}>Type</th>
-                <th style={{ padding: '0.85rem 1rem' }}>Department & AY</th>
+                <th style={{ padding: '0.85rem 1rem' }}>Department</th>
+                <th style={{ padding: '0.85rem 1rem' }}>Section</th>
                 <th style={{ padding: '0.85rem 1rem' }}>Dates & Mode</th>
                 <th style={{ padding: '0.85rem 1rem' }}>Coordinator(s)</th>
                 <th style={{ padding: '0.85rem 1rem' }}>Key Speaker / Expert</th>
@@ -531,22 +652,22 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
               </tr>
             </thead>
             <tbody>
-              {filteredEvents.length === 0 ? (
+              {filteredOfferings.length === 0 ? (
                 <tr>
-                  <td colSpan={10} style={{ padding: '3.5rem 1rem', textAlign: 'center', color: '#94A3B8', fontSize: '0.85rem' }}>
-                    No academic events recorded matching current filters.
+                  <td colSpan={11} style={{ padding: '3.5rem 1rem', textAlign: 'center', color: '#94A3B8', fontSize: '0.85rem' }}>
+                    No academic event offerings recorded matching current filters.
                   </td>
                 </tr>
               ) : (
-                filteredEvents.map((item, idx) => {
+                filteredOfferings.map((item, idx) => {
                   const wfBadge = getWorkflowBadge(item.workflowStatus);
                   const evBadge = getEventLifecycleBadge(item.eventStatus);
                   const WfIcon = wfBadge.icon;
                   const firstSpeaker = item.resourcePersons?.[0]?.name || (item.resourcePersons?.length ? '1 Expert' : 'TBD');
 
                   return (
-                    <tr key={item.id || idx} style={{ borderBottom: '1px solid #F1F5F9' }} className="hover:bg-slate-50">
-                      <td style={{ padding: '0.85rem 1rem', maxWidth: '300px' }}>
+                    <tr key={item.offeringId || item.id || idx} style={{ borderBottom: '1px solid #F1F5F9' }} className="hover:bg-slate-50">
+                      <td style={{ padding: '0.85rem 1rem', maxWidth: '280px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
                           {(item.coverImageUrl || item.posterUrl) && (
                             <div
@@ -598,8 +719,28 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
                       </td>
 
                       <td style={{ padding: '0.85rem 1rem' }}>
-                        <span style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.8rem' }}>{item.department}</span>
-                        <div style={{ fontSize: '0.72rem', color: '#64748B' }}>{item.academicYear}</div>
+                        <span style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.8rem' }}>{item.departmentName}</span>
+                        <div style={{ fontSize: '0.72rem', color: '#64748B' }}>Code: <strong>{item.department}</strong> • {item.academicYear}</div>
+                      </td>
+
+                      <td style={{ padding: '0.85rem 1rem' }}>
+                        <span style={{
+                          padding: '0.2rem 0.55rem',
+                          borderRadius: '6px',
+                          background: '#F1F5F9',
+                          color: '#0F172A',
+                          fontSize: '0.74rem',
+                          fontWeight: 800,
+                          border: '1px solid #CBD5E1',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          Section {item.section}
+                        </span>
+                        {item.isExpanded && (
+                          <div style={{ fontSize: '0.65rem', color: '#64748B', marginTop: '0.15rem' }}>
+                            Offering ({item.totalSiblings} total)
+                          </div>
+                        )}
                       </td>
 
                       <td style={{ padding: '0.85rem 1rem' }}>
@@ -681,7 +822,11 @@ export default function AcademicEventsManager({ currentUser, onDataChange, initi
                           {canCreate && (
                             <button
                               type="button"
-                              onClick={() => { setEditingItem(item); setWizardOpen(true); }}
+                              onClick={() => { 
+                                const parent = events.find(e => e.id === (item.parentEventId || item.id)) || item;
+                                setEditingItem(parent); 
+                                setWizardOpen(true); 
+                              }}
                               title="Edit Event"
                               style={{ padding: '0.35rem', background: '#FEFCE8', border: '1px solid #FEF08A', borderRadius: '6px', color: '#A16207', cursor: 'pointer' }}
                             >
